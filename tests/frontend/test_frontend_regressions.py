@@ -2344,3 +2344,40 @@ def test_theme_and_dark_mode_improvements_and_guess_mode_leaderboard() -> None:
     assert '[data-theme="dark"] .multi-select-actions' in multi_css
     assert '[data-theme="dark"] .btn-text-action' in multi_css
     assert '[data-theme="dark"] .multi-select-summary' in multi_css
+
+
+def test_streamlined_share_direct_links_and_dead_key_removal() -> None:
+    """Verify sharing logic is streamlined to direct challenge invite or match replay URLs,
+    replay-share-btn uses copyToClipboard with toast feedback, and dead summary.scores_header
+    translation keys are cleanly removed across all locales.
+    """
+    share_js = (JS_DIR / 'modules' / 'summary' / 'share.js').read_text(encoding='utf-8')
+    replay_js = (JS_DIR / 'modules' / 'screens' / 'replay.js').read_text(encoding='utf-8')
+    en_us_js = (JS_DIR / 'modules' / 'locales' / 'en_US.js').read_text(encoding='utf-8')
+    pt_br_js = (JS_DIR / 'modules' / 'locales' / 'pt_BR.js').read_text(encoding='utf-8')
+    locales_dir = Path(__file__).resolve().parent.parent.parent / 'locales'
+    en_json = (locales_dir / 'en-US.json').read_text(encoding='utf-8')
+    pt_json = (locales_dir / 'pt-BR.json').read_text(encoding='utf-8')
+
+    # 1. share.js imports challengeSession and generates direct replay or play URLs
+    assert 'import { challengeSession } from "../challenge/session.js";' in share_js
+    assert '/replay`' in share_js
+    assert '/play/' in share_js
+    assert 'winnerText' not in share_js
+    assert 'summary.scores_header' not in share_js
+    assert 'summary.meta_rounds' not in share_js
+
+    # 2. replay.js handles replay-share-btn using copyToClipboard
+    assert 'copyToClipboard' in replay_js
+    assert 'replay-share-btn' in replay_js
+    assert '"summary.share_copied"' in replay_js
+
+    # 3. summary.scores_header is completely purged across all 4 locale files
+    for loc_text in (en_us_js, pt_br_js, en_json, pt_json):
+        assert '"summary.scores_header"' not in loc_text
+
+    # 4. summary.share_copied is updated to reflect direct replay link copy
+    assert 'Replay link copied to clipboard!' in en_us_js
+    assert 'Replay link copied to clipboard!' in en_json
+    assert 'Link do replay copiado para a área de transferência!' in pt_br_js
+    assert 'Link do replay copiado para a área de transferência!' in pt_json

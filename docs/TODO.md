@@ -6,7 +6,7 @@ This document lists planned features, design ideas, and technical debt items for
 
 ## 🚀 Prioritized TODO List
 
-- [ ] v3.3.0 **Improve Share Functionality & Social Scorecards**
+- [x] v3.3.0 **Streamline Share Action to Direct Links (Replay & Challenge Invites)**
 
 - [ ] v3.4.0 **Add Support for Videos**
   - [ ] Integrate Immich video streaming adapter using transcoded preview streams (`/api/asset/video/playback/{id}` or `encoded-video`) instead of raw 4K originals.
