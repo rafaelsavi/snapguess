@@ -23,6 +23,7 @@ _CF_EMAIL_HEADERS = (
 
 _CF_NAME_HEADERS = (
     'cf-access-authenticated-user-name',
+    'cf-access-user-name',
     'x-user-name',
     'x-auth-name',
     'x-forwarded-user-name',
@@ -198,7 +199,7 @@ async def get_current_auth(request: Request) -> AuthContext:
     """
     # --- DEV TESTING HOOK ---
     # To bypass all resolvers and immediately simulate any role (GUEST, USER, CREATOR):
-    # return AuthContext(role=Role.USER, email="test@example.com", name="Tester")
+    # return AuthContext(role=Role.CREATOR, email="test@example.com", name="Tester")
 
     settings = request.app.state.settings
     mode = settings.auth_mode
