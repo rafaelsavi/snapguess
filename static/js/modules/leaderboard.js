@@ -2,7 +2,12 @@ import { state, el } from "./state.js";
 import { api, setupFilterParams } from "./api.js";
 import { buildCell, createRankBadge, escapeHtml } from "./formatters.js";
 import { t, formatDateTime } from "./i18n.js";
-import { getActiveFilterSummary, getActiveFilterTooltip } from "./setup_filters.js";
+import {
+  getActiveFilterSummary,
+  getActiveFilterTooltip,
+  formatFilterSummary,
+  formatFilterTooltip,
+} from "./setup_filters.js";
 import { navigate } from "./router.js";
 
 export function formatAccuracy(pct) {
@@ -11,24 +16,106 @@ export function formatAccuracy(pct) {
   return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
 }
 
-export function updateLeaderboardScope() {
+/**
+ * Normalize arbitrary game / match / challenge data into a standard leaderboard config object.
+ * @param {object|null} source
+ * @returns {object|null}
+ */
+export function normalizeLeaderboardConfig(source) {
+  if (!source) return null;
+  const cfg = source.config || source;
+  const gameMode = cfg.game_mode || source.game_mode || "pinpoint";
+  const roundLength = cfg.round_length || source.round_length || "1m";
+  const locationMode = (cfg.location_mode !== undefined ? cfg.location_mode : source.location_mode) !== false;
+  const dateMode = (cfg.date_mode !== undefined ? cfg.date_mode : source.date_mode) !== false;
+  const includeShared = Boolean(cfg.include_shared !== undefined ? cfg.include_shared : source.include_shared);
+
+  const cleanList = (arr) => {
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .map((item) =>
+        typeof item === "object" && item !== null
+          ? item.id || item.album_id || item.person_id || item.name || ""
+          : String(item)
+      )
+      .filter(Boolean);
+  };
+
+  const cleanNameList = (arr) => {
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .map((item) =>
+        typeof item === "object" && item !== null
+          ? item.name || item.id || ""
+          : String(item)
+      )
+      .filter(Boolean);
+  };
+
+  const toDateStr = (val) => {
+    if (!val) return null;
+    return String(val).split("T")[0];
+  };
+
+  return {
+    game_mode: gameMode,
+    round_length: roundLength,
+    location_mode: locationMode,
+    date_mode: dateMode,
+    libraries: cleanList(cfg.libraries || source.libraries),
+    albums: cleanList(cfg.albums || source.albums),
+    album_names: cleanNameList(cfg.album_names || source.album_names),
+    countries: cleanList(cfg.countries || source.countries),
+    cities: cleanList(cfg.cities || source.cities),
+    people: cleanList(cfg.people || source.people),
+    person_names: cleanNameList(cfg.person_names || source.person_names),
+    people_mode: cfg.people_mode || source.people_mode || "ANY",
+    min_date: toDateStr(cfg.min_date || source.min_date),
+    max_date: toDateStr(cfg.max_date || source.max_date),
+    include_shared: includeShared,
+    filter_summary: source.filter_summary || cfg.filter_summary || null,
+    filter_tooltip: source.filter_tooltip || cfg.filter_tooltip || null,
+  };
+}
+
+export function updateLeaderboardScope(customConfig = null) {
   if (!el.leaderboardScopePill) return;
 
-  const lengthVal = (el.roundLength && el.roundLength.value) || "1m";
-  const lengthKey = `setup.round_${lengthVal}`;
-  const lengthText = t(lengthKey) !== lengthKey ? t(lengthKey) : lengthVal;
+  const cfg = customConfig || state.activeLeaderboardConfig;
 
-  const gameMode = (state && state.gameMode) || "pinpoint";
-  let modeText = gameMode === "unshuffle" ? t("mode.unshuffle") : t("mode.pinpoint");
+  let lengthVal;
+  let gameMode;
+  let locActive;
+  let dateActive;
+  let filterScope;
+  let filterTooltip;
 
-  if (gameMode === "pinpoint") {
+  if (cfg) {
+    lengthVal = cfg.round_length || "1m";
+    gameMode = cfg.game_mode || "pinpoint";
+    locActive = cfg.location_mode !== false;
+    dateActive = cfg.date_mode !== false;
+    filterScope = cfg.filter_summary || (typeof formatFilterSummary === "function" ? formatFilterSummary(cfg) : t("leaderboard.scope_all"));
+    filterTooltip = cfg.filter_tooltip || (typeof formatFilterTooltip === "function" ? formatFilterTooltip(cfg) : null);
+  } else {
+    lengthVal = (el.roundLength && el.roundLength.value) || "1m";
+    gameMode = (state && state.gameMode) || "pinpoint";
     const locEl = el.goalLocation;
     const dateEl = el.goalDate;
     const locCard = document.getElementById("card-goal-location");
     const dateCard = document.getElementById("card-goal-date");
-    const locActive = locEl ? Boolean(locEl.checked) : (locCard ? locCard.classList.contains("active") : true);
-    const dateActive = dateEl ? Boolean(dateEl.checked) : (dateCard ? dateCard.classList.contains("active") : true);
+    locActive = locEl ? Boolean(locEl.checked) : (locCard ? locCard.classList.contains("active") : true);
+    dateActive = dateEl ? Boolean(dateEl.checked) : (dateCard ? dateCard.classList.contains("active") : true);
+    filterScope = typeof getActiveFilterSummary === "function" ? getActiveFilterSummary() : t("leaderboard.scope_all");
+    filterTooltip = typeof getActiveFilterTooltip === "function" ? getActiveFilterTooltip() : null;
+  }
 
+  const lengthKey = `setup.round_${lengthVal}`;
+  const lengthText = t(lengthKey) !== lengthKey ? t(lengthKey) : lengthVal;
+
+  let modeText = gameMode === "unshuffle" ? t("mode.unshuffle") : t("mode.pinpoint");
+
+  if (gameMode === "pinpoint") {
     if (locActive && !dateActive) {
       modeText += ` (${t("setup.goal_location")})`;
     } else if (!locActive && dateActive) {
@@ -36,20 +123,22 @@ export function updateLeaderboardScope() {
     }
   }
 
-  const filterScope = typeof getActiveFilterSummary === "function" ? getActiveFilterSummary() : t("leaderboard.scope_all");
   const scopeText = `${modeText} • ${lengthText} • ${filterScope}`;
 
   el.leaderboardScopePill.textContent = scopeText;
-
-  const filterTooltip = typeof getActiveFilterTooltip === "function" ? getActiveFilterTooltip() : null;
   el.leaderboardScopePill.title = filterTooltip ? `${modeText} • ${lengthText}\n\n${filterTooltip}` : scopeText;
 }
 
 let _leaderboardAbortCtrl = null;
 let _leaderboardDebounceTimer = null;
 
-export async function loadLeaderboard() {
-  updateLeaderboardScope();
+export async function loadLeaderboard(configOverride = undefined) {
+  if (configOverride !== undefined) {
+    state.activeLeaderboardConfig = configOverride ? normalizeLeaderboardConfig(configOverride) : null;
+  }
+  const activeCfg = state.activeLeaderboardConfig;
+  updateLeaderboardScope(activeCfg);
+
   if (_leaderboardAbortCtrl) {
     _leaderboardAbortCtrl.abort();
   }
@@ -57,7 +146,7 @@ export async function loadLeaderboard() {
   const signal = _leaderboardAbortCtrl.signal;
 
   try {
-    const params = setupFilterParams();
+    const params = setupFilterParams(activeCfg);
     const raw = await api(`/api/leaderboard?${params}`, { signal });
     state.leaderboardRows = raw.map((row) => {
       const computedAcc =
@@ -82,7 +171,7 @@ export async function loadLeaderboard() {
 }
 
 export function loadLeaderboardDebounced(delay = 250) {
-  updateLeaderboardScope();
+  updateLeaderboardScope(state.activeLeaderboardConfig);
   if (_leaderboardDebounceTimer) {
     clearTimeout(_leaderboardDebounceTimer);
   }

@@ -1178,6 +1178,15 @@ Response (`200 OK`):
   "challenge_id": "ch_uuid_12345",
   "title": "Summer Vacation 2024",
   "game_mode": "pinpoint",
+  "round_length": "1m",
+  "filter_summary": "All Photos",
+  "filter_tooltip": null,
+  "config": {
+    "game_mode": "pinpoint",
+    "round_length": "1m",
+    "location_mode": true,
+    "date_mode": true
+  },
   "up_to_round": 0,
   "total_rounds": 10,
   "is_game_over": false,

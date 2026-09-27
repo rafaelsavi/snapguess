@@ -9,7 +9,7 @@ Immich Quiz provides a zero-trust, role-based access control (RBAC) architecture
 The application divides permissions across three distinct roles:
 
 | Role | Lobby View | Challenges Hub | Stats & Directory | Replay Viewer | Game Setup & Libraries | Reported Assets |
-|:---|:---|:---|:---|:---|:---|:---|
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **👑 Creator** | Setup Card (full filters) | Create, Manage & Play | Full Access | Full Access | Full Access | Full Access |
 | **👥 User** *(Player)* | Welcome Card (code input) | Join & Play | Full Access | Full Access | Restricted | Restricted |
 | **🎟️ Guest** | Welcome Card (code input) | Direct Link / Code Play | Restricted | Restricted | Restricted | Restricted |
@@ -25,19 +25,23 @@ The application divides permissions across three distinct roles:
 Access control is configured via environment variables:
 
 | Variable | Default | Description |
-|:---|:---|:---|
+| :--- | :--- | :--- |
 | `AUTH_MODE` | `disabled` | Set to `cloudflare` (or `cf`) to enforce Zero Trust identity checks. Set to `disabled` for local single-player / trust-all setups. |
 | `CF_CREATOR_EMAILS` | `""` | Comma-separated list of emails or usernames granted the **Creator** role. |
 | `CF_USER_EMAILS` | `""` | Comma-separated list of emails or usernames granted the **User** role. |
 
 ### Single-Player / Disabled Mode (`AUTH_MODE=disabled`)
+
 When `AUTH_MODE` is unset or set to `disabled`:
+
 - Every visitor is automatically assigned the **Creator** role.
 - The default player display name is set to `'Host'`.
 - Suitable for private home networks, desktop testing, or single-user deployments.
 
 ### Zero Trust Mode (`AUTH_MODE=cloudflare`)
+
 When `AUTH_MODE=cloudflare`:
+
 - Every incoming request must provide identity headers from an upstream reverse proxy or Cloudflare Access.
 - Email or username matching against `CF_CREATOR_EMAILS` assigns **Creator**.
 - Email or username matching against `CF_USER_EMAILS` assigns **User**.
@@ -95,6 +99,7 @@ When running behind Caddy, Nginx, or Traefik, your reverse proxy can pass client
 ### Caddyfile Examples
 
 #### Scenario A: Pass-Through Cloudflare Access Headers
+
 If Cloudflare Access terminates at your domain before hitting Caddy:
 
 ```caddy
@@ -102,9 +107,11 @@ quiz.example.com {
     reverse_proxy 127.0.0.1:8010
 }
 ```
+
 *Note: Caddy automatically preserves incoming Cloudflare headers (`Cf-Access-Jwt-Assertion`, `Cf-Access-Authenticated-User-Email`).*
 
 #### Scenario B: Map Authenticated User Emails to Display Names
+
 If your proxy performs upstream authentication (e.g., Authelia, Authentik, or Cloudflare Access) and you want to pass sanitized, custom display names:
 
 ```caddy
@@ -134,6 +141,7 @@ quiz.example.com {
 ```
 
 #### Scenario C: Caddy Basic Authentication
+
 ```caddy
 quiz.example.com {
     basicauth {
@@ -196,6 +204,7 @@ When developing locally with `AUTH_MODE=cloudflare`, you can simulate any user i
    - `http://localhost:8010/?dev_email=creator@example.com&dev_name=Test+Creator`
    - `http://localhost:8010/?dev_email=player@example.com&dev_name=Player+One`
 2. **HTTP Headers** (via curl or API client):
+
    ```bash
    curl -H "X-User-Name: Alice" -H "X-Forwarded-Email: user1@example.com" http://localhost:8010/api/auth/me
    ```

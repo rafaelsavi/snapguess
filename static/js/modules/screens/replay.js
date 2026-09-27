@@ -4,11 +4,12 @@
  */
 
 import { el } from "../state.js";
-import { t, formatDateTime } from "../i18n.js";
+import { t, tOr, formatDateTime } from "../i18n.js";
 import { showCard } from "./common.js";
 import { navigate } from "../router.js";
 import { escapeHtml, playerColor, playerInitial } from "../formatters.js";
 import { showMatchSummaryByMatchId, refreshSummaryLanguage } from "./summary.js";
+import { copyToClipboard } from "../summary/share.js";
 
 let _listenersBound = false;
 
@@ -43,18 +44,21 @@ export function initReplay() {
   if (shareBtn) {
     shareBtn.addEventListener("click", async () => {
       const url = window.location.href;
-      if (navigator.share) {
+      if (navigator.share && navigator.canShare && navigator.canShare({ url })) {
         try {
           await navigator.share({
-            title: "Immich Quiz Match Replay",
+            title: tOr("replay.title", "Immich Quiz Match Replay"),
             url,
           });
           return;
-        } catch (_) {}
+        } catch (err) {
+          if (err && err.name === "AbortError") return;
+        }
       }
-      try {
-        await navigator.clipboard.writeText(url);
-      } catch (_) {}
+      await copyToClipboard(url, {
+        button: shareBtn,
+        successMessage: tOr("summary.share_copied", "Replay link copied to clipboard!"),
+      });
     });
   }
 }
