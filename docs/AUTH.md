@@ -29,6 +29,7 @@ Access control is configured via environment variables:
 | `AUTH_MODE` | `disabled` | Set to `cloudflare` (or `cf`) to enforce Zero Trust identity checks. Set to `disabled` for local single-player / trust-all setups. |
 | `CF_CREATOR_EMAILS` | `""` | Comma-separated list of emails or usernames granted the **Creator** role. |
 | `CF_USER_EMAILS` | `""` | Comma-separated list of emails or usernames granted the **User** role. |
+| `CF_LOCK_PLAYER_NAME` | `false` | When `true`, challenge gameplay strictly enforces verified reverse proxy / Cloudflare Access display names, disabling custom player name inputs. |
 
 ### Single-Player / Disabled Mode (`AUTH_MODE=disabled`)
 
@@ -47,6 +48,18 @@ When `AUTH_MODE=cloudflare`:
 - Email or username matching against `CF_USER_EMAILS` assigns **User**.
 - Valid incoming identities not listed in either allowlist are assigned the **Guest** role.
 - If no identity headers are present, the request defaults to an unauthenticated **Guest**.
+
+### Player Name Auto-Defaulting & Identity Locking
+
+1. **Seamless Defaulting**:
+   - When launching challenges or local matches, the player input field automatically defaults to the user's verified identity name (`state.auth.name`) or email prefix.
+   - For guests or unauthenticated users, the last used player name is persisted to browser storage (`immich_quiz_last_player_name`) and restored on return.
+2. **Whitespace Normalization**:
+   - Player names are automatically sanitized across frontend and backend, stripping leading/trailing whitespace and collapsing multiple inner spaces (e.g. `"  Alice   Smith  "` → `"Alice Smith"`).
+3. **Strict Identity Enforcement (`CF_LOCK_PLAYER_NAME=true`)**:
+   - When enabled, the challenge landing screen displays a `Verified Account` badge and sets the name input to `readonly`.
+   - On the backend, `POST /play/api/{token}/start` strictly overrides any submitted body name with the verified identity context to guarantee authentic standings in leaderboards and match history.
+
 
 ---
 

@@ -59,7 +59,8 @@ Response:
   "role": "creator",
   "email": "user@example.com",
   "name": "Host",
-  "authenticated": true
+  "authenticated": true,
+  "lock_player_name": false
 }
 ```
 
@@ -67,6 +68,8 @@ Response:
 - `email`: Authenticated email string or `null` if unauthenticated.
 - `name`: Resolved display name or `null`. Resolved from identity headers (`Cf-Access-Authenticated-User-Name`, `X-User-Name`, `X-Auth-Name`, `X-Forwarded-User-Name`, `X-Forwarded-User`, `Remote-User`), the decoded `Cf-Access-Jwt-Assertion` token (`name`, `preferred_username`, `user_name`), or falling back to capitalized email prefix.
 - `authenticated`: Boolean indicating whether identity was verified (via email, name header, or JWT assertion).
+- `lock_player_name`: Boolean indicating whether challenge player names are strictly enforced to match verified identity (configured via `CF_LOCK_PLAYER_NAME`).
+
 
 ## Setup, Sync & Metadata (👑 Creator)
 
@@ -729,7 +732,8 @@ Query Parameters:
 
 - `game_mode`: Filter by game mode (`pinpoint`, `unshuffle`).
 - `play_mode`: Filter by play mode (`local`, `challenge`).
-- `player`: Filter by participating player name.
+- `search`: Case-insensitive partial-text search across match IDs, game/play modes, challenge titles/creators, and participating players.
+- `player`: Filter by participating player name(s). Supports multiple comma-separated or repeated names as an "AND" search (e.g. `Alice,Bob` or `?player=Alice&player=Bob` matches only games with all listed players).
 - `limit`: Page size (1–100, default `30`).
 - `offset`: Pagination offset (default `0`).
 
@@ -815,7 +819,6 @@ Response (`200 OK`):
       "player_guesses": [
         {
           "player_name": "Alice",
-          "player_color": "#f25f5c",
           "location_score": 980,
           "date_score": 1000,
           "round_score": 1980,
@@ -1035,14 +1038,13 @@ Response (`200 OK`):
 
 ### POST /play/api/{capability_token}/start
 
-Initializes or resumes a player's challenge session. If the player name already has an active session, returns the existing session token and current round progress.
+Initializes or resumes a player's challenge session. If the player name already has an active session, returns the existing session token and current round progress. Surrounding and duplicate inner whitespace in `player_name` are automatically normalized. When `CF_LOCK_PLAYER_NAME` is enabled, authenticated reverse proxy/Cloudflare user identity strictly overrides any forged or custom player name submitted in the request body.
 
 Request:
 
 ```json
 {
-  "player_name": "Bob",
-  "player_color": "#ff7043"
+  "player_name": "Bob"
 }
 ```
 
@@ -1056,7 +1058,6 @@ Response (`200 OK`):
   "total_rounds": 10,
   "current_round": 0,
   "is_resumed": false,
-  "player_color": "#ff7043",
   "participant_index": 1,
   "participants": ["Alice", "Bob"]
 }
@@ -1196,7 +1197,6 @@ Response (`200 OK`):
   "leaderboard": [
     {
       "player_name": "Alice",
-      "player_color": "#4caf50",
       "location_score": 48,
       "date_score": 46,
       "total_score": 94,
@@ -1213,7 +1213,6 @@ Response (`200 OK`):
   "round_guesses": [
     {
       "player_name": "Alice",
-      "player_color": "#4caf50",
       "round_index": 0,
       "game_mode": "pinpoint",
       "round_score": 94,
@@ -1425,7 +1424,7 @@ Query Parameters:
 
 - `game_mode` (optional): Filter by `pinpoint` or `unshuffle`.
 - `play_mode` (optional): Filter by `local` or `challenge`.
-- `player` (optional): Filter matches where a player participated.
+- `player` (optional): Filter matches where specified player(s) participated. Supports comma-separated or repeated names for an "AND" search (matches games where all specified players participated together).
 - `limit` (optional, default: 30, max: 100): Results per page.
 - `offset` (optional, default: 0): Pagination offset.
 
@@ -1485,7 +1484,6 @@ Response (`200 OK`):
       "player_guesses": [
         {
           "player_name": "Alex",
-          "player_color": "#0f7c7f",
           "location_score": 98,
           "date_score": 100,
           "round_score": 198,

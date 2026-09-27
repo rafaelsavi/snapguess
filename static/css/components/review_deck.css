@@ -7,9 +7,9 @@
 .review-deck {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.65rem;
   width: 100%;
-  margin-top: 1rem;
+  margin-top: 0.5rem;
 }
 
 /* ----------------------------------------------------------------- Tabs Bar */
@@ -18,17 +18,17 @@
   justify-content: center;
   align-items: center;
   width: 100%;
-  margin: 0.5rem 0 1rem 0;
+  margin: 0.2rem 0 0.35rem 0;
 }
 
 .review-deck-tabs {
-  max-width: 580px;
+  max-width: 520px;
   width: 100%;
   background: var(--bg-surface-secondary, #f1f5f9);
   border: 1.5px solid var(--border-color, #e2e8f0);
   border-radius: 12px;
-  padding: 3px;
-  gap: 4px;
+  padding: 2.5px;
+  gap: 3px;
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
@@ -40,9 +40,10 @@
 }
 
 .review-deck-tabs .segmented-btn {
-  font-size: 0.92rem;
+  font-size: 0.84rem;
   font-weight: 600;
-  padding: 0.55rem 0.85rem;
+  padding: 0.38rem 0.65rem;
+  gap: 0.35rem;
   color: var(--text-muted, #64748b);
   border-radius: 9px;
   transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
@@ -114,24 +115,36 @@
 
 /* ----------------------------------------------------------------- Mobile Viewports */
 @media (max-width: 600px) {
+  .review-deck {
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+  }
+
   .review-deck-tabs-container {
-    margin: 0.25rem 0 0.75rem 0;
+    margin: 0.1rem 0 0.25rem 0;
   }
 
   .review-deck-tabs {
     max-width: 100%;
+    padding: 2px;
+    gap: 2px;
   }
 
   .review-deck-tabs .segmented-btn {
-    font-size: 0.82rem;
-    padding: 0.45rem 0.4rem;
+    font-size: 0.78rem;
+    padding: 0.3rem 0.45rem;
+    gap: 0.25rem;
     white-space: normal;
     text-align: center;
   }
 
+  .review-deck-tabs .tab-icon {
+    font-size: 0.88rem;
+  }
+
   .review-deck-journey-panel .map-shell {
-    min-height: 360px;
-    height: 400px;
+    min-height: 320px;
+    height: 360px;
   }
 }
 
@@ -156,4 +169,3 @@
     border-color: #334155;
   }
 }
-

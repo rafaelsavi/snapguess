@@ -269,13 +269,15 @@ async def test_stats_hub_and_replay_dynamic_language_switch(page: Page) -> None:
     await page.goto('/replays')
     await page.wait_for_selector('#replays-page-card')
     await expect(page.locator('#replays-page-heading')).to_have_text('Match Replays')
-    await expect(page.locator('#stats-replays-player-search')).to_have_attribute('placeholder', 'Filter by player...')
-    await expect(page.locator('#stats-replays-mode-filter option[value="all"]')).to_have_text('All Modes')
+    await expect(page.locator('#stats-replays-player-search')).to_have_attribute('placeholder', 'Search replays...')
+    await expect(page.locator('#stats-replays-mode-filter option[value="all"]')).to_have_text('All Game Modes')
     await expect(page.locator('#stats-replays-mode-filter option[value="pinpoint"]')).to_have_text('🎯 Pinpoint')
     await expect(page.locator('#stats-replays-mode-filter option[value="unshuffle"]')).to_have_text('🔀 Unshuffle')
     await expect(page.locator('#stats-replays-type-filter option[value="all"]')).to_have_text('All Types')
     await expect(page.locator('#stats-replays-type-filter option[value="local"]')).to_have_text('🕹️ Local Match')
     await expect(page.locator('#stats-replays-type-filter option[value="challenge"]')).to_have_text('⚔️ Challenge')
+    await expect(page.locator('#stats-replays-sort-select option[value="newest"]')).to_have_text('Newest First')
+    await expect(page.locator('#stats-replays-sort-select option[value="accuracy"]')).to_have_text('Best Score')
 
     # 2. Toggle to Portuguese in realtime
     await _toggle_language(page)
@@ -283,15 +285,15 @@ async def test_stats_hub_and_replay_dynamic_language_switch(page: Page) -> None:
     await expect(page.locator('#replays-page-desc')).to_have_text(
         'Reviva partidas passadas com mapas interativos rodada a rodada e fotos.'
     )
-    await expect(page.locator('#stats-replays-player-search')).to_have_attribute(
-        'placeholder', 'Filtrar por jogador...'
-    )
+    await expect(page.locator('#stats-replays-player-search')).to_have_attribute('placeholder', 'Pesquisar replays...')
     await expect(page.locator('#stats-replays-mode-filter option[value="all"]')).to_have_text('Todos os Modos')
     await expect(page.locator('#stats-replays-mode-filter option[value="pinpoint"]')).to_have_text('🎯 Pinpoint')
     await expect(page.locator('#stats-replays-mode-filter option[value="unshuffle"]')).to_have_text('🔀 Embaralhado')
     await expect(page.locator('#stats-replays-type-filter option[value="all"]')).to_have_text('Todos os Tipos')
     await expect(page.locator('#stats-replays-type-filter option[value="local"]')).to_have_text('🕹️ Partida Local')
     await expect(page.locator('#stats-replays-type-filter option[value="challenge"]')).to_have_text('⚔️ Desafio')
+    await expect(page.locator('#stats-replays-sort-select option[value="newest"]')).to_have_text('Mais Recentes')
+    await expect(page.locator('#stats-replays-sort-select option[value="accuracy"]')).to_have_text('Melhor pointuação')
 
     # Players page in Portuguese
     await page.goto('/players')
@@ -439,7 +441,7 @@ async def test_stats_hub_and_replay_dynamic_language_switch(page: Page) -> None:
 
 
 async def test_settings_menu_dropdown_interaction(page: Page) -> None:
-    """Verify that settings gear dropdown opens on hover/click, switches language/audio,
+    """Verify that settings gear dropdown toggles open and closed on click, switches language/audio,
     and dismisses on outside click.
     """
     await page.goto('/')
@@ -447,6 +449,7 @@ async def test_settings_menu_dropdown_interaction(page: Page) -> None:
     await _ensure_language(page, 'en-US')
 
     settings_toggle = page.locator('#settings-toggle-btn')
+    settings_icon = page.locator('#settings-icon')
     settings_menu = page.locator('#settings-menu')
     lang_btn = page.locator('#lang-toggle-btn')
     audio_btn = page.locator('#audio-toggle-btn')
@@ -454,32 +457,114 @@ async def test_settings_menu_dropdown_interaction(page: Page) -> None:
     await expect(settings_toggle).to_be_visible()
     await expect(settings_menu).not_to_be_visible()
 
-    # 1. Desktop Hover Interaction: hover over gear reveals menu
+    # 1. Desktop hover opens the menu until the pointer leaves
     await settings_toggle.hover()
     await expect(settings_menu).to_be_visible()
+    await expect(settings_toggle).to_have_attribute('aria-expanded', 'true')
+    toggle_box = await settings_toggle.bounding_box()
+    menu_box = await settings_menu.bounding_box()
+    assert toggle_box is not None and menu_box is not None
+    assert abs(menu_box['x'] - toggle_box['x']) < 1
+    assert abs(menu_box['y'] - toggle_box['y']) < 1
+    assert abs(menu_box['width'] - toggle_box['width']) < 1
+    await lang_btn.hover()
+    await expect(settings_menu).to_be_visible()
+    await page.mouse.move(0, 0)
+    await expect(settings_menu).not_to_be_visible()
+    await expect(settings_toggle).to_have_attribute('aria-expanded', 'false')
+
+    # 2. Click Toggle: clicking settings-icon opens menu
+    await settings_icon.click()
+    await expect(settings_menu).to_be_visible()
+    await expect(settings_toggle).to_have_attribute('aria-expanded', 'true')
     await expect(lang_btn).to_be_visible()
     await expect(audio_btn).to_be_visible()
 
-    # Moving mouse away hides menu
-    await page.mouse.move(0, 0)
+    # 3. Click Toggle: clicking settings-icon again closes menu
+    await settings_icon.click()
     await expect(settings_menu).not_to_be_visible()
+    await expect(settings_toggle).to_have_attribute('aria-expanded', 'false')
 
-    # 2. Click Interaction: toggle open
+    # 4. Click Toggle on button directly: opens menu
     await settings_toggle.click()
     await expect(settings_menu).to_be_visible()
     await expect(settings_toggle).to_have_attribute('aria-expanded', 'true')
 
-    # 3. Toggle language from inside the open menu
+    # 5. Toggle language from inside the open menu
     await lang_btn.click()
     setup_heading = page.locator('#setup-card h2').first
     await expect(setup_heading).to_have_text('Configuração do Jogo')
 
-    # 4. Test outside click dismiss
+    # 6. Click Toggle on button directly: closes menu
+    await settings_toggle.click()
+    await expect(settings_menu).not_to_be_visible()
+    await expect(settings_toggle).to_have_attribute('aria-expanded', 'false')
+
+    # 7. Test outside click dismiss
     await settings_toggle.click()
     await expect(settings_menu).to_be_visible()
     await page.locator('#setup-card').click()
     await expect(settings_menu).not_to_be_visible()
     await expect(settings_toggle).to_have_attribute('aria-expanded', 'false')
 
+    # 8. Test Escape key dismiss
+    await settings_toggle.click()
+    await expect(settings_menu).to_be_visible()
+    await page.keyboard.press('Escape')
+    await expect(settings_menu).not_to_be_visible()
+    await expect(settings_toggle).to_have_attribute('aria-expanded', 'false')
+
     # Restore language to English
     await _ensure_language(page, 'en-US')
+
+
+async def test_date_formatters_use_today_and_yesterday_labels(page: Page) -> None:
+    await page.goto('/')
+    await _ensure_language(page, 'en-US')
+
+    async def get_formatted_dates() -> dict[str, str]:
+        return await page.evaluate(
+            """async () => {
+                            const { formatDate, formatDateTime } = await import('/static/js/modules/i18n.js');
+                            const now = new Date();
+                            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 37);
+                            const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 12, 37);
+                            const older = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2, 12, 37);
+                            const utcToday = new Date(Date.UTC(
+                                now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 12, 37
+                            ));
+                            return {
+                                today: formatDate(today),
+                                yesterday: formatDate(yesterday),
+                                older: formatDate(older),
+                                todayDateTime: formatDateTime(today, {
+                                    year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                                }),
+                                yesterdayDateTime: formatDateTime(yesterday, {
+                                    year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                                }),
+                                utcToday: formatDate(utcToday, { timeZone: 'UTC' }),
+                            };
+                        }"""
+        )
+
+    english = await get_formatted_dates()
+    assert english['today'] == 'Today'
+    assert english['yesterday'] == 'Yesterday'
+    assert english['todayDateTime'].startswith('Today, ')
+    assert ':37' in english['todayDateTime']
+    assert english['yesterdayDateTime'].startswith('Yesterday, ')
+    assert ':37' in english['yesterdayDateTime']
+    assert english['utcToday'] == 'Today'
+    assert english['older'] not in {'Today', 'Yesterday'}
+
+    await _toggle_language(page)
+    portuguese = await get_formatted_dates()
+    assert portuguese['today'] == 'Hoje'
+    assert portuguese['yesterday'] == 'Ontem'
+    assert portuguese['todayDateTime'].startswith('Hoje, ')
+    assert ':37' in portuguese['todayDateTime']
+    assert portuguese['yesterdayDateTime'].startswith('Ontem, ')
+    assert ':37' in portuguese['yesterdayDateTime']
+    assert portuguese['utcToday'] == 'Hoje'
+    assert portuguese['older'] not in {'Hoje', 'Ontem'}

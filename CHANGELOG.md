@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-09-29
+
+### Added
+
+- **Replays catalog improvements**: better search, sorting, "My Matches" filter, and direct player-profile links.
+- **Verified player identity** defaults, locking, and quick suggestions for signed-in users.
+- **Personalized player directory** highlights and profile badges.
+
+### Changed
+
+- **Player profile links and ranking behavior** are now more consistent across results, standings, and replays.
+- **Mobile and desktop UI polish** for headers, filters, and match cards to improve clarity and responsiveness.
+- **Visual consistency updates** for rank badges, avatars, names, and date labels.
+
+### Removed
+
+- **Redundant status text and podium clutter** to keep the UI cleaner on smaller screens.
+
+### Fixed
+
+- **Mobile layout bugs** in reveal and replay views, including clipping and cramped controls.
+- **Autocomplete, persistence, and avatar issues** that caused frustrating UI inconsistencies.
+- **Settings resets and layout instability** after returning home or refreshing the page.
+
 ## [3.2.2] - 2026-09-27
 
 ### Added

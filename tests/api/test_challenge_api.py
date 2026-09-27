@@ -5,9 +5,10 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from conftest import FakeImmichClient, build_client, make_asset
+from conftest import FakeImmichClient, build_client, make_asset, seed_test_metadata
 
 from src.models import UnshuffleAnswerItem
+from src.storage.challenge import deterministic_player_color
 
 
 def _create_mock_assets(count: int = 25) -> list[dict]:
@@ -744,7 +745,6 @@ def test_challenge_individual_player_colors_api(tmp_path: Path) -> None:
     p1_res = client.post(f'/play/api/{token}/start', json={'player_name': 'Alice'}).json()
     assert p1_res['player_name'] == 'Alice'
     assert p1_res['participant_index'] == 0
-    assert p1_res['player_color'] == '#f25f5c'
     assert p1_res['participants'] == ['Alice']
 
     # Detail now reflects Player 1
@@ -756,11 +756,10 @@ def test_challenge_individual_player_colors_api(tmp_path: Path) -> None:
     p2_res = client.post(f'/play/api/{token}/start', json={'player_name': 'Bob'}).json()
     assert p2_res['player_name'] == 'Bob'
     assert p2_res['participant_index'] == 1
-    assert p2_res['player_color'] == '#0f7c7f'
     assert p2_res['participants'] == ['Alice', 'Bob']
 
-    # Colors must be distinct
-    assert p1_res['player_color'] != p2_res['player_color']
+    # Deterministic colors are distinct
+    assert deterministic_player_color('Alice') != deterministic_player_color('Bob')
 
     # 4. Player 1 submits answer for round 0
     ans_res = client.post(
@@ -776,19 +775,18 @@ def test_challenge_individual_player_colors_api(tmp_path: Path) -> None:
         },
     )
     assert ans_res.status_code == 200
-    assert ans_res.json()['player_color'] == '#f25f5c'
 
-    # 5. Leaderboard returns player_color on entries and round guesses
+    # 5. Leaderboard returns entries and round guesses
     lb_res = client.get(f'/play/api/{token}/leaderboard', headers={'X-Player-Token': p1_res['session_token']})
     assert lb_res.status_code == 200
     lb_data = lb_res.json()
     alice_entry = next(e for e in lb_data['leaderboard'] if e['player_name'] == 'Alice')
     bob_entry = next(e for e in lb_data['leaderboard'] if e['player_name'] == 'Bob')
-    assert alice_entry['player_color'] == '#f25f5c'
-    assert bob_entry['player_color'] == '#0f7c7f'
+    assert alice_entry['player_name'] == 'Alice'
+    assert bob_entry['player_name'] == 'Bob'
 
     assert len(lb_data['round_guesses']) >= 1
-    assert lb_data['round_guesses'][0]['player_color'] == '#f25f5c'
+    assert lb_data['round_guesses'][0]['player_name'] == 'Alice'
 
 
 def test_challenge_unshuffle_opponent_guesses_retrieval(tmp_path: Path) -> None:
@@ -1045,3 +1043,72 @@ def test_play_media_scoped_and_flagging(tmp_path: Path) -> None:
         },
     )
     assert flag_fail.status_code == 404
+
+
+def test_challenge_start_normalizes_player_name(tmp_path: Path) -> None:
+    """Verify that challenge start normalizes surrounding and multiple internal spaces."""
+    immich = FakeImmichClient(_create_mock_assets(25))
+    client = build_client(tmp_path, immich)
+
+    create_res = client.post(
+        '/api/challenge/create',
+        json={'creator_name': 'Host', 'game_mode': 'pinpoint', 'round_count': 5},
+    )
+    token = create_res.json()['capability_token']
+
+    start_res = client.post(f'/play/api/{token}/start', json={'player_name': '   Alice    Wonderland   '})
+    assert start_res.status_code == 200
+    assert start_res.json()['player_name'] == 'Alice Wonderland'
+
+
+def test_challenge_start_locks_player_name_when_configured(tmp_path: Path) -> None:
+    """Verify that when CF_LOCK_PLAYER_NAME is enabled, authenticated user names override body."""
+    from starlette.testclient import TestClient
+
+    from src.config import AppSettings
+    from src.main import create_app
+
+    creator_email = 'creator@example.com'
+    user_email = 'verified_player@example.com'
+    settings = AppSettings(
+        immich_server_url='https://placeholder.example.com/api',
+        immich_libraries={'family': 'token'},
+        data_path=tmp_path,
+        auth_mode='cloudflare',
+        cf_creator_emails=frozenset({creator_email}),
+        cf_user_emails=frozenset({user_email}),
+        cf_lock_player_name=True,
+        auto_sync_on_startup=False,
+    )
+    immich = FakeImmichClient(_create_mock_assets(25))
+    app = create_app(settings=settings)
+    app.state.immich_client = immich
+    seed_test_metadata(app.state.metadata_store, 'family', immich)
+
+    with TestClient(app) as test_client:
+        # Create challenge as creator
+        creator_headers = {
+            'cf-access-authenticated-user-email': creator_email,
+            'cf-access-user-name': 'Boss Creator',
+        }
+        create_res = test_client.post(
+            '/api/challenge/create',
+            json={'creator_name': 'Boss Creator', 'game_mode': 'pinpoint', 'round_count': 5},
+            headers=creator_headers,
+        )
+        assert create_res.status_code == 200
+        token = create_res.json()['capability_token']
+
+        # Attempt to start with a forged/different player name in body as user
+        user_headers = {
+            'cf-access-authenticated-user-email': user_email,
+            'cf-access-user-name': 'Verified Hero',
+        }
+        start_res = test_client.post(
+            f'/play/api/{token}/start',
+            json={'player_name': 'Sneaky Impostor'},
+            headers=user_headers,
+        )
+        assert start_res.status_code == 200
+        # Overridden to verified name
+        assert start_res.json()['player_name'] == 'Verified Hero'

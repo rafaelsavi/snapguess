@@ -117,7 +117,7 @@ Grand Reveal Summary (/play/:token/summary)
 - Gold confetti and fanfare audio play upon entry.
 - **Provisional vs. Settled Podium**:
   - If only 1 player has completed the match: A *Provisional Standings* notice explains that rankings may shift as friends finish.
-  - If $\ge 2$ players have finished: Displays a full 3D podium with medals (`🥇 1`, `🥈 2`, `🥉 3`).
+  - If $\ge 2$ players have finished: Displays a full 3D podium with metallic rank badges (`1`, `2`, `3`).
 - **Awards Section**: Awards such as 🎯 *Sniper*, ⏳ *Time Traveler*, and ⚡ *Speed Demon*.
 - **Visual Match Review**:
   - **Pinpoint Mode**: An interactive **Round Carousel** with photo preview, fullscreen SVG lightbox, scatter map of all players' guesses and connector lines, and date comparison chips.

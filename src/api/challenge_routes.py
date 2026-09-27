@@ -8,12 +8,13 @@ Separated into:
 from __future__ import annotations
 
 import asyncio
+import re
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 
 from src.auth.models import Role
-from src.auth.service import require_role
+from src.auth.service import get_current_auth, require_role
 from src.game.challenge_service import ChallengeService, get_challenge_total_rounds
 from src.immich.client import ImmichClient, ImmichClientError
 from src.models import (
@@ -241,6 +242,7 @@ async def get_challenge_detail(
 async def start_challenge(
     capability_token: str,
     body: ChallengeStartRequest,
+    request: Request,
     challenge_store: ChallengeStore = Depends(get_challenge_store),
 ) -> ChallengeStartResponse:
     """Start or resume a player attempt for a challenge.
@@ -252,11 +254,17 @@ async def start_challenge(
     if not challenge:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Challenge not found or expired.')
 
+    player_name = re.sub(r'\s+', ' ', body.player_name.strip())
+    settings = getattr(request.app.state, 'settings', None)
+    if settings and getattr(settings, 'cf_lock_player_name', False):
+        auth = await get_current_auth(request)
+        if auth.authenticated and auth.name and auth.name.strip():
+            player_name = re.sub(r'\s+', ' ', auth.name.strip())
+
     session = await asyncio.to_thread(
         challenge_store.get_or_resume_player_session,
         challenge_id=challenge['challenge_id'],
-        player_name=body.player_name.strip(),
-        player_color=body.player_color,
+        player_name=player_name,
     )
     total_rounds = get_challenge_total_rounds(challenge)
 
@@ -276,7 +284,6 @@ async def start_challenge(
         total_rounds=total_rounds,
         current_round=session['current_round'],
         is_resumed=is_resumed,
-        player_color=session.get('player_color'),
         participant_index=participant_index,
         participants=participants,
     )

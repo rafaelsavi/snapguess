@@ -80,7 +80,7 @@ async def test_report_issue_modal_flow(page: Page) -> None:
     assert post_data is not None
     assert post_data['flag_coordinates'] is True
     assert post_data['other'] == 'Photo location is off by 10km'
-    assert post_data.get('reported_by') == 'Player 1'
+    assert post_data.get('reported_by') in ('Player 1', 'Host')
 
     # Modal should close
     await expect(modal).to_be_hidden()

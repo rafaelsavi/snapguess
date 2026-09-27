@@ -70,6 +70,7 @@ DYNAMIC_IDS = frozenset(
         'pinpoint-reveal-media-frame',
         'profile-back-btn',
         'profile-back-to-hub-btn',
+        'profile-view-all-replays-link',
         'replay-empty-challenge-btn',
         'replay-empty-play-btn',
         'replay-error-back-btn',
@@ -845,9 +846,8 @@ def test_challenges_ui_streamlining_and_minimal_refresh_buttons() -> None:
 
     # 2. Compact total badge is inside challenges-toolbar and updated by updateHeroStats
     assert 'id="challenges-page-total-badge"' in index_html
-    toolbar_section = index_html[
-        index_html.find('class="challenges-toolbar"') : index_html.find('id="challenges-hub-list"')
-    ]
+    toolbar_pos = index_html.find('challenges-toolbar')
+    toolbar_section = index_html[toolbar_pos : index_html.find('id="challenges-hub-list"')]
     assert 'id="challenges-page-total-badge"' in toolbar_section
     assert '_totalBadgeEl.textContent =' in challenges_page_js
 
@@ -1150,6 +1150,8 @@ def test_standardized_leaderboard_elements_and_layout() -> None:
     """
     formatters_js = (JS_DIR / 'modules' / 'formatters.js').read_text(encoding='utf-8')
     leaderboard_js = (JS_DIR / 'modules' / 'leaderboard.js').read_text(encoding='utf-8')
+    app_js = (STATIC_DIR / 'js' / 'app.js').read_text(encoding='utf-8')
+    podium_js = (JS_DIR / 'modules' / 'summary' / 'podium.js').read_text(encoding='utf-8')
     summary_table_js = (JS_DIR / 'modules' / 'summary' / 'table.js').read_text(encoding='utf-8')
     challenge_js = read_challenge_bundle_js()
     challenges_page_js = read_challenges_page_js()
@@ -1160,6 +1162,11 @@ def test_standardized_leaderboard_elements_and_layout() -> None:
     assert 'export function formatRankBadge(rank, options = {})' in formatters_js
     assert 'export function formatRoundsBadge(completedRounds, totalRounds, isFinished = false)' in formatters_js
     assert 'export function formatPlayerCellHtml(playerName, options = {})' in formatters_js
+    assert 'class="player-name-text player-profile-link"' in formatters_js
+    assert 'href="/players/${encodeURIComponent(playerName)}"' in formatters_js
+    assert 'event.target.closest("a.player-profile-link")' in app_js
+    assert 'name.className = "podium-name player-profile-link";' in podium_js
+    assert 'name.href = `/players/${encodeURIComponent(player.player_name)}`;' in podium_js
 
     # 2. leaderboard.js reuses createRankBadge
     assert 'createRankBadge' in leaderboard_js
@@ -1177,6 +1184,7 @@ def test_standardized_leaderboard_elements_and_layout() -> None:
     assert 'formatRoundsBadge' in challenges_page_js
     assert 'formatPlayerCellHtml' in challenges_page_js
     assert 'standings-table-wrap table-scroll' in challenges_page_js
+    assert 'class="mini-podium-name player-profile-link"' in challenges_page_js
 
     # 5. Shared styling in challenge.css
     assert '.standings-table tr.winner-row' in challenge_css
@@ -1902,8 +1910,9 @@ def test_player_autocomplete_extension_and_mobile() -> None:
     assert 'open-upwards' in autocomplete_js
     assert '.player-autocomplete-dropdown.open-upwards' in player_input_css
 
-    # 3. Pointer and touch handling to avoid mobile blur issues
-    assert "el.addEventListener('pointerdown', handleSelect)" in autocomplete_js
+    # 3. Pointer and touch handling to avoid mobile blur issues and click fall-through
+    assert "el.addEventListener('pointerdown'" in autocomplete_js
+    assert "el.addEventListener('click'" in autocomplete_js
     assert "this.dropdownEl.addEventListener('pointerdown'" in autocomplete_js
 
     # 4. CSS styling: full width, high z-index, and mobile touch targets
@@ -1944,6 +1953,33 @@ def test_modal_backdrop_drag_selection_no_close() -> None:
     # Pinpoint help modal
     assert 'isBackdropPress' in pinpoint_js
     assert 'modal.addEventListener("pointerdown"' in pinpoint_js
+
+
+def test_all_dropdowns_and_menus_pointer_click_isolation() -> None:
+    """Verify that all floating dropdowns, autocompletes, and menu popovers across
+    the entire application operate strictly on click events and do not prematurely
+    destroy or close DOM elements on pointerdown/mousedown, preventing click fall-through.
+    """
+    autocomplete_js = (JS_DIR / 'modules' / 'components' / 'player_autocomplete.js').read_text(encoding='utf-8')
+    multi_select_js = (JS_DIR / 'modules' / 'components' / 'multi_select.js').read_text(encoding='utf-8')
+    settings_menu_js = (JS_DIR / 'modules' / 'components' / 'settings_menu.js').read_text(encoding='utf-8')
+
+    # 1. PlayerAutocomplete: blur prevented on pointerdown/mousedown, selection strictly on click with stopPropagation
+    assert "el.addEventListener('pointerdown'" in autocomplete_js
+    assert "el.addEventListener('mousedown'" in autocomplete_js
+    assert "el.addEventListener('click'" in autocomplete_js
+    assert 'this._selectIndex(idx)' in autocomplete_js
+    assert "el.addEventListener('pointerdown', handleSelect)" not in autocomplete_js
+
+    # 2. MultiSelect: options and trigger interact strictly on click, no pointerdown premature close
+    assert 'pointerdown' not in multi_select_js
+    assert 'optEl.addEventListener("click"' in multi_select_js
+    assert 'document.addEventListener("click", this._boundOnDocClick)' in multi_select_js
+
+    # 3. SettingsMenu: gear dropdown toggles and closes strictly on click
+    assert 'pointerdown' not in settings_menu_js
+    assert 'toggleBtn.addEventListener("click", toggleMenu)' in settings_menu_js
+    assert 'document.addEventListener("click"' in settings_menu_js
 
 
 def test_gameplay_auto_scroll_to_game_card() -> None:
@@ -1990,7 +2026,7 @@ def test_match_replays_catalog_player_chips_and_styling() -> None:
 
     # 2. Chips and avatar classes are rendered
     assert 'class="replay-player-chip' in replay_js
-    assert 'class="replay-player-avatar"' in replay_js
+    assert 'class="replay-player-avatar' in replay_js
     assert 'class="replay-player-name"' in replay_js
     assert 'class="replay-winner-crown"' in replay_js
 
@@ -2000,7 +2036,7 @@ def test_match_replays_catalog_player_chips_and_styling() -> None:
     assert '.replay-item-header {' in replay_css
     assert '.replay-item-body {' in replay_css
     assert '.replay-player-chip {' in replay_css
-    assert '.replay-player-chip.is-winner {' in replay_css
+    assert '.replay-player-chip.is-winner {' not in replay_css
     assert '.replay-player-avatar {' in replay_css
     assert '.replay-player-name {' in replay_css
     assert '.replay-winner-crown {' in replay_css
@@ -2377,3 +2413,251 @@ def test_streamlined_share_direct_links_and_dead_key_removal() -> None:
     assert 'Replay link copied to clipboard!' in en_json
     assert 'Link do replay copiado para a área de transferência!' in pt_br_js
     assert 'Link do replay copiado para a área de transferência!' in pt_json
+
+
+def test_player_name_prefill_and_cf_identity_standardization() -> None:
+    """Verify player name defaulting, persistence, and Cloudflare Access identity lock."""
+    landing_js = (JS_DIR / 'modules' / 'challenge' / 'landing.js').read_text(encoding='utf-8')
+    formatters_js = (JS_DIR / 'modules' / 'formatters.js').read_text(encoding='utf-8')
+    setup_filters_js = (JS_DIR / 'modules' / 'setup_filters.js').read_text(encoding='utf-8')
+    state_js = (JS_DIR / 'modules' / 'state.js').read_text(encoding='utf-8')
+    app_js = (JS_DIR / 'app.js').read_text(encoding='utf-8')
+    challenge_css = (STATIC_DIR / 'css' / 'components' / 'challenge.css').read_text(encoding='utf-8')
+    replay_js = (JS_DIR / 'modules' / 'screens' / 'replay.js').read_text(encoding='utf-8')
+
+    # 1. Shared resolver applies identity, storage, and fallback precedence
+    assert 'export const LAST_PLAYER_NAME_KEY = "immich_quiz_last_player_name";' in landing_js
+    assert 'export function resolvePlayerName(storageKey = null, fallbackFn = null)' in formatters_js
+    assert 'state.auth?.name' in formatters_js
+    assert 'state.auth?.email' in formatters_js
+    assert 'localStorage.getItem(storageKey)' in formatters_js
+    assert 'fallbackFn()' in formatters_js
+    resolver_body = formatters_js.split('export function resolvePlayerName', 1)[1]
+    assert resolver_body.index('if (state.auth?.name') < resolver_body.index('if (state.auth?.email')
+    assert resolver_body.index('if (state.auth?.email') < resolver_body.index('if (storageKey)')
+    assert resolver_body.index('if (storageKey)') < resolver_body.index('if (typeof fallbackFn')
+    assert 'resolvePlayerName(LAST_PLAYER_NAME_KEY)' in landing_js
+    assert 'localStorage.setItem(LAST_PLAYER_NAME_KEY, name);' in landing_js
+    assert 'resolvePlayerName(REPLAY_LAST_PLAYER_NAME_KEY, getLegacyCurrentPlayerName)' in replay_js
+    assert 'const REPLAY_LAST_PLAYER_NAME_KEY = "immich_quiz_last_player_name";' in replay_js
+    assert 'localStorage.getItem("immich_quiz_players")' in replay_js
+
+    # 2. Challenge landing markup supports locked identity and prefilled default
+    assert 'isLocked' in landing_js
+    assert 'challenge-name-locked-badge' in landing_js
+    assert 'challenge.verified_identity' in landing_js
+    assert 'readonly' in landing_js
+
+    # 3. Setup filters defaults initial players to authenticated name
+    assert '(state.auth?.name && state.auth.name.trim()) || "Player 1"' in setup_filters_js
+
+    # 4. Global state tracks lock_player_name from auth/me
+    assert 'lock_player_name: false' in state_js
+    assert 'state.auth.lock_player_name = Boolean(authData.lock_player_name);' in app_js
+
+    # 5. CSS styles locked name badge and readonly input styling
+    assert '.challenge-name-locked-badge' in challenge_css
+    assert '.challenge-form input.input[readonly]' in challenge_css
+
+
+def test_standings_table_player_name_width_and_no_premature_truncation() -> None:
+    """Verify that standings tables and round date tables do not choke player names
+    with artificial 75px/120px/125px caps, formatPlayerCellHtml adds a title tooltip,
+    and highlights the active player with the golden ring avatar without redundant text clutter.
+    """
+    challenge_css = (STATIC_DIR / 'css' / 'components' / 'challenge.css').read_text(encoding='utf-8')
+    formatters_js = (JS_DIR / 'modules' / 'formatters.js').read_text(encoding='utf-8')
+
+    # 1. No artificial 125px or 120px cap on player cell or col-player in mobile tables
+    assert '#grand-reveal-table .player-cell {\n    gap: 0.35rem;\n    max-width: 125px;' not in challenge_css
+    assert '.standings-table .col-player {\n    max-width: 120px;' not in challenge_css
+    assert '#grand-reveal-table .player-name-text {\n    max-width: 75px;' not in challenge_css
+
+    # 2. Generous mobile max-width and min-width allowing full names to render cleanly
+    assert '#grand-reveal-table .col-player {\n    min-width: 135px;\n  }' in challenge_css
+    assert '.standings-table .col-player {\n    min-width: 135px;\n  }' in challenge_css
+    assert '#grand-reveal-table .player-name-text {\n    max-width: 150px;' in challenge_css
+    assert '.challenge-you-tag' not in challenge_css
+
+    # 3. formatPlayerCellHtml includes title tooltip and user-gold-avatar highlighting without text clutter
+    assert 'title="${escapeHtml(playerName)}"' in formatters_js
+    assert 'user-gold-avatar' in formatters_js
+    assert 'challenge-you-tag' not in formatters_js
+
+
+def test_player_directory_and_profile_current_user_personalization() -> None:
+    """Verify that the player directory pins the current authenticated user to the top,
+    applies visual-first highlighting without adding text clutter to names,
+    and displays verified and you badges in the dedicated profile view.
+    """
+    stats_js = (JS_DIR / 'modules' / 'screens' / 'stats.js').read_text(encoding='utf-8')
+    stats_css = (STATIC_DIR / 'css' / 'components' / 'stats.css').read_text(encoding='utf-8')
+
+    # 1. Pinned to top logic in renderPlayerDirectory
+    assert 'const currentUserName = state.auth?.name?.trim() || "";' in stats_js
+    assert 'players.findIndex(' in stats_js
+    assert 'displayPlayers = [' in stats_js
+    assert 'players[userIndex],' in stats_js
+
+    # 2. Visual-first card recognition on directory cards without text clutter in the name
+    assert 'isCurrentUser ? "is-current-user" : ""' in stats_js
+    assert '<div class="player-card ${isCurrentUser ? "is-current-user" : ""}"' in stats_js
+    assert '<div class="player-card-avatar ${isCurrentUser ? "is-current-user" : ""}"' in stats_js
+    assert '${isCurrentUser ? `<span class="player-card-avatar-badge" aria-hidden="true">👤</span>` : ""}' in stats_js
+    # Ensure card name header does NOT append (You) text
+    assert '<h3 class="player-card-name">${escapeHtml(p.player_name)}</h3>' in stats_js
+
+    # 3. Dedicated profile view badges (You & Verified Account)
+    assert 'player.player_name.trim().toLowerCase() === state.auth.name.trim().toLowerCase()' in stats_js
+    assert (
+        '${isCurrentUser ? `<span class="player-hero-badge is-you">👤 ${t("stats.you_badge")}</span>` : ""}' in stats_js
+    )
+    assert (
+        '${isCurrentUser ? `<span class="player-hero-badge is-verified">✓ ${t("stats.verified_account")}</span>` : ""}'
+        in stats_js
+    )
+
+    # 4. CSS tokens and dark mode support
+    assert '.player-card.is-current-user {' in stats_css
+    assert '.player-card-avatar.is-current-user {' in stats_css
+    assert '.player-card-avatar-badge {' in stats_css
+    assert '.player-hero-badge.is-you {' in stats_css
+    assert '.player-hero-badge.is-verified {' in stats_css
+    assert '[data-theme="dark"] .player-card.is-current-user {' in stats_css
+
+
+def test_user_golden_avatar_architecture() -> None:
+    """Verify that the user golden avatar architecture is completely centralized,
+    defined in tokens and components/avatar.css, and implemented across all views,
+    tables, cards, dropdowns, headers, toasts, and inputs without ad-hoc duplication.
+    """
+    variables_css = (STATIC_DIR / 'css' / 'base' / 'variables.css').read_text(encoding='utf-8')
+    avatar_css = (STATIC_DIR / 'css' / 'components' / 'avatar.css').read_text(encoding='utf-8')
+    style_css = (STATIC_DIR / 'css' / 'style.css').read_text(encoding='utf-8')
+    arch_md = (Path(__file__).parents[2] / 'docs' / 'ARCHITECTURE.md').read_text(encoding='utf-8')
+    formatters_js = (JS_DIR / 'modules' / 'formatters.js').read_text(encoding='utf-8')
+    app_js = (JS_DIR / 'app.js').read_text(encoding='utf-8')
+    player_input_js = (JS_DIR / 'modules' / 'components' / 'player_input.js').read_text(encoding='utf-8')
+    single_player_input_js = (JS_DIR / 'modules' / 'components' / 'single_player_input.js').read_text(encoding='utf-8')
+    autocomplete_js = (JS_DIR / 'modules' / 'components' / 'player_autocomplete.js').read_text(encoding='utf-8')
+    landing_js = (JS_DIR / 'modules' / 'challenge' / 'landing.js').read_text(encoding='utf-8')
+    challenges_js = (JS_DIR / 'modules' / 'screens' / 'challenges.js').read_text(encoding='utf-8')
+    replay_js = (JS_DIR / 'modules' / 'screens' / 'replay.js').read_text(encoding='utf-8')
+    activity_toast_js = (JS_DIR / 'modules' / 'components' / 'activity_toast.js').read_text(encoding='utf-8')
+
+    # 1. CSS tokens in light and dark mode
+    assert '--user-gold: #d97706;' in variables_css
+    assert '--user-gold-ring:' in variables_css
+    assert '--user-gold-ring-sm:' in variables_css
+    assert '--user-gold-ring-lg:' in variables_css
+    assert '--user-gold: #f59e0b;' in variables_css  # dark mode
+
+    # 2. Centralized avatar stylesheet imported and documented
+    assert '@import "./components/avatar.css";' in style_css
+    assert 'avatar.css' in arch_md
+    assert '.user-gold-avatar,' in avatar_css
+    assert 'var(--user-gold-ring)' in avatar_css
+    assert 'var(--user-gold-ring-sm)' in avatar_css
+    assert 'var(--user-gold-ring-lg)' in avatar_css
+
+    # 3. Tables & Badges: formatPlayerCellHtml & playerBadge
+    assert 'legend-badge is-current-user user-gold-avatar' in formatters_js
+
+    # 4. Header identity badge
+    assert 'identity-avatar user-gold-avatar' in app_js
+
+    # 5. Inputs & Setup
+    assert 'this.avatarPreview.classList.toggle("user-gold-avatar", isAuth);' in single_player_input_js
+    assert 'user-gold-avatar' in player_input_js
+    assert "player-autocomplete-avatar${item.is_auth ? ' is-auth user-gold-avatar' : ''}" in autocomplete_js
+
+    # 6. Challenges
+    assert 'user-gold-avatar' in landing_js
+    assert 'mini-podium-avatar${isCurrentUser ? " is-current-user user-gold-avatar" : ""}' in challenges_js
+
+    # 7. Replay & Toasts
+    assert 'replay-player-avatar${isCurrentUser ? " is-current-user user-gold-avatar" : ""}' in replay_js
+    assert 'activity-toast-avatar${isCurrentUser ? " is-current-user user-gold-avatar" : ""}' in activity_toast_js
+
+
+def test_desktop_header_navigation_and_identity_order() -> None:
+    """Verify that on desktop viewports (> 760px), the player identity badge is positioned
+    to the left of all navigation page buttons, with settings anchored on the far right.
+    """
+    layout_css = (STATIC_DIR / 'css' / 'base' / 'layout.css').read_text(encoding='utf-8')
+    arch_md = (Path(__file__).parents[2] / 'docs' / 'ARCHITECTURE.md').read_text(encoding='utf-8')
+    index_html = (STATIC_DIR / 'index.html').read_text(encoding='utf-8')
+
+    # 1. HTML markup defines header elements
+    assert 'id="identity-badge"' in index_html
+    assert 'class="header-nav-bar"' in index_html
+    assert 'id="settings-dropdown"' in index_html
+
+    # 2. CSS order ensures identity badge is to the left of all page buttons
+    assert '@media (min-width: 761px)' in layout_css
+    assert '.header-utility-actions {\n    display: contents;\n  }' in layout_css
+    assert '#identity-badge {\n    order: 2;\n  }' in layout_css
+    assert '.header-nav-bar {\n    order: 3;\n  }' in layout_css
+    assert '#settings-dropdown {\n    order: 5;\n  }' in layout_css
+
+    # 3. Documented in ARCHITECTURE.md
+    assert 'order: 2`: Player identity badge (`#identity-badge`)' in arch_md
+    assert 'order: 3`: Navigation links (`.header-nav-bar`)' in arch_md
+    assert 'order: 5`: Settings menu (`#settings-dropdown`)' in arch_md
+
+
+def test_photo_caption_two_row_folding_layout() -> None:
+    """Verify that photo captions fold into 2 clean rows when date + location do not fit
+    on a single line, placing the date on row 1 (left), report flag on row 1 (right),
+    and location on row 2 (left) with no third row overflow.
+    """
+    round_stage_css = (STATIC_DIR / 'css' / 'components' / 'round_stage.css').read_text(encoding='utf-8')
+    round_stage_js = (JS_DIR / 'modules' / 'components' / 'round_stage.js').read_text(encoding='utf-8')
+
+    # 1. CSS grid declarations for folded-two-rows layout
+    assert '.reveal-actual-row.folded-two-rows' in round_stage_css
+    assert 'grid-template-columns: 1fr auto !important;' in round_stage_css
+    assert 'grid-template-rows: auto auto !important;' in round_stage_css
+    assert 'display: contents !important;' in round_stage_css
+
+    # 2. Row 1: Date on left, Report flag on right
+    assert (
+        'grid-column: 1 / 2 !important;\n  grid-row: 1 / 2 !important;\n  justify-self: start !important;'
+        in round_stage_css
+    )
+    assert (
+        'grid-column: 2 / 3 !important;\n  grid-row: 1 / 2 !important;\n  justify-self: end !important;'
+        in round_stage_css
+    )
+
+    # 3. Row 2: Location on left spanning across
+    assert (
+        'grid-column: 1 / -1 !important;\n  grid-row: 2 / 3 !important;\n  justify-self: start !important;'
+        in round_stage_css
+    )
+
+    # 4. JS controller integrates dynamic measurement and ResizeObserver
+    assert 'updateCaptionFolding()' in round_stage_js
+    assert 'this._captionObserver = new ResizeObserver' in round_stage_js
+    assert 'this.revealActualRow.classList.toggle("folded-two-rows", shouldFold);' in round_stage_js
+    assert 'this._captionObserver.disconnect()' in round_stage_js
+
+
+def test_replay_round_stepper_button_sizing() -> None:
+    """Verify that replay previous and next round buttons meet touch target standards (>= 38px)
+    and scale with prominent icons across desktop and mobile viewports.
+    """
+    replay_css = (STATIC_DIR / 'css' / 'components' / 'replay.css').read_text(encoding='utf-8')
+
+    # 1. Desktop sizing: 40px width/height and 20px icons
+    assert 'width: 40px;' in replay_css
+    assert 'height: 40px;' in replay_css
+    assert 'width: 20px;' in replay_css
+    assert 'height: 20px;' in replay_css
+
+    # 2. Selectors include explicit replay buttons and generic icon control
+    assert '.btn-icon-control,\n.replay-prev-round-btn,\n.replay-next-round-btn' in replay_css
+
+    # 3. Mobile touch-target compliance: at least 38px
+    assert 'width: 38px;' in replay_css
+    assert 'height: 38px;' in replay_css

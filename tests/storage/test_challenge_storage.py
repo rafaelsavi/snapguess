@@ -12,7 +12,7 @@ from src.models import (
     RoundLength,
     UnshuffleAnswerItem,
 )
-from src.storage.challenge import PLAYER_COLORS, ChallengeStore
+from src.storage.challenge import ChallengeStore, deterministic_player_color
 from src.storage.db import DatabaseManager
 from src.storage.leaderboard import LeaderboardStore
 
@@ -618,28 +618,27 @@ def test_challenge_individual_player_colors(tmp_path: Path) -> None:
     )
     ch_id = ch['challenge_id']
 
-    # 1. First player gets PLAYER_COLORS[0]
+    # 1. First player gets assigned session
     s1 = store.get_or_resume_player_session(ch_id, 'Alice')
-    assert s1['player_color'] == PLAYER_COLORS[0]
     assert s1['participant_index'] == 0
 
-    # 2. Second player gets PLAYER_COLORS[1]
+    # 2. Second player gets assigned session
     s2 = store.get_or_resume_player_session(ch_id, 'Bob')
-    assert s2['player_color'] == PLAYER_COLORS[1]
     assert s2['participant_index'] == 1
 
-    # 3. Third player gets PLAYER_COLORS[2]
+    # 3. Third player gets assigned session
     s3 = store.get_or_resume_player_session(ch_id, 'Charlie')
-    assert s3['player_color'] == PLAYER_COLORS[2]
     assert s3['participant_index'] == 2
 
-    # Verify colors are distinct
-    assert len({s1['player_color'], s2['player_color'], s3['player_color']}) == 3
+    # Deterministic colors are distinct
+    c1 = deterministic_player_color('Alice')
+    c2 = deterministic_player_color('Bob')
+    c3 = deterministic_player_color('Charlie')
+    assert len({c1, c2, c3}) == 3
 
-    # 4. Resuming Alice's session returns her exact saved color
+    # 4. Resuming Alice's session returns existing session token
     s1_resume = store.get_or_resume_player_session(ch_id, 'Alice')
     assert s1_resume['session_token'] == s1['session_token']
-    assert s1_resume['player_color'] == PLAYER_COLORS[0]
 
     # 5. Participants list is ordered
     participants = store.get_challenge_participants(ch_id)
@@ -842,7 +841,7 @@ def test_player_session_case_insensitive_resume(tmp_path: Path) -> None:
     ch_id = res['challenge_id']
 
     # Player joins as "Alice"
-    s1 = store.get_or_resume_player_session(ch_id, 'Alice', player_color='#f25f5c')
+    s1 = store.get_or_resume_player_session(ch_id, 'Alice')
     assert s1['current_round'] == 0
     tok = s1['session_token']
 

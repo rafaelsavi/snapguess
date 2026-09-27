@@ -3,6 +3,7 @@
  * Displays floating glassmorphism notifications when opponents submit answers or finish rounds.
  */
 
+import { state } from "../state.js";
 import { playerInitial, playerColor, escapeHtml } from "../formatters.js";
 
 let _containerEl = null;
@@ -57,11 +58,17 @@ export function showActivityToast({
   toast.className = "activity-toast";
   toast.style.setProperty("--toast-accent", color);
 
-  toast.innerHTML = `
-    <div class="activity-toast-leading">
-      <span class="activity-toast-icon" aria-hidden="true">${escapeHtml(icon)}</span>
-      <span class="activity-toast-avatar" style="background: ${escapeHtml(color)};" aria-hidden="true">${escapeHtml(initial)}</span>
-    </div>
+    const isCurrentUser = Boolean(
+      state.auth?.name &&
+      playerName &&
+      playerName.trim().toLowerCase() === state.auth.name.trim().toLowerCase()
+    );
+
+    toast.innerHTML = `
+      <div class="activity-toast-leading">
+        <span class="activity-toast-icon" aria-hidden="true">${escapeHtml(icon)}</span>
+        <span class="activity-toast-avatar${isCurrentUser ? " is-current-user user-gold-avatar" : ""}" style="background: ${escapeHtml(color)};" aria-hidden="true">${escapeHtml(initial)}</span>
+      </div>
     <div class="activity-toast-body">
       <div class="activity-toast-title">${escapeHtml(title)}</div>
       ${subtitle ? `<div class="activity-toast-subtitle">${escapeHtml(subtitle)}</div>` : ""}

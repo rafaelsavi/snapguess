@@ -456,13 +456,13 @@
 }
 
 @media (max-width: 600px) {
-  .reveal-actual-row {
+  .reveal-actual-row:not(.round-photo-caption .reveal-actual-row):not(.replay-photo-caption .reveal-actual-row) {
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
   }
 
-  .reveal-actual-row .btn-report-discrete {
+  .reveal-actual-row:not(.round-photo-caption .reveal-actual-row):not(.replay-photo-caption .reveal-actual-row) .btn-report-discrete {
     margin-left: auto;
   }
 }
@@ -506,24 +506,33 @@
   font-size: 0.75rem;
 }
 
-/* Replay discrete report button: icon only with tooltip */
+/* Discrete photo report button: icon only with tooltip */
+#reveal-report-btn,
+#shuffle-report-btn,
 #replay-report-btn,
-[id$="replay-report-btn"],
+[id$="report-btn"],
+.round-photo-report-btn,
+.btn-report-discrete,
 .round-photo-report-btn-icon-only {
-  width: 28px !important;
-  height: 28px !important;
-  min-width: 28px !important;
-  max-width: 28px !important;
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  max-width: 26px !important;
   padding: 0 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 0 !important;
   border-radius: 6px !important;
+  flex-shrink: 0 !important;
 }
 
+#reveal-report-btn .report-discrete-text,
+#shuffle-report-btn .report-discrete-text,
 #replay-report-btn .report-discrete-text,
-[id$="replay-report-btn"] .report-discrete-text,
+[id$="report-btn"] .report-discrete-text,
+.round-photo-report-btn .report-discrete-text,
+.btn-report-discrete .report-discrete-text,
 .round-photo-report-btn-icon-only .report-discrete-text {
   display: none !important;
 }

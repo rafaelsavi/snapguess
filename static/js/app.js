@@ -35,7 +35,7 @@ import {
 } from "./modules/maps.js";
 import { loadLeaderboard, handleSortClick, updateLeaderboardScope, renderLeaderboard } from "./modules/leaderboard.js";
 import { clearTimer, startTimer, refreshTimerLanguage } from "./modules/timer.js";
-import { refreshRoundMeta } from "./modules/formatters.js";
+import { playerInitial, playerColor, escapeHtml, refreshRoundMeta } from "./modules/formatters.js";
 import { bindGlobalShortcuts, markShortcutCooldown } from "./modules/shortcuts.js";
 import { shareMatchSummary, showShareToast } from "./modules/summary/share.js";
 import {
@@ -62,7 +62,7 @@ import {
 import { loadQuestion, submitAnswer, refreshGameLanguage } from "./modules/screens/game.js";
 import { handleNextRound, refreshRevealLanguage } from "./modules/screens/reveal.js";
 import { initReportModal } from "./modules/components/report_modal.js";
-import { initAdminModal, openAdminModal } from "./modules/admin.js";
+import { initAdminModal, openAdminModal, syncCreatorName } from "./modules/admin.js";
 import {
   showMatchSummaryByMatchId,
   showGameEndedCard,
@@ -219,14 +219,14 @@ async function handleRoute(route) {
     case RouteType.PLAYERS: {
       challenge.reset();
       clearActiveMatchSession();
-      showPlayerDirectory();
+      showPlayerDirectory(route.query?.search || null);
       break;
     }
 
     case RouteType.REPLAYS: {
       challenge.reset();
       clearActiveMatchSession();
-      showReplaysCatalog();
+      showReplaysCatalog(route.query?.player || null);
       break;
     }
 
@@ -527,6 +527,7 @@ bindGlobalShortcuts({
 
 function refreshActiveScreenLanguage() {
   applyLanguage();
+  applyAuthUi();
   updateLanguageUi();
   updateAudioUi();
   updateThemeUi();
@@ -643,15 +644,40 @@ function applyAuthUi() {
         state.auth.name ||
         (state.auth.email ? state.auth.email.split("@")[0] : (role === "creator" ? "Host" : "Player"));
       const roleLabel = role === "creator" ? t("auth.role_creator") : t("auth.role_player");
-      el.identityBadge.textContent = `👤 ${displayName} · ${roleLabel}`;
+      const roleI18nKey = role === "creator" ? "auth.role_creator" : "auth.role_player";
+      const initial = playerInitial(displayName);
+      const color = playerColor(displayName);
+      el.identityBadge.innerHTML = `
+        <span class="identity-avatar user-gold-avatar" style="background:${escapeHtml(color)};">${escapeHtml(initial)}</span>
+        <span class="identity-name">${escapeHtml(displayName)}</span>
+        <span class="identity-sep">·</span>
+        <span class="identity-role" data-i18n="${roleI18nKey}">${escapeHtml(roleLabel)}</span>
+      `;
       el.identityBadge.classList.remove("hidden");
     }
   }
+
+  syncCreatorName();
 }
 
 /**
  * Wire up interactive events for #home-card (challenge code join + quick links).
  */
+function initPlayerProfileLinks() {
+  document.addEventListener("click", (event) => {
+    const link = event.target instanceof Element
+      ? event.target.closest("a.player-profile-link")
+      : null;
+    if (!link) return;
+
+    const href = link.getAttribute("href");
+    if (!href || !href.startsWith("/players/")) return;
+
+    event.preventDefault();
+    navigate(href);
+  });
+}
+
 function initHomeCard() {
   function handleJoin() {
     const raw = el.homeChallengeCodeInput ? el.homeChallengeCodeInput.value.trim() : "";
@@ -734,6 +760,20 @@ function initHomeCard() {
   initSettingsMenu();
   initTheme();
 
+  if (el.homeNavBtn) {
+    el.homeNavBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      navigate("/");
+    });
+  }
+
+  if (el.challengesNavBtn) {
+    el.challengesNavBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      navigate("/challenges");
+    });
+  }
+
   if (el.statsNavBtn) {
     el.statsNavBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -753,6 +793,7 @@ function initHomeCard() {
   refreshActiveScreenLanguage();
   syncFullscreenButtons();
   initHomeCard();
+  initPlayerProfileLinks();
 
   setNavigationGuard((toRoute, fromRoute) => {
     if (!canAccessRoute(toRoute.type, state.auth.role)) {
@@ -791,6 +832,7 @@ function initHomeCard() {
     state.auth.email = authData.email || null;
     state.auth.name = authData.name || null;
     state.auth.authenticated = Boolean(authData.authenticated);
+    state.auth.lock_player_name = Boolean(authData.lock_player_name);
   } catch (err) {
     console.warn("Auth fetch failed, defaulting to creator:", err);
     state.auth.role = "creator";
@@ -818,7 +860,7 @@ function initHomeCard() {
   // Initialize router immediately so non-lobby routes display instantly without flash of lobby
   initRouter(handleRoute);
 
-  const initialRoute = parseRoute(window.location.pathname);
+  const initialRoute = parseRoute(window.location.pathname + window.location.search);
   if (initialRoute.type === RouteType.LOBBY) {
     ensureLobbyInitialized().catch((err) => console.warn("Lobby startup error:", err));
   }

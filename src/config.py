@@ -163,6 +163,7 @@ class AppSettings:
     auth_mode: str = 'disabled'
     cf_creator_emails: frozenset[str] = frozenset()
     cf_user_emails: frozenset[str] = frozenset()
+    cf_lock_player_name: bool = False
 
     # 4. Global Filter Safeguards
     date_lower_bound: date | None = None
@@ -319,6 +320,8 @@ def load_settings() -> AppSettings:
         kwargs['cf_creator_emails'] = _parse_comma_set(val)
     if val := _get_env('CF_USER_EMAILS'):
         kwargs['cf_user_emails'] = _parse_comma_set(val)
+    if val := _get_env('CF_LOCK_PLAYER_NAME'):
+        kwargs['cf_lock_player_name'] = _parse_bool(val, 'CF_LOCK_PLAYER_NAME')
 
     # Date Bounds
     if val := _get_env('DATE_LOWER_BOUND', 'FETCH_PHOTOS_DATE_LOWER_BOUND'):

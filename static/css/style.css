@@ -4,6 +4,7 @@
 @import "./base/layout.css";
 
 /* Shared Component styles */
+@import "./components/avatar.css";
 @import "./components/buttons.css";
 @import "./components/cards.css";
 @import "./components/maps.css";

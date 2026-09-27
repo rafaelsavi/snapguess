@@ -121,16 +121,27 @@ const ROUTE_DEFINITIONS = [
  * @returns {string}
  */
 export function normalizePath(pathname) {
-  return (pathname || "/").replace(/\/+$/, "") || "/";
+  if (!pathname) return "/";
+  const [path, query] = pathname.split("?");
+  const cleanPath = path.replace(/\/+$/, "") || "/";
+  return query !== undefined ? `${cleanPath}?${query}` : cleanPath;
 }
 
 /**
  * Match a pathname against registered route patterns.
  * @param {string} pathname
- * @returns {{ type: string, params: Record<string, string>, path: string }}
+ * @returns {{ type: string, params: Record<string, string>, query: Record<string, string>, path: string }}
  */
 export function parseRoute(pathname) {
-  const path = normalizePath(pathname);
+  const full = normalizePath(pathname);
+  const [path, queryString] = full.split("?");
+  const query = {};
+  if (queryString) {
+    const sp = new URLSearchParams(queryString);
+    for (const [k, v] of sp.entries()) {
+      query[k] = v;
+    }
+  }
 
   for (const def of ROUTE_DEFINITIONS) {
     const match = path.match(def.pattern);
@@ -147,12 +158,13 @@ export function parseRoute(pathname) {
       return {
         type: def.type,
         params,
+        query,
         path: def.canonicalPath ? def.canonicalPath(params) : path,
       };
     }
   }
 
-  return { type: RouteType.UNKNOWN, params: {}, path };
+  return { type: RouteType.UNKNOWN, params: {}, query, path };
 }
 
 /**
@@ -180,9 +192,10 @@ export function navigate(path, { replace = false, state = null, force = false, s
     }
   }
 
+  const currentBrowserPath = window.location.pathname + window.location.search;
   if (replace) {
     history.replaceState(state, "", targetPath);
-  } else if (window.location.pathname !== targetPath) {
+  } else if (currentBrowserPath !== targetPath && window.location.pathname !== targetPath) {
     history.pushState(state, "", targetPath);
   }
 

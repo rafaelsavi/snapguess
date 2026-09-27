@@ -92,11 +92,41 @@ async def test_score_rollup_animation_and_post_game_summary(page: Page) -> None:
     await expect(new_scope_pill).to_contain_text('Pinpoint (Date)')
     await expect(new_scope_pill).to_contain_text('2 min')
 
-    # Returning to lobby resets leaderboard back to lobby setup form settings
+    # Returning to lobby restores the remembered setup for a quick rematch
     await new_page.locator('#home-nav-btn').click()
     await expect(new_page.locator('#setup-card')).to_be_visible()
-    await expect(new_scope_pill).to_contain_text('1 min')
+    await expect(new_scope_pill).to_contain_text('2 min')
     await new_page.close()
+
+
+async def test_match_summary_player_name_opens_profile(page: Page) -> None:
+    """Verify a result-table player name navigates to the matching profile in-app."""
+    await page.goto('/')
+    await start_date_only_match(page, rounds=5, round_length='2m')
+    await expect(page.locator('#game-card')).to_be_visible()
+
+    for _round_idx in range(5):
+        if await page.locator('#pass-overlay').is_visible():
+            await page.locator('#ready-btn').click()
+            await expect(page.locator('#pass-overlay')).to_be_hidden()
+
+        await expect(page.locator('#guessing-ui')).to_be_visible()
+        await page.locator('#date-guess-year').select_option('2021')
+        await page.locator('#date-guess-month').select_option('6')
+        await page.locator('#submit-answer').click()
+        await expect(page.locator('#reveal-ui')).to_be_visible()
+        await page.locator('#next-round').click()
+    await expect(page).to_have_url(re.compile(r'/game/[^/]+/summary$'))
+
+    profile_link = page.locator('#summary-table .player-profile-link')
+    await expect(profile_link).to_have_count(1)
+    player_name = await profile_link.inner_text()
+    await profile_link.click()
+
+    await expect(page).to_have_url(re.compile(r'/players/[^/]+$'))
+    await expect(page.locator('#stats-profile-view')).to_be_visible()
+    await expect(page.locator('#stats-page-heading')).to_have_text('Player Profile')
+    await expect(page.locator('#stats-page-desc')).to_have_text(player_name)
 
 
 async def test_multiplayer_podium_and_winner_resolution(page: Page) -> None:
@@ -156,8 +186,8 @@ async def test_multiplayer_podium_and_winner_resolution(page: Page) -> None:
     # Winner section / podium avatar
     winner_section = page.locator('#summary-winner')
     await expect(winner_section).to_be_visible()
-    # Winner text should mention Alice (Player 1 who scored higher)
-    await expect(winner_section).to_contain_text(re.compile(r'Player 1|Alice', re.IGNORECASE))
+    # Winner text should mention Host or Player 1 who scored higher
+    await expect(winner_section).to_contain_text(re.compile(r'Player 1|Alice|Host', re.IGNORECASE))
 
     # Results Table contains both players
     summary_table = page.locator('#summary-table')

@@ -27,7 +27,7 @@ import { renderSummaryTable } from "../summary/table.js";
 import { showCard, clearRevealAnimation } from "./common.js";
 import { ReviewDeck } from "../components/review_deck.js";
 import { renderMatchMeta } from "../components/match_meta.js";
-import { escapeHtml } from "../formatters.js";
+import { escapeHtml, playerColor } from "../formatters.js";
 import { renderShareUrlContainerHtml, setupShareBox } from "../components/share_box.js";
 import { challengeSession } from "../challenge/session.js";
 
@@ -244,7 +244,7 @@ export function replayToSummary(replayData) {
       rank: (typeof p === "object" && p.rank) ? p.rank : (idx + 1),
       max_possible_score: (replayData.rounds || 1) * 10000,
       accuracy_percentage: typeof p === "object" ? p.accuracy_percentage : null,
-      avatar_color: typeof p === "object" ? (p.avatar_color || p.player_color) : null,
+      avatar_color: typeof p === "object" ? (p.avatar_color || playerColor(p.player_name)) : playerColor(p),
       completed_rounds: typeof p === "object" ? p.completed_rounds : null,
       is_finished: typeof p === "object" ? p.is_finished : null,
     }));
@@ -257,7 +257,7 @@ export function replayToSummary(replayData) {
       date_score: g.date_score,
       rank: idx + 1,
       max_possible_score: (replayData.rounds || (replayData.rounds_data ? replayData.rounds_data.length : 1)) * 10000,
-      avatar_color: g.player_color,
+      avatar_color: playerColor(g.player_name),
     }));
   }
 

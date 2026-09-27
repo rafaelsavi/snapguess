@@ -24,6 +24,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
+  margin: 0.1rem 0 0.25rem 0;
 }
 
 .replay-round-stepper {
@@ -31,7 +32,7 @@
   align-items: center;
   gap: 0.5rem;
   background: var(--bg-surface-secondary, #f1f5f9);
-  padding: 0.28rem 0.6rem;
+  padding: 0.25rem 0.55rem;
   border-radius: 999px;
   border: 1px solid var(--border-color, #e2e8f0);
   touch-action: pan-y;
@@ -43,32 +44,46 @@
   font-size: 0.88rem;
   font-weight: 700;
   color: var(--text-color, #0f172a);
-  min-width: 95px;
+  min-width: 88px;
   text-align: center;
   user-select: none;
 }
 
-.btn-icon-control {
+.btn-icon-control,
+.replay-prev-round-btn,
+.replay-next-round-btn {
   background: var(--bg-card, #ffffff);
   border: 1px solid var(--border-color, #cbd5e1);
   border-radius: 50%;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: var(--text-color, #1e293b);
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
-.btn-icon-control:hover:not(:disabled) {
+.btn-icon-control svg,
+.replay-prev-round-btn svg,
+.replay-next-round-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.btn-icon-control:hover:not(:disabled),
+.replay-prev-round-btn:hover:not(:disabled),
+.replay-next-round-btn:hover:not(:disabled) {
   border-color: var(--accent, #0f7c7f);
   color: var(--accent, #0f7c7f);
   transform: scale(1.05);
 }
 
-.btn-icon-control:disabled {
+.btn-icon-control:disabled,
+.replay-prev-round-btn:disabled,
+.replay-next-round-btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
@@ -153,19 +168,32 @@
     padding: 0.35rem 0.7rem;
   }
 
+  .replay-header-controls {
+    margin: 0 0 0.2rem 0;
+  }
+
   .replay-round-stepper {
-    padding: 0.2rem 0.4rem;
-    gap: 0.35rem;
+    padding: 0.2rem 0.45rem;
+    gap: 0.4rem;
   }
 
   .replay-round-indicator {
     min-width: 80px;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
   }
 
-  .btn-icon-control {
-    width: 30px;
-    height: 30px;
+  .btn-icon-control,
+  .replay-prev-round-btn,
+  .replay-next-round-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .btn-icon-control svg,
+  .replay-prev-round-btn svg,
+  .replay-next-round-btn svg {
+    width: 18px;
+    height: 18px;
   }
 
   .replay-main-heading {
@@ -184,18 +212,21 @@
   }
 
   .replay-round-stepper {
-    padding: 0.18rem 0.35rem;
+    padding: 0.15rem 0.35rem;
+    gap: 0.3rem;
   }
 
   .replay-round-indicator {
-    min-width: 72px;
-    font-size: 0.75rem;
+    min-width: 74px;
+    font-size: 0.78rem;
   }
 }
 
 /* Dark mode adjustments */
 [data-theme="dark"] .replay-round-stepper,
-[data-theme="dark"] .btn-icon-control {
+[data-theme="dark"] .btn-icon-control,
+[data-theme="dark"] .replay-prev-round-btn,
+[data-theme="dark"] .replay-next-round-btn {
   background: #0f172a;
   border-color: #334155;
   color: #f1f5f9;
@@ -388,11 +419,6 @@
   transition: all 0.15s ease;
 }
 
-.replay-player-chip.is-winner {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.4);
-  color: var(--text-color, #0f172a);
-}
 
 .replay-player-avatar {
   display: inline-flex;
@@ -517,11 +543,7 @@
   color: #f1f5f9;
 }
 
-[data-theme="dark"] .replay-player-chip.is-winner {
-  background: rgba(245, 158, 11, 0.18);
-  border-color: rgba(245, 158, 11, 0.45);
-  color: #fbbf24;
-}
+
 
 [data-theme="dark"] .replay-more-players {
   background: #0f172a;
@@ -579,8 +601,14 @@
 .replay-content-grid {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.65rem;
   width: 100%;
+}
+
+@media (max-width: 640px) {
+  .replay-content-grid {
+    gap: 0.5rem;
+  }
 }
 
 .summary-replay-section {
@@ -612,13 +640,17 @@
   color: #f1f5f9;
 }
 
-[data-theme="dark"] .btn-icon-control {
+[data-theme="dark"] .btn-icon-control,
+[data-theme="dark"] .replay-prev-round-btn,
+[data-theme="dark"] .replay-next-round-btn {
   background: #1e293b;
   border-color: #334155;
   color: #f1f5f9;
 }
 
-[data-theme="dark"] .btn-icon-control:hover:not(:disabled) {
+[data-theme="dark"] .btn-icon-control:hover:not(:disabled),
+[data-theme="dark"] .replay-prev-round-btn:hover:not(:disabled),
+[data-theme="dark"] .replay-next-round-btn:hover:not(:disabled) {
   background: #334155;
   border-color: var(--accent, #0f7c7f);
   color: #2dd4bf;
@@ -644,4 +676,78 @@
 
 [data-theme="dark"] .replay-guess-detail {
   color: #94a3b8;
+}
+
+/* Replays My Matches Filter Pill */
+.replays-my-matches-pill {
+  width: auto !important;
+  max-width: fit-content;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  user-select: none;
+  box-sizing: border-box;
+  position: relative;
+}
+
+@media (pointer: coarse), (max-width: 768px) {
+  .replays-my-matches-pill::after {
+    content: "";
+    position: absolute;
+    top: -6px;
+    bottom: -6px;
+    left: -4px;
+    right: -4px;
+  }
+}
+
+.replays-my-matches-pill:hover {
+  color: var(--text-color, #0f172a);
+  background: var(--bg-surface-secondary, #f8fafc);
+  border-color: var(--accent, #0f7c7f);
+}
+
+.replays-my-matches-pill.active {
+  background: rgba(15, 124, 127, 0.12);
+  color: var(--accent, #0f7c7f);
+  border-color: var(--accent, #0f7c7f);
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(15, 124, 127, 0.15);
+}
+
+.replays-my-matches-pill .pill-icon {
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+[data-theme="dark"] .replays-my-matches-pill {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .replays-my-matches-pill:hover {
+  background: rgba(40, 53, 76, 0.95);
+  color: #ffffff;
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+[data-theme="dark"] .replays-my-matches-pill.active {
+  background: rgba(15, 124, 127, 0.28);
+  color: #38bdf8;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 }

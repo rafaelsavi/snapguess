@@ -496,7 +496,6 @@ class ChallengeService:
             total_score=updated['total_score'] if updated else round_score,
             total_time_seconds=updated['total_time_seconds'] if updated else body.time_taken_seconds,
             timed_out=body.timed_out,
-            player_color=session.get('player_color'),
         )
 
     def _score_unshuffle(
@@ -716,7 +715,6 @@ class ChallengeService:
             total_score=updated['total_score'] if updated else round_score,
             total_time_seconds=updated['total_time_seconds'] if updated else body.time_taken_seconds,
             timed_out=body.timed_out,
-            player_color=session.get('player_color'),
         )
 
     def _finalize_player_match(

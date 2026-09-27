@@ -7,7 +7,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.3rem 0.65rem;
+  padding: 0.25rem 0.6rem 0.25rem 0.35rem;
   border-radius: 9999px;
   font-size: 0.8rem;
   font-weight: 600;
@@ -19,10 +19,35 @@
   transition: all 0.2s ease;
 }
 
+.identity-badge .identity-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--user-gold-ring-sm) !important;
+}
+
 [data-theme="dark"] .identity-badge {
   color: #cbd5e1;
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 640px) {
+  .identity-badge {
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
 }
 
 /* Home Card (Guest & User Landing View) */

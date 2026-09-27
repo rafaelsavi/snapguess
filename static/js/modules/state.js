@@ -30,6 +30,7 @@ export const state = {
     email: null,
     name: null,
     authenticated: false,
+    lock_player_name: false,
   },
   lastMatchConfig: null,
   lastSummary: null,

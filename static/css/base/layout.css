@@ -33,6 +33,10 @@
   gap: 1rem;
 }
 
+.header-brand-row {
+  display: contents;
+}
+
 .header-main {
   min-width: 0;
   flex: 1;
@@ -47,9 +51,48 @@
   overflow-wrap: break-word;
 }
 
-.header-main p {
+.header-main p,
+.header-tagline {
   margin-top: 0.4rem;
   margin-bottom: 0;
+}
+
+.header-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-utility-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+@media (min-width: 761px) {
+  .app-header {
+    gap: 0.5rem;
+  }
+  .header-main {
+    order: 1;
+    margin-right: auto;
+  }
+  .header-utility-actions {
+    display: contents;
+  }
+  #identity-badge {
+    order: 2;
+  }
+  .header-nav-bar {
+    order: 3;
+  }
+  #pwa-install-btn {
+    order: 4;
+  }
+  #settings-dropdown {
+    order: 5;
+  }
 }
 
 .app-footer {
@@ -69,13 +112,6 @@
   opacity: 0.45;
   letter-spacing: 0.05em;
   user-select: none;
-}
-
-.header-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
 }
 
 .grid-2 {
@@ -108,12 +144,21 @@
 #unshuffle-reveal-ui {
   display: grid;
   gap: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Prevent grid children from overflowing with long i18n text */
 #setup-form > *,
-#setup-form .setting-col {
+#setup-form .setting-col,
+#reveal-ui > *,
+#pinpoint-reveal-ui > *,
+#unshuffle-reveal-ui > * {
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 #game-card,
@@ -165,22 +210,108 @@
   .round-guess-layout {
     grid-template-columns: 1fr;
   }
-}
 
-@media (max-width: 480px) {
+  /* Mobile App Header 2-Row Layout */
   .app-header {
-    gap: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    width: 100%;
+  }
+
+  .header-brand-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .header-main {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .header-main h1 {
-    font-size: 1.45rem;
+    font-size: clamp(1.35rem, 5vw, 1.7rem);
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .header-main p {
-    font-size: 0.85rem;
+  .header-tagline {
+    display: none;
   }
 
+  .header-utility-actions,
   .header-controls {
-    gap: 0.35rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-shrink: 0;
+  }
+
+  .header-nav-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.4rem;
+    width: 100%;
+    background: var(--bg-surface-secondary, rgba(241, 245, 249, 0.75));
+    padding: 0.35rem;
+    border-radius: var(--radius-md, 12px);
+    border: 1px solid var(--border-light, #e2e8f0);
+    box-sizing: border-box;
+  }
+
+  [data-theme="dark"] .header-nav-bar {
+    background: rgba(15, 23, 42, 0.65);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .header-nav-bar .header-icon-btn {
+    width: 100%;
+    height: 40px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    background: transparent;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .header-nav-bar .header-icon-btn.active {
+    background: var(--card, #ffffff);
+    border-color: var(--border-light, #cbd5e1);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  }
+
+  [data-theme="dark"] .header-nav-bar .header-icon-btn.active {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .header-nav-bar .header-challenges-badge {
+    top: 2px;
+    right: calc(50% - 18px);
+  }
+}
+
+@media (max-width: 480px) {
+  .header-main h1 {
+    font-size: 1.3rem;
+  }
+
+  .header-nav-bar {
+    gap: 0.3rem;
+    padding: 0.25rem;
+  }
+
+  .header-nav-bar .header-icon-btn {
+    height: 38px;
+    font-size: 1.15rem;
   }
 }

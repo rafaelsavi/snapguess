@@ -19,8 +19,6 @@ import {
   formatDistance,
   playerColor,
   playerInitial,
-  registerPlayerColor,
-  clearPlayerColors,
   PLAYER_COLORS,
   ACTUAL_COLOR,
 } from "../formatters.js";
@@ -111,7 +109,7 @@ export class PinpointReplayStrategy {
       boundsPoints.push(guessPt);
 
       const initial = playerInitial(g.player_name);
-      const pColor = g.player_color || playerColor(g.player_name);
+      const pColor = playerColor(g.player_name);
       const guessIcon = createPinIcon(initial, pColor);
 
       const marker = L.marker(guessPt, { icon: guessIcon, zIndexOffset: 500 })
@@ -655,23 +653,6 @@ export class MatchReplayViewer {
       Math.min(initialRoundIndex, (matchData.rounds_data || []).length - 1)
     );
 
-    // Register player colors in standard sequence
-    clearPlayerColors();
-    if (Array.isArray(matchData.players)) {
-      matchData.players.forEach((p, idx) => {
-        const color = p.player_color || PLAYER_COLORS[idx % PLAYER_COLORS.length];
-        registerPlayerColor(p.player_name, color);
-      });
-    }
-    if (Array.isArray(matchData.rounds_data)) {
-      matchData.rounds_data.forEach((r) => {
-        (r.player_guesses || []).forEach((g) => {
-          if (g.player_name && g.player_color) {
-            registerPlayerColor(g.player_name, g.player_color);
-          }
-        });
-      });
-    }
 
     // Stabilize map dimensions
     if (this.map) {

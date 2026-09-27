@@ -72,7 +72,7 @@ immich-quiz/
     ├── css/             Modular CSS stylesheets:
     │   ├── style.css    Master entrypoint (@importing base, components, modes).
     │   ├── base/        Design tokens (variables.css), resets (reset.css), app shell (layout.css).
-    │   ├── components/  UI components (auth.css, buttons.css, cards.css, maps.css, leaderboard.css, challenge.css, modals.css, multi_select.css, player_input.css, range_slider.css, reported.css, filters.css, timer.css, toolbar.css, hub_header.css, stats.css, round_stage.css, reveal_table.css, replay.css, review_deck.css, summary.css).
+    │   ├── components/  UI components (auth.css, avatar.css, buttons.css, cards.css, maps.css, leaderboard.css, challenge.css, modals.css, multi_select.css, player_input.css, range_slider.css, reported.css, filters.css, timer.css, toolbar.css, hub_header.css, stats.css, round_stage.css, reveal_table.css, replay.css, review_deck.css, summary.css).
     │   └── modes/       Game mode styles (pinpoint.css, unshuffle.css).
     ├── js/app.js        Main application coordinator and match lifecycle state machine.
     ├── js/audio-playground.js Playground controller & visualizer logic.
@@ -80,6 +80,8 @@ immich-quiz/
         ├── components/  Reusable UI components:
         │   ├── activity_toast.js Glassmorphic activity toast notifications for real-time multiplayer.
         │   ├── focus_trap.js Accessible modal focus trap utility (Tab / Shift+Tab) restoring focus.
+        │   ├── hub_search.js Standardized hub search component managing search inputs, clear button visibility, debouncing, and Escape/Enter triggers.
+        │   ├── hub_toolbar.js Standardized hub toolbar controller orchestrating search, segmented tabs, dropdown selects, and counter badges.
         │   ├── lightbox.js  Zero-dependency modal photo lightbox with click-outside and Escape dismissal.
         │   ├── match_meta.js Match configuration rendering, game setup & library filter summary badges.
         │   ├── match_replay.js Standardized multi-round replay canvas, round stepper, Leaflet map with spider lines, and reveal table.
@@ -92,7 +94,8 @@ immich-quiz/
         │   ├── review_deck.js Universal 3-tab review deck (Match Replay, Journey Map, Photo Memories) with Leaflet dimension invalidation and location mode gating.
         │   ├── round_stage.js Single source of truth for photo canvas, batch photo tabs, Leaflet map split view, and metadata caption pill chips across Live Pinpoint Reveal, Live Unshuffle Reveal, Match Replay, and Summary views.
         │   ├── settings_menu.js Settings gear dropdown menu with click-outside and Escape dismissal.
-        │   └── share_box.js Reusable, standardized share URL box, icon-only action button row, and QR code component.
+        │   ├── share_box.js Reusable, standardized share URL box, icon-only action button row, and QR code component.
+        │   └── single_player_input.js Single-player/creator input controller managing prefill waterfall, avatar initial preview, locked identity badge, and autocomplete.
         ├── challenge/   Modular challenge play mode sub-package:
         │   ├── session.js   Challenge state store, localStorage keys, reset, and map cleanup.
         │   ├── landing.js   Lobby/landing screen, resume detection, join form, and error views.
@@ -112,9 +115,9 @@ immich-quiz/
         │   ├── game.js      Question fetching, media pre-verification, pass-device coordination, and answer submit.
         │   ├── reveal.js    Round results aggregation, reveal rendering, and turn progression.
         │   ├── summary.js   Unified match review & replay controller (/game/:id/summary, /play/:token/summary, /game/:id/replay) managing Winner Podium, Standings Table, ReviewDeck (#summary-card), invite drawer, and ended card (#game-ended-card).
-        │   ├── challenges.js Challenges Hub screen controller (#challenges-page-card, live timers, drawers).
+        │   ├── challenges.js Challenges Hub screen controller (#challenges-page-card, live timers, drawers, accuracy-ranked standings).
         │   ├── stats.js     Player Statistics Directory & Profile controller (#stats-page-card).
-        │   ├── replay.js    Match Replays Catalog & History controller (#replays-page-card).
+        │   ├── replay.js    Match Replays Catalog & History controller (#replays-page-card, highest-accuracy sorting).
         │   └── reported.js  Reported Asset Moderation Dashboard screen controller (#reported-page-card).
         ├── summary/     Post-game summary rendering submodules:
         │   ├── podium.js    3D podium and winner banner.
@@ -126,8 +129,8 @@ immich-quiz/
         ├── api.js       API HTTP request client.
         ├── audio.js     Zero-dependency Web Audio sound synthesizer engine.
         ├── effects.js   Canvas confetti, animations, and visual transitions.
-        ├── formatters.js Distance/date formatters, relative time formatters, and string helpers.
-        ├── i18n.js      Multi-language translation engine (EN/PT) with live switcher.
+        ├── formatters.js Distance/date formatters, player identity/name resolution, profile-linked standings cells, relative time formatters, and string helpers.
+        ├── i18n.js      Multi-language translation engine (EN/PT), live switcher, and locale-aware date formatting with Today/Yesterday labels.
         ├── leaderboard.js Leaderboard UI rendering and filtering.
         ├── maps.js      Leaflet map wrapper, marker placement, auto-zoom, and updateSubmitState.
         ├── router.js    Client-side History API router (normalizePath, parseRoute, setNavigationGuard).
@@ -376,6 +379,35 @@ This parity is enforced on every commit and CI run via automated regression test
 - **`auth.*`**: Role-based access control badges and permission alerts.
 
 Dynamic units and plural forms must always use parameterized interpolation (`{count}` or `{0}`) via `t("...", count)` or `plural(...)` rather than hardcoded string concatenation.
+
+---
+
+## UI Architecture & Responsive Mobile Layout
+
+The frontend uses a mobile-first, responsive CSS architecture designed to render cleanly across desktop monitors and mobile phone screens down to 360px viewport widths:
+
+Player names in match and challenge result standings link to `/players/{playerName}` through a shared anchor style and delegated SPA navigation handler, which preserves the router's access and active-game guards.
+
+### Standardized Header Architecture
+
+- **Desktop (`> 760px`)**: Single unified flex row. `.header-brand-row` and `.header-utility-actions` use `display: contents;` with CSS `order` sequencing:
+  1. `order: 1`: Brand title and logo (`.header-main`)
+  2. `order: 2`: Player identity badge (`#identity-badge`)
+  3. `order: 3`: Navigation links (`.header-nav-bar`)
+  4. `order: 4`: PWA install button (`#pwa-install-btn`)
+  5. `order: 5`: Settings menu (`#settings-dropdown`)
+- **Mobile (`<= 760px`)**: Structured 2-row layout:
+  - **Row 1**: Brand title (`.header-main`) on the left and utility controls (`.header-utility-actions`) on the right.
+  - **Row 2**: Full-width dedicated navigation bar (`.header-nav-bar`) with 4 equal-width touch tabs (Home, Challenges, Players, Replays) meeting $\ge 40$px touch target standards with active state pills.
+
+### Hub & Sub-Page Header (`.hub-page-header`)
+
+- Top-level sub-pages (Challenges Hub, Players Directory, Match Replays, Moderation Dashboard) share the standardized `.hub-page-header` component (`hub_header.css`).
+- On mobile (`<= 760px`), sub-pages with a back button wrap into a structured 2-row layout: back button and badge/action controls share row 1, while the page title and subtitle expand across row 2 with 100% width.
+
+### Mobile Viewport Guarantee
+
+- All tables, matrices, and chips feature container-level horizontal touch scrolling (`overflow-x: auto`), ensuring `document.documentElement.scrollWidth === document.documentElement.clientWidth` across all screens on phone viewports down to 360px.
 
 ---
 

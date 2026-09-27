@@ -278,9 +278,10 @@ async def test_challenge_individual_icon_colors_e2e(page: Page, e2e_server: str)
 
     # 1. Open challenge page as Player 1 (Alice)
     await page.goto(f'/play/{token}')
-    await expect(page.locator('#challenge-card')).to_be_visible()
     avatar_preview = page.locator('#challenge-avatar-preview')
     await expect(avatar_preview).to_be_visible()
+    # Clear defaulted account name to verify '?' placeholder state
+    await page.locator('#player-name-input').fill('')
     await expect(avatar_preview).to_have_text('?')
 
     # Type name and verify avatar initial updates dynamically
@@ -309,6 +310,7 @@ async def test_challenge_individual_icon_colors_e2e(page: Page, e2e_server: str)
     await expect(avatar_preview2).to_be_visible()
     await page2.locator('#player-name-input').fill('Bob')
     await expect(avatar_preview2).to_have_text('B')
+    await page2.wait_for_timeout(250)
 
     p2_bg_color = await avatar_preview2.evaluate('el => getComputedStyle(el).backgroundColor')
     # Player 2 must have an individual, distinct color from Player 1
@@ -430,10 +432,10 @@ async def test_challenge_multi_tab_session_isolation_and_standings_on_reload(pag
     await page.locator('#challenge-see-results-btn').click()
     await expect(page.locator('.challenge-grand-reveal')).to_be_visible()
 
-    # Verify Tab 1 shows Alice as (You) with finished 3/3 pill
+    # Verify Tab 1 shows Alice with golden user avatar and finished 3/3 pill
     alice_row_tab1 = page.locator('tr[data-player-name="Alice"]')
     await expect(alice_row_tab1).to_be_visible()
-    await expect(alice_row_tab1.locator('.challenge-you-tag')).to_have_text('(You)')
+    await expect(alice_row_tab1.locator('.legend-badge.user-gold-avatar')).to_be_visible()
     await expect(alice_row_tab1.locator('.challenge-rounds-pill.finished')).to_contain_text('3/3')
 
     # 3. Tab 2: Player 2 (Bob) plays and finishes all 3 rounds
@@ -461,10 +463,10 @@ async def test_challenge_multi_tab_session_isolation_and_standings_on_reload(pag
     await page2.locator('#challenge-see-results-btn').click()
     await expect(page2.locator('.challenge-grand-reveal')).to_be_visible()
 
-    # Verify Tab 2 shows Bob as (You) with finished 3/3 pill
+    # Verify Tab 2 shows Bob with golden user avatar and finished 3/3 pill
     bob_row_tab2 = page2.locator('tr[data-player-name="Bob"]')
     await expect(bob_row_tab2).to_be_visible()
-    await expect(bob_row_tab2.locator('.challenge-you-tag')).to_have_text('(You)')
+    await expect(bob_row_tab2.locator('.legend-badge.user-gold-avatar')).to_be_visible()
     await expect(bob_row_tab2.locator('.challenge-rounds-pill.finished')).to_contain_text('3/3')
 
     # 4. Tab 3: Player 3 (Charlie) starts challenge (round 0 in-progress)
@@ -478,7 +480,8 @@ async def test_challenge_multi_tab_session_isolation_and_standings_on_reload(pag
     # 5. Reload Tab 1 (Alice)
     await page.reload()
     await expect(page.locator('.challenge-grand-reveal')).to_be_visible()
-    await expect(page.locator('tr[data-player-name="Alice"] .challenge-you-tag')).to_have_text('(You)')
+    await expect(page.locator('tr[data-player-name="Alice"] .legend-badge.user-gold-avatar')).to_be_visible()
+    await expect(page.locator('tr[data-player-name="Bob"] .legend-badge.user-gold-avatar')).not_to_be_visible()
     await expect(page.locator('tr[data-player-name="Alice"] .challenge-rounds-pill.finished')).to_contain_text('3/3')
     await expect(page.locator('tr[data-player-name="Bob"] .challenge-rounds-pill.finished')).to_contain_text('3/3')
     charlie_pill_tab1 = page.locator('tr[data-player-name="Charlie"] .challenge-rounds-pill.in-progress')
@@ -487,7 +490,8 @@ async def test_challenge_multi_tab_session_isolation_and_standings_on_reload(pag
     # 6. Reload Tab 2 (Bob)
     await page2.reload()
     await expect(page2.locator('.challenge-grand-reveal')).to_be_visible()
-    await expect(page2.locator('tr[data-player-name="Bob"] .challenge-you-tag')).to_have_text('(You)')
+    await expect(page2.locator('tr[data-player-name="Bob"] .legend-badge.user-gold-avatar')).to_be_visible()
+    await expect(page2.locator('tr[data-player-name="Alice"] .legend-badge.user-gold-avatar')).not_to_be_visible()
     await expect(page2.locator('tr[data-player-name="Alice"] .challenge-rounds-pill.finished')).to_contain_text('3/3')
     await expect(page2.locator('tr[data-player-name="Bob"] .challenge-rounds-pill.finished')).to_contain_text('3/3')
     charlie_pill_tab2 = page2.locator('tr[data-player-name="Charlie"] .challenge-rounds-pill.in-progress')

@@ -87,7 +87,7 @@ Designed for parties, family gatherings, or solo play on a single screen.
 ### 5. Game Summary & Review Deck
 
 - When all rounds conclude, celebrate with confetti, fanfare audio, and the **Outcome Hero**:
-  - **3D Winner Podium**: Medals for 1st, 2nd, and 3rd place with celebratory crowns and player avatar badges.
+  - **3D Winner Podium**: Metallic rank badges for 1st, 2nd, and 3rd place with celebratory crowns and player avatar badges.
   - **Standings Table**: Full breakdown of total scores, location points, date points, and accuracy percentages.
   - **Performance Awards**: Earned badges for exceptional play (🎯 *Sniper*, ⏳ *Time Traveler*, ⚡ *Speed Demon*).
 - Explore the match through the universal 3-tab **Review Deck**:
@@ -137,7 +137,7 @@ Allows anyone with a browser to join a shared game on their own device.
 
 - Features gold confetti, fanfare audio, and a 3D podium:
   - **Provisional Standings**: Displayed if only 1 player has completed the game.
-  - **Settled Podium**: Displays ranks, crowns, medals, and completed round counts (`5/5`).
+  - **Settled Podium**: Displays ranks, crowns, metallic badges, and completed round counts (`5/5`).
 - **Mode-Specific Review**:
   - *Pinpoint*: Interactive **Round Carousel** with photo preview, lightbox zoom, multi-player scatter map with connector lines, and date comparison chips.
   - *Unshuffle*: Full **World Journey Map** with spiderfy clustering and **Photo Memories** polaroid gallery.
@@ -175,7 +175,7 @@ Every completed game—whether a local Pass & Play match or a multiplayer challe
 
 Track career records and individual performance across all completed games:
 
-- **Player Directory**: Browse all historical participants with total matches played, win rates, podium finishes (🥇/🥈/🥉), and medal counts.
+- **Player Directory**: Browse all historical participants with total matches played, win rates, podium finishes (1st/2nd/3rd), and rank records.
 - **Player Profiles (`/players/:name`)**:
   - **Career Overview**: Total score, matches played, win rate percentage, and average active response time.
   - **Symmetrical 4-Tier Accuracy Analytics**: Visual distribution of Location and Date accuracy across 4 balanced tiers (*Top Tier 90–100%*, *Great 75–89%*, *Moderate 50–74%*, *Low <50%*).
