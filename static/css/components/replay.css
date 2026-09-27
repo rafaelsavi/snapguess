@@ -34,6 +34,9 @@
   padding: 0.28rem 0.6rem;
   border-radius: 999px;
   border: 1px solid var(--border-color, #e2e8f0);
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .replay-round-indicator {

@@ -1062,27 +1062,24 @@ def test_challenges_page_share_drawer_and_results_button() -> None:
     assert '.challenge-hub-share-drawer' in challenge_css
     assert 'renderShareUrlContainerHtml(ch.play_url' in challenges_page_js
 
-    # 4. Challenge cards render Results and Replay buttons (both active & inactive)
-    #    deep linking to /play/:token/summary and /game/:id/replay
+    # 4. Challenge cards render Results button (linking to /play/:token/summary with integrated replay)
     assert 'btn-results-challenge' in challenges_page_js
     assert '.btn-results-challenge' in challenge_css
-    assert 'btn-replay-challenge' in challenges_page_js
-    assert '.btn-replay-challenge' in challenge_css
     assert 'btn-play-challenge' in challenges_page_js
     assert '/play/${ch.capability_token}/summary' in challenges_page_js
-    assert '/game/${encodeURIComponent(ch.challenge_id)}/replay' in challenges_page_js
     assert 'navigate(`/play/${token}/summary`)' in challenges_page_js
     assert 'navigate(`/play/${token}`)' in challenges_page_js
-    assert 'navigate(`/game/${encodeURIComponent(id)}/replay`)' in challenges_page_js
+    assert 'btn-replay-challenge' not in challenges_page_js
+    assert '.btn-replay-challenge' not in challenge_css
 
     # 5. Redundant footer copy button removed
     assert '.footer-left-actions .btn-copy-challenge-link' not in challenge_css
 
-    # 6. Locale strings for share, results & replay exist in both locales
+    # 6. Locale strings for share & results exist in both locales (replay pruned)
     for locale in (en_us, pt_br):
         assert '"challenges_page.share_btn"' in locale
         assert '"challenges_page.results_btn"' in locale
-        assert '"challenges_page.replay_btn"' in locale
+        assert '"challenges_page.replay_btn"' not in locale
         assert '"challenges_page.share_drawer_title"' in locale
         assert '"challenges_page.scan_qr_hint"' in locale
 

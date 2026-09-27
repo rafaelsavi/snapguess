@@ -468,6 +468,10 @@ async def get_challenge_leaderboard(
         location_mode=location_mode,
         date_mode=date_mode,
         round_history=round_history,
+        config=config,
+        round_length=str(config.get('round_length', '1m')),
+        filter_summary=config.get('filter_summary'),
+        filter_tooltip=config.get('filter_tooltip'),
     )
 
 

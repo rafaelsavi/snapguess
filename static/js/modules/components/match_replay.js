@@ -556,7 +556,69 @@ export class MatchReplayViewer {
         onReportPhoto: (assetId, previewUrl) => {
           openReportModal(assetId, previewUrl);
         },
+        onSwipeNext: () => {
+          const totalRounds = this.matchData?.rounds_data?.length || 0;
+          if (this.currentRoundIndex < totalRounds - 1) {
+            this.goToRound(this.currentRoundIndex + 1, { swipeAnimation: "next" });
+          } else if (this.roundStage) {
+            this.roundStage.applyEdgeBounce("next");
+          }
+        },
+        onSwipePrev: () => {
+          if (this.currentRoundIndex > 0) {
+            this.goToRound(this.currentRoundIndex - 1, { startAtLastPhoto: true, swipeAnimation: "prev" });
+          } else if (this.roundStage) {
+            this.roundStage.applyEdgeBounce("prev");
+          }
+        },
       });
+    }
+
+    const stepperEl = this.containerEl.querySelector(".replay-round-stepper");
+    if (stepperEl) {
+      let sStartX = 0;
+      let sStartY = 0;
+      let sStartTime = 0;
+      let sTracking = false;
+
+      const onTouchStart = (e) => {
+        if (e.touches.length > 1 || (e.target && e.target.closest("button"))) return;
+        sTracking = true;
+        sStartX = e.touches[0].clientX;
+        sStartY = e.touches[0].clientY;
+        sStartTime = Date.now();
+      };
+
+      const onTouchEnd = (e) => {
+        if (!sTracking) return;
+        sTracking = false;
+        const dX = e.changedTouches[0].clientX - sStartX;
+        const dY = e.changedTouches[0].clientY - sStartY;
+        const dT = Date.now() - sStartTime;
+        if (Math.abs(dX) >= 40 && Math.abs(dX) > Math.abs(dY) * 1.25 && dT <= 700) {
+          if (dX < 0) {
+            if (this.currentRoundIndex < (this.matchData?.rounds_data?.length || 0) - 1) {
+              this.goToRound(this.currentRoundIndex + 1, { swipeAnimation: "next" });
+            } else if (this.roundStage) {
+              this.roundStage.applyEdgeBounce("next");
+            }
+          } else {
+            if (this.currentRoundIndex > 0) {
+              this.goToRound(this.currentRoundIndex - 1, { swipeAnimation: "prev" });
+            } else if (this.roundStage) {
+              this.roundStage.applyEdgeBounce("prev");
+            }
+          }
+        }
+      };
+
+      stepperEl.addEventListener("touchstart", onTouchStart, { passive: true });
+      stepperEl.addEventListener("touchend", onTouchEnd, { passive: true });
+
+      this._cleanupStepperSwipe = () => {
+        stepperEl.removeEventListener("touchstart", onTouchStart);
+        stepperEl.removeEventListener("touchend", onTouchEnd);
+      };
     }
 
     // Initialize Leaflet Map on RoundStage's generated map container
@@ -623,19 +685,19 @@ export class MatchReplayViewer {
     this.renderCurrentRound();
   }
 
-  goToRound(idx) {
+  goToRound(idx, { startAtLastPhoto = false, swipeAnimation = null } = {}) {
     if (!this.matchData || !Array.isArray(this.matchData.rounds_data)) return;
     if (idx < 0 || idx >= this.matchData.rounds_data.length) return;
 
     this.currentRoundIndex = idx;
-    this.renderCurrentRound();
+    this.renderCurrentRound({ startAtLastPhoto, swipeAnimation });
 
     if (this.onRoundChange) {
       this.onRoundChange(this.currentRoundIndex, this.currentRound);
     }
   }
 
-  renderCurrentRound() {
+  renderCurrentRound({ startAtLastPhoto = false, swipeAnimation = null } = {}) {
     if (
       !this.matchData ||
       !this.matchData.rounds_data ||
@@ -673,7 +735,11 @@ export class MatchReplayViewer {
       const isDateMode = this.matchData?.date_mode !== false;
       this.roundStage.setModes({ locationMode: isLocMode, dateMode: isDateMode });
       const batchPhotos = this._getBatchPhotos(round);
-      this.roundStage.setPhotos(batchPhotos, 0);
+      const initialIdx = startAtLastPhoto && batchPhotos.length > 0 ? batchPhotos.length - 1 : 0;
+      this.roundStage.setPhotos(batchPhotos, initialIdx);
+      if (swipeAnimation) {
+        this.roundStage.applySwipeAnimation(swipeAnimation);
+      }
     }
 
     // 3. Render map via Strategy
@@ -782,6 +848,14 @@ export class MatchReplayViewer {
   }
 
   destroy() {
+    if (this._cleanupStepperSwipe) {
+      this._cleanupStepperSwipe();
+      this._cleanupStepperSwipe = null;
+    }
+    if (this.roundStage) {
+      this.roundStage.destroy();
+      this.roundStage = null;
+    }
     if (this._handleKeyDown) {
       document.removeEventListener("keydown", this._handleKeyDown);
       this._handleKeyDown = null;

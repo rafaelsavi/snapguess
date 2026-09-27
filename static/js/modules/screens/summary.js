@@ -314,6 +314,7 @@ export async function showMatchSummaryByMatchId(
     if (headerReplay) headerReplay.classList.remove("hidden");
     if (actionsSummary) actionsSummary.classList.add("hidden");
     if (actionsReplay) actionsReplay.classList.remove("hidden");
+    state.activeLeaderboardConfig = null;
     if (el.leaderboardCard) el.leaderboardCard.classList.add("hidden");
     if (el.summaryCard) el.summaryCard.classList.remove("challenge-grand-reveal");
   } else {
@@ -443,7 +444,7 @@ export async function showMatchSummaryByMatchId(
     if (el.leaderboardCard) {
       if (state.auth?.role === "creator") {
         el.leaderboardCard.classList.remove("hidden");
-        await loadLeaderboard();
+        await loadLeaderboard(summary);
       } else {
         el.leaderboardCard.classList.add("hidden");
       }
@@ -485,7 +486,7 @@ export async function showMatchSummaryByMatchId(
       if (el.leaderboardCard) {
         if (state.auth?.role === "creator") {
           el.leaderboardCard.classList.remove("hidden");
-          await loadLeaderboard();
+          await loadLeaderboard(summary);
         } else {
           el.leaderboardCard.classList.add("hidden");
         }
@@ -527,6 +528,7 @@ export function showGameEndedCard(matchId = null, customMsg = null, customTitle 
   clearActiveMatchSession();
 
   showCard(el.gameEndedCard);
+  state.activeLeaderboardConfig = null;
   if (el.leaderboardCard) el.leaderboardCard.classList.add("hidden");
 
   const iconEl = document.getElementById("game-ended-icon");

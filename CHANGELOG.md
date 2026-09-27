@@ -7,9 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Mobile Swipe Navigation for Replay & Photos**: Swipe left or right on mobile devices to smoothly browse through replay photos and rounds, flip between batch photos in Unshuffle review, and navigate fullscreen photos in the photo lightbox.
+
 ### Changed
 
+- **Compact Match Specifications Layout**: Reduced spacing between game setup and photo filter categories across challenge cards, landing pages, and match summary replays to eliminate empty space and optimize vertical screen space.
 - **Direct Link Sharing**: Sharing results now directly shares the challenge invite link (in Challenge Mode) or the match replay URL (in Local Match and Replay views) with instant copy feedback, replacing the lengthy text score breakdown.
+
+### Fixed
+
+- **Match Summary Leaderboard Scope**: Fixed an issue where the leaderboard on the match summary screen lost the match's game settings, round duration, and photo filters when reopening or refreshing the summary link.
+- **Challenge Created Time Localization**: Fixed unlocalized creation timestamp label displayed on challenge creation confirmation cards, correctly presenting localized timestamps in English and Portuguese.
+- **Dark Mode UI Consistency**: Resolved visual contrast and styling issues in dark mode, including fixing repeating chevrons across select dropdowns, ensuring seamless dark background on the Prepare Game modal action footer, styling the challenge link share box to prevent washed-out text, and improving contrast and readability of the active player name chip in the round header.
+
+### Removed
+
+- **Redundant Challenge Replay Button**: Removed the standalone Replay button from challenge cards on the Challenges Hub in favor of the Results button, which already embeds the full interactive match replay deck alongside challenge standings and podium.
+- **Empty Challenges Create Button**: Removed the create challenge action button from the empty state on the Challenges Hub page for a cleaner discovery view.
 
 ## [3.2.1] - 2026-09-24
 

@@ -75,6 +75,73 @@
   justify-content: center;
   overflow: hidden;
   padding: 4px;
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Touch & swipe transitions for photo browsing */
+@keyframes photoSwipeInNext {
+  from {
+    opacity: 0.4;
+    transform: translateX(28px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes photoSwipeInPrev {
+  from {
+    opacity: 0.4;
+    transform: translateX(-28px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes photoEdgeBounceLeft {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-12px); }
+  50% { transform: translateX(6px); }
+  75% { transform: translateX(-3px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes photoEdgeBounceRight {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(12px); }
+  50% { transform: translateX(-6px); }
+  75% { transform: translateX(3px); }
+  100% { transform: translateX(0); }
+}
+
+.photo-swipe-next {
+  animation: photoSwipeInNext 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.photo-swipe-prev {
+  animation: photoSwipeInPrev 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.photo-edge-bounce-left {
+  animation: photoEdgeBounceLeft 0.28s ease;
+}
+
+.photo-edge-bounce-right {
+  animation: photoEdgeBounceRight 0.28s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photo-swipe-next,
+  .photo-swipe-prev,
+  .photo-edge-bounce-left,
+  .photo-edge-bounce-right {
+    animation: none;
+  }
 }
 
 .round-media-frame:fullscreen,
