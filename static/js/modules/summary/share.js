@@ -111,10 +111,10 @@ export async function shareMatchSummary(summary) {
       summary.capability_token ||
       challengeSession?.challengeData?.capability_token;
     shareUrl = capToken
-      ? `${window.location.origin}/play/${encodeURIComponent(capToken)}`
+      ? `${window.location.origin}/play/${encodeURIComponent(capToken)}/summary`
       : window.location.href;
-    title = tOr("challenge.invite_message", "Immich Quiz Challenge");
-    successMessage = tOr("challenge.link_copied", "Challenge link copied to clipboard!");
+    title = tOr("summary.share_title", "Immich Quiz Results");
+    successMessage = tOr("summary.share_copied", "Replay link copied to clipboard!");
   } else {
     shareUrl = summary.match_id
       ? `${window.location.origin}/game/${encodeURIComponent(summary.match_id)}/replay`

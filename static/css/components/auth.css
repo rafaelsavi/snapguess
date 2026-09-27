@@ -313,11 +313,34 @@
 @media (max-width: 768px) {
   #home-card {
     padding: 1.5rem 1rem;
-    gap: 1.5rem;
+    gap: 1.25rem;
   }
 
   .home-quick-grid {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .home-quick-card {
+    padding: 0.65rem 0.85rem;
+    gap: 0.65rem;
+    border-radius: 10px;
+  }
+
+  .home-quick-icon {
+    font-size: 1.25rem;
+  }
+
+  .home-quick-title {
+    font-size: 0.88rem;
+  }
+
+  .home-quick-desc {
+    display: none;
+  }
+
+  .home-quick-arrow {
+    font-size: 0.95rem;
   }
 
   .home-input-row {

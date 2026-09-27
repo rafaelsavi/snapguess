@@ -314,6 +314,7 @@ export default {
   "game.fullscreen_photo_alt": "Fullscreen photo",
   "game.prev_photo": "Previous photo",
   "game.next_photo": "Next photo",
+  "summary.play_again_btn": "Play Again",
   "summary.share_results_btn": "Share Results",
   "summary.share_copied": "Replay link copied to clipboard!",
   "summary.journey_round": "Round {0}",

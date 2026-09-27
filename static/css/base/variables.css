@@ -16,6 +16,10 @@
   --border: #cbd5e1;
   --border-light: #e2e8f0;
   --bg-surface-secondary: #f8fafc;
+  --bg-card: var(--card);
+  --border-color: var(--border-light);
+  --text-color: var(--ink);
+  --bg-secondary: var(--bg-surface-secondary);
 
   /* Border Radius Tokens */
   --radius-xs: 4px;
@@ -60,6 +64,10 @@
   --border: #26344d;
   --border-light: #1d273a;
   --bg-surface-secondary: #0c1322;
+  --bg-card: var(--card);
+  --border-color: var(--border);
+  --text-color: var(--text-main);
+  --bg-secondary: var(--bg-surface-secondary);
   --input-bg: #141d2e;
   --input-border: #283650;
   --shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
@@ -80,6 +88,10 @@
     --border: #26344d;
     --border-light: #1d273a;
     --bg-surface-secondary: #0c1322;
+    --bg-card: var(--card);
+    --border-color: var(--border);
+    --text-color: var(--text-main);
+    --bg-secondary: var(--bg-surface-secondary);
     --input-bg: #141d2e;
     --input-border: #283650;
     --shadow: 0 16px 36px rgba(0, 0, 0, 0.55);

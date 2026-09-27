@@ -26,12 +26,6 @@ export function initReplay() {
     });
   }
 
-  const exitBottomBtn = document.getElementById("replay-exit-bottom-btn");
-  if (exitBottomBtn) {
-    exitBottomBtn.addEventListener("click", () => {
-      navigate("/replays");
-    });
-  }
 
   const errBackBtn = document.getElementById("replay-error-back-btn");
   if (errBackBtn) {

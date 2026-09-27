@@ -314,6 +314,7 @@ export default {
   "game.fullscreen_photo_alt": "Foto em tela cheia",
   "game.prev_photo": "Foto anterior",
   "game.next_photo": "Próxima foto",
+  "summary.play_again_btn": "Jogar Novamente",
   "summary.share_results_btn": "Compartilhar Resultados",
   "summary.share_copied": "Link do replay copiado para a área de transferência!",
   "summary.journey_round": "Rodada {0}",

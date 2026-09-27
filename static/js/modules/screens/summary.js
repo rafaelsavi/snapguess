@@ -184,7 +184,17 @@ export function renderSummaryContent(summary) {
     currentSessionPlayerName: summary.current_player_name || challengeSession?.sessionPlayerName,
   });
 
-  // 4. Challenge Invite Friends Action & Drawer
+  // 4. Action buttons in summary footer
+  const playAgainBtn = document.getElementById("summary-play-again-btn");
+  const homeBtn = document.getElementById("summary-home-btn");
+  if (playAgainBtn) {
+    playAgainBtn.classList.toggle("hidden", Boolean(isChallenge || !state.lastMatchConfig));
+  }
+  if (homeBtn) {
+    homeBtn.classList.remove("hidden");
+  }
+
+  // 5. Challenge Invite Friends Action & Drawer
   const inviteBtn = document.getElementById("challenge-invite-btn");
   const inviteDrawer = document.getElementById("summary-invite-drawer");
   const inviteBox = document.getElementById("summary-invite-share-box");
@@ -582,10 +592,6 @@ export function refreshSummaryLanguage() {
       if (backBtn) {
         const span = backBtn.querySelector("[data-i18n]");
         if (span) span.textContent = t("replay.exit");
-      }
-      const exitBottom = document.getElementById("replay-exit-bottom-btn");
-      if (exitBottom) {
-        exitBottom.textContent = t("replay.exit");
       }
     }
   }

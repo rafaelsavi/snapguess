@@ -166,7 +166,7 @@
 
 .share-toast {
   position: fixed;
-  bottom: 2rem;
+  bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%) translateY(20px) scale(0.96);
   background: rgba(15, 23, 42, 0.94);
@@ -180,7 +180,7 @@
   opacity: 0;
   pointer-events: none;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
-  z-index: 10000;
+  z-index: 999999;
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
@@ -904,11 +904,14 @@
   transform: translateY(0);
 }
 
-.btn-copy-link.copied {
-  background: linear-gradient(120deg, #10b981, #059669);
-  border-color: #10b981;
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+.btn-copy-link.copied,
+.btn-secondary.copied,
+.btn-action-icon.copied,
+button.copied {
+  background: linear-gradient(120deg, #10b981, #059669) !important;
+  border-color: #10b981 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35) !important;
 }
 
 .btn-qr-code.active {
@@ -1207,17 +1210,17 @@
 /* Dark Mode Toast & Feedback */
 [data-theme="dark"] .share-toast {
   background: rgba(24, 34, 53, 0.96);
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: rgba(45, 212, 191, 0.35);
   color: #f8fafc;
-  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.65), 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.65), 0 0 16px rgba(45, 212, 191, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .share-toast {
     background: rgba(24, 34, 53, 0.96);
-    border-color: rgba(255, 255, 255, 0.18);
+    border-color: rgba(45, 212, 191, 0.35);
     color: #f8fafc;
-    box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.65), 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.65), 0 0 16px rgba(45, 212, 191, 0.12);
   }
 }
 

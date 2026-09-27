@@ -9,21 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Play Again & Return Home Actions on Results**: Added quick action buttons to the match summary screen, allowing players to instantly replay with the same settings or return to home without scrolling.
 - **Mobile Swipe Navigation for Replay & Photos**: Swipe left or right on mobile devices to smoothly browse through replay photos and rounds, flip between batch photos in Unshuffle review, and navigate fullscreen photos in the photo lightbox.
 
 ### Changed
 
 - **Compact Match Specifications Layout**: Reduced spacing between game setup and photo filter categories across challenge cards, landing pages, and match summary replays to eliminate empty space and optimize vertical screen space.
-- **Direct Link Sharing**: Sharing results now directly shares the challenge invite link (in Challenge Mode) or the match replay URL (in Local Match and Replay views) with instant copy feedback, replacing the lengthy text score breakdown.
+- **Direct Link Sharing**: Sharing results now directly shares the challenge summary link (in Challenge Mode) or the match replay URL (in Local Match and Replay views) with instant copy feedback, replacing the lengthy text score breakdown.
+- **Compact Mobile Landing Quick Links**: Optimized the explore more links on the player landing screen on mobile devices into compact rows to reduce vertical scrolling.
 
 ### Fixed
 
 - **Match Summary Leaderboard Scope**: Fixed an issue where the leaderboard on the match summary screen lost the match's game settings, round duration, and photo filters when reopening or refreshing the summary link.
 - **Challenge Created Time Localization**: Fixed unlocalized creation timestamp label displayed on challenge creation confirmation cards, correctly presenting localized timestamps in English and Portuguese.
-- **Dark Mode UI Consistency**: Resolved visual contrast and styling issues in dark mode, including fixing repeating chevrons across select dropdowns, ensuring seamless dark background on the Prepare Game modal action footer, styling the challenge link share box to prevent washed-out text, and improving contrast and readability of the active player name chip in the round header.
+- **Dark Mode UI Consistency**: Resolved visual contrast and styling issues in dark mode, including fixing repeating chevrons across select dropdowns, ensuring seamless dark backgrounds on the Prepare Game modal action footer and challenge link share box, enhancing the "Link Copied" popup balloon and copy button feedback with glassmorphic dark styling and crisp status icons, and improving contrast and readability of active player name chips, unshuffle ranking chips, and photo sync completion popovers.
 
 ### Removed
 
+- **Duplicate Replay Exit Button**: Removed the duplicate exit button from the replay screen's bottom action bar in favor of the header back button.
 - **Redundant Challenge Replay Button**: Removed the standalone Replay button from challenge cards on the Challenges Hub in favor of the Results button, which already embeds the full interactive match replay deck alongside challenge standings and podium.
 - **Empty Challenges Create Button**: Removed the create challenge action button from the empty state on the Challenges Hub page for a cleaner discovery view.
 

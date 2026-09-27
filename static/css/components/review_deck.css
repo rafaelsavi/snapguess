@@ -134,3 +134,26 @@
     height: 400px;
   }
 }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .review-deck-tabs {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  :root:not([data-theme="light"]) .review-deck-tabs .segmented-btn:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  :root:not([data-theme="light"]) .review-deck-tabs .segmented-btn.active {
+    background: #334155;
+    color: #f8fafc;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  }
+
+  :root:not([data-theme="light"]) .review-deck-journey-panel .map-shell {
+    border-color: #334155;
+  }
+}
+
