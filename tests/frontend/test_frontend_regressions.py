@@ -42,7 +42,6 @@ DYNAMIC_IDS = frozenset(
         'challenge-share-url',
         'challenge-start-btn',
         'empty-state-clear-btn',
-        'empty-state-create-btn',
         'finisher-count-text',
         'goal-date',
         'goal-location',

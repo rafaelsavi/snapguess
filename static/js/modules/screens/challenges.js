@@ -16,7 +16,6 @@ import { t, formatDate } from "../i18n.js";
 import { showCard } from "./common.js";
 import { navigate } from "../router.js";
 import { showShareToast, copyToClipboard } from "../summary/share.js";
-import { openAdminModal } from "../admin.js";
 import { playerColor, playerInitial, registerPlayerColor, formatRank, formatRoundsBadge, formatPlayerCellHtml, formatRelativeTime, escapeHtml } from "../formatters.js";
 import { buildMatchMetaHtml } from "../components/match_meta.js";
 import { renderShareUrlContainerHtml, setupShareBox } from "../components/share_box.js";
@@ -394,17 +393,8 @@ export function renderChallenges() {
           <div class="empty-state-icon">⚔️</div>
           <h3>${t("challenges_page.empty_title")}</h3>
           <p>${t("challenges_page.empty_no_challenges")}</p>
-          <button type="button" class="btn-primary" id="empty-state-create-btn">
-            <span class="btn-icon">✨</span>
-            ${t("challenges_page.create_btn")}
-          </button>
         </div>
       `;
-
-      const emptyBtn = document.getElementById("empty-state-create-btn");
-      if (emptyBtn) {
-        emptyBtn.addEventListener("click", () => openAdminModal("challenge"));
-      }
     } else {
       _hubListEl.innerHTML = `
         <div class="challenges-empty-state">
