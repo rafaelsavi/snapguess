@@ -8,6 +8,7 @@ import { loadQuestion } from "./game.js";
 import { closeAdminModal } from "../admin.js";
 import { challenge } from "../challenge/index.js";
 import { clearTimer } from "../timer.js";
+import { loadLeaderboard } from "../leaderboard.js";
 import {
   playerInput,
   libraryMultiSelect,
@@ -156,6 +157,7 @@ export async function startMatch(event) {
 export function returnToSetup({ updateUrl = true } = {}) {
   document.documentElement.classList.remove("route-non-lobby");
   state.startingMatch = false;
+  state.activeLeaderboardConfig = null;
   clearActiveMatchSession();
   resetGameUi();
   if (state.auth && state.auth.role !== "creator") {
@@ -165,7 +167,10 @@ export function returnToSetup({ updateUrl = true } = {}) {
     }
   } else {
     showCard(el.setupCard);
-    if (el.leaderboardCard) el.leaderboardCard.classList.remove("hidden");
+    if (el.leaderboardCard) {
+      el.leaderboardCard.classList.remove("hidden");
+      loadLeaderboard().catch((err) => console.warn("Lobby leaderboard refresh error:", err));
+    }
   }
   const submitBtn = el.setupSubmitBtn || document.querySelector("#setup-form button[type=submit]");
   if (submitBtn) {

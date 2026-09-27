@@ -1,4 +1,5 @@
-import { t, tOr, formatList } from "../i18n.js";
+import { t, tOr } from "../i18n.js";
+import { challengeSession } from "../challenge/session.js";
 
 export function showShareToast(message) {
   let toast = document.querySelector(".share-toast");
@@ -82,49 +83,44 @@ export async function copyToClipboard(text, options = {}) {
 export async function shareMatchSummary(summary) {
   if (!summary) return;
 
-  const winnerText =
-    summary.winners && summary.winners.length > 1
-      ? t("summary.tie", formatList(summary.winners))
-      : summary.winners && summary.winners.length > 0
-        ? t("summary.winner", summary.winners[0])
-        : "";
+  const isChallenge = Boolean(
+    summary.is_challenge ||
+    summary.play_mode === "challenge" ||
+    summary.challenge_id ||
+    summary.capability_token ||
+    challengeSession?.challengeData?.capability_token
+  );
 
-  let text = `🏆 Immich Quiz - ${winnerText}\n`;
-  const albumNames = summary.config?.album_names || summary.album_names || [];
-  const filterInfo =
-    summary.is_custom_filtered && summary.filter_summary
-      ? summary.filter_summary
-      : albumNames.length > 0
-        ? formatList(albumNames)
-        : t("leaderboard.scope_all");
+  let shareUrl;
+  let title;
+  let successMessage;
 
-  const libraries = summary.config?.libraries || summary.libraries || [];
-  const libPrefix =
-    libraries.length > 0
-      ? `${formatList(libraries)} • `
-      : "";
-
-  text += `📍 ${libPrefix}${filterInfo} | ${t("summary.meta_rounds", summary.rounds_played)}\n\n`;
-  text += `${t("summary.scores_header")}\n`;
-  (summary.players || []).forEach((p) => {
-    text += `${p.rank}. ${p.player_name}: ${p.total_score}/${p.max_possible_score} (${p.accuracy_pct}%)\n`;
-  });
-
-  const shareUrl = summary.match_id
-    ? `${window.location.origin}/game/${encodeURIComponent(summary.match_id)}/summary`
-    : window.location.href;
-
-  text += `\n🔗 ${shareUrl}`;
+  if (isChallenge) {
+    const capToken =
+      summary.capability_token ||
+      challengeSession?.challengeData?.capability_token;
+    shareUrl = capToken
+      ? `${window.location.origin}/play/${encodeURIComponent(capToken)}`
+      : window.location.href;
+    title = tOr("challenge.invite_message", "Immich Quiz Challenge");
+    successMessage = tOr("challenge.link_copied", "Challenge link copied to clipboard!");
+  } else {
+    shareUrl = summary.match_id
+      ? `${window.location.origin}/game/${encodeURIComponent(summary.match_id)}/replay`
+      : window.location.href;
+    title = tOr("summary.share_title", "Immich Quiz Results");
+    successMessage = tOr("summary.share_copied", "Replay link copied to clipboard!");
+  }
 
   try {
-    if (navigator.share && navigator.canShare && navigator.canShare({ text, url: shareUrl })) {
-      await navigator.share({ title: t("summary.share_title"), text, url: shareUrl });
+    if (navigator.share && navigator.canShare && navigator.canShare({ url: shareUrl })) {
+      await navigator.share({ title, url: shareUrl });
     } else {
-      await copyToClipboard(text, { successMessage: t("summary.share_copied") });
+      await copyToClipboard(shareUrl, { successMessage });
     }
   } catch (err) {
     if (err && err.name !== "AbortError") {
-      await copyToClipboard(text, { successMessage: t("summary.share_copied") });
+      await copyToClipboard(shareUrl, { successMessage });
     }
   }
 }

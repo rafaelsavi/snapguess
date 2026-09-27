@@ -29,6 +29,9 @@
   border-radius: 12px;
   padding: 3px;
   gap: 4px;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 [data-theme="dark"] .review-deck-tabs {

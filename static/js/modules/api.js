@@ -72,10 +72,85 @@ export async function api(path, options = {}) {
 }
 
 /**
- * Build query params from the current setup form selections and fetch
- * leaderboard entries filtered to that exact game configuration.
+ * Build query params from an explicit game config or current setup form selections
+ * and fetch leaderboard entries filtered to that exact game configuration.
+ * @param {object|null} [customConfig=null]
+ * @returns {URLSearchParams}
  */
-export function setupFilterParams() {
+export function setupFilterParams(customConfig = null) {
+  const cfg = customConfig || state.activeLeaderboardConfig;
+
+  if (cfg) {
+    const gameMode = cfg.game_mode || "pinpoint";
+    const roundLength = cfg.round_length || "1m";
+    const locationMode = cfg.location_mode !== false;
+    const dateMode = cfg.date_mode !== false;
+    const includeShared = Boolean(cfg.include_shared);
+
+    const params = new URLSearchParams({
+      round_length: roundLength,
+      location_mode: String(locationMode),
+      date_mode: String(dateMode),
+      game_mode: gameMode,
+    });
+
+    const cleanList = (arr) => {
+      if (!Array.isArray(arr)) return [];
+      return arr
+        .map((item) =>
+          typeof item === "object" && item !== null
+            ? item.id || item.album_id || item.person_id || item.name || ""
+            : String(item)
+        )
+        .filter(Boolean);
+    };
+
+    const selectedLibs = cleanList(cfg.libraries);
+    selectedLibs.forEach((lib) => params.append("libraries", lib));
+
+    const albumIds = cleanList(cfg.albums);
+    albumIds.forEach((aid) => params.append("albums", aid));
+
+    const toDateStr = (val) => {
+      if (!val) return null;
+      return String(val).split("T")[0];
+    };
+
+    const minDate = toDateStr(cfg.min_date);
+    const maxDate = toDateStr(cfg.max_date);
+    if (minDate) params.set("min_date", minDate);
+    if (maxDate) params.set("max_date", maxDate);
+
+    const countries = cleanList(cfg.countries);
+    countries.forEach((c) => params.append("countries", c));
+
+    const cities = cleanList(cfg.cities);
+    cities.forEach((c) => params.append("cities", c));
+
+    const peopleList = cleanList(cfg.people);
+    peopleList.forEach((pid) => params.append("people", pid));
+    if (peopleList.length > 0 && cfg.people_mode) {
+      params.set("people_mode", cfg.people_mode);
+    }
+
+    if (includeShared) {
+      params.set("include_shared", "true");
+    }
+
+    const hasCustomPhotoFilters =
+      albumIds.length > 0 ||
+      selectedLibs.length > 0 ||
+      Boolean(minDate) ||
+      Boolean(maxDate) ||
+      countries.length > 0 ||
+      cities.length > 0 ||
+      peopleList.length > 0 ||
+      includeShared;
+
+    params.set("is_custom_filtered", String(hasCustomPhotoFilters));
+    return params;
+  }
+
   const albumSelect = state.filters && state.filters.albumMultiSelect;
   const albumIds = albumSelect ? albumSelect.getSelectedIds().sort() : [];
 

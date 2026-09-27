@@ -1072,6 +1072,8 @@ class MatchReplayResponse(BaseModel):
     players: list[MatchSummaryPlayer] = Field(default_factory=list)
     rounds_data: list[MatchReplayRound] = Field(default_factory=list)
     config: MatchConfig = Field(default_factory=MatchConfig)
+    filter_summary: str | None = None
+    filter_tooltip: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -1345,6 +1347,10 @@ class ChallengeLeaderboardResponse(BaseModel):
     location_mode: bool = True
     date_mode: bool = True
     round_history: list[dict[str, Any]] = Field(default_factory=list)
+    config: dict[str, Any] = Field(default_factory=dict)
+    round_length: str = '1m'
+    filter_summary: str | None = None
+    filter_tooltip: str | None = None
 
 
 class ChallengeListItem(BaseModel):

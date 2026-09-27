@@ -210,6 +210,11 @@ async function handleRoute(route) {
       route.type === RouteType.GAME_REPLAY
     );
   }
+
+  if (route.type !== RouteType.GAME_SUMMARY && route.type !== RouteType.CHALLENGE_SUMMARY) {
+    state.activeLeaderboardConfig = null;
+  }
+
   switch (route.type) {
     case RouteType.PLAYERS: {
       challenge.reset();

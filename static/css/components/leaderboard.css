@@ -44,7 +44,7 @@
 .match-meta-section {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.35rem;
   width: 100%;
 }
 
@@ -1112,6 +1112,10 @@ td.hide-on-desktop {
 
 /* Responsive Match Meta Specifications for Mobile */
 @media (max-width: 640px) {
+  .match-meta-section {
+    gap: 0.3rem;
+  }
+
   .match-meta-category {
     padding: 0.35rem 0.55rem;
     gap: 0.45rem;

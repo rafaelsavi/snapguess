@@ -22,16 +22,27 @@ export class RoundStage {
    * @param {Function} [options.onPhotoChange] - Callback (photoIndex, photoData) when tabs switch
    * @param {Function} [options.onReportPhoto] - Callback (photoId, mediaUrl) for reporting photo issue
    * @param {boolean} [options.showReportButton=false]
+   * @param {Function} [options.onSwipeNext] - Callback when swiping next at boundary
+   * @param {Function} [options.onSwipePrev] - Callback when swiping prev at boundary
    */
   constructor(
     containerEl,
-    { idPrefix = "", onPhotoChange = null, onReportPhoto = null, showReportButton = false } = {}
+    {
+      idPrefix = "",
+      onPhotoChange = null,
+      onReportPhoto = null,
+      showReportButton = false,
+      onSwipeNext = null,
+      onSwipePrev = null,
+    } = {}
   ) {
     this.containerEl = containerEl;
     this.idPrefix = idPrefix;
     this.onPhotoChange = onPhotoChange;
     this.onReportPhoto = onReportPhoto;
     this.showReportButton = showReportButton;
+    this.onSwipeNext = onSwipeNext;
+    this.onSwipePrev = onSwipePrev;
 
     this.photos = [];
     this.currentPhotoIndex = 0;
@@ -39,6 +50,7 @@ export class RoundStage {
     this.dateMode = true;
 
     this._initMarkup();
+    this._initSwipeGestures();
   }
 
   _initMarkup() {
@@ -137,7 +149,14 @@ export class RoundStage {
     if (this.photoImg) {
       this.photoImg.addEventListener("click", () => {
         if (this.photoImg.src) {
-          openPhotoLightbox(this.photoImg.src);
+          const photoUrls = this.photos
+            .map((p) => p.media_url || (p.photo_id ? `/api/media/${p.photo_id}` : (p.asset_id ? `/api/media/${encodeURIComponent(p.asset_id)}` : "")))
+            .filter(Boolean);
+          openPhotoLightbox(this.photoImg.src, {
+            photos: photoUrls.length > 1 ? photoUrls : null,
+            currentIndex: this.currentPhotoIndex,
+            onIndexChange: (idx) => this.setActivePhoto(idx),
+          });
         }
       });
     }
@@ -297,17 +316,148 @@ export class RoundStage {
   }
 
   /**
-   * Programmatically switch the active photo (e.g. when clicking a map pin).
+   * Programmatically switch the active photo (e.g. when clicking a map pin or swiping).
    * @param {number} index
+   * @param {object} [options]
+   * @param {string} [options.swipeAnimation] - "next" | "prev"
    */
-  setActivePhoto(index) {
+  setActivePhoto(index, { swipeAnimation = null } = {}) {
     if (!this.photos || this.photos.length === 0) return;
     const targetIdx = Math.max(0, Math.min(index, this.photos.length - 1));
     if (this.currentPhotoIndex === targetIdx) return;
     this.currentPhotoIndex = targetIdx;
     this.renderPhotoCanvas();
+    if (swipeAnimation) {
+      this.applySwipeAnimation(swipeAnimation);
+    }
     if (this.onPhotoChange) {
       this.onPhotoChange(this.currentPhotoIndex, this.getCurrentPhoto());
+    }
+  }
+
+  applySwipeAnimation(direction) {
+    if (!this.photoImg) return;
+    const animClass = direction === "next" ? "photo-swipe-next" : "photo-swipe-prev";
+    this.photoImg.classList.remove("photo-swipe-next", "photo-swipe-prev", "photo-edge-bounce-left", "photo-edge-bounce-right");
+    void this.photoImg.offsetWidth;
+    this.photoImg.classList.add(animClass);
+    const onEnd = () => {
+      if (this.photoImg) {
+        this.photoImg.classList.remove(animClass);
+        this.photoImg.removeEventListener("animationend", onEnd);
+      }
+    };
+    this.photoImg.addEventListener("animationend", onEnd, { once: true });
+  }
+
+  applyEdgeBounce(direction) {
+    if (!this.photoImg) return;
+    const animClass = direction === "next" ? "photo-edge-bounce-left" : "photo-edge-bounce-right";
+    this.photoImg.classList.remove("photo-swipe-next", "photo-swipe-prev", "photo-edge-bounce-left", "photo-edge-bounce-right");
+    void this.photoImg.offsetWidth;
+    this.photoImg.classList.add(animClass);
+    const onEnd = () => {
+      if (this.photoImg) {
+        this.photoImg.classList.remove(animClass);
+        this.photoImg.removeEventListener("animationend", onEnd);
+      }
+    };
+    this.photoImg.addEventListener("animationend", onEnd, { once: true });
+  }
+
+  _initSwipeGestures() {
+    if (!this.mediaFrame) return;
+
+    let startX = 0;
+    let startY = 0;
+    let endX = 0;
+    let endY = 0;
+    let startTime = 0;
+    let isTracking = false;
+
+    const handleTouchStart = (e) => {
+      if (e.touches.length > 1) {
+        isTracking = false;
+        return;
+      }
+      if (e.target && e.target.closest("button, a")) {
+        isTracking = false;
+        return;
+      }
+      isTracking = true;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      endX = startX;
+      endY = startY;
+      startTime = Date.now();
+    };
+
+    const handleTouchMove = (e) => {
+      if (!isTracking || e.touches.length > 1) return;
+      endX = e.touches[0].clientX;
+      endY = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e) => {
+      if (!isTracking) return;
+      isTracking = false;
+
+      const deltaX = endX - startX;
+      const deltaY = endY - startY;
+      const deltaTime = Date.now() - startTime;
+
+      const minDistance = 40;
+      if (
+        Math.abs(deltaX) >= minDistance &&
+        Math.abs(deltaX) > Math.abs(deltaY) * 1.25 &&
+        deltaTime <= 700
+      ) {
+        if (deltaX < 0) {
+          this.handleSwipe("next");
+        } else {
+          this.handleSwipe("prev");
+        }
+      }
+    };
+
+    const handleTouchCancel = () => {
+      isTracking = false;
+    };
+
+    this.mediaFrame.addEventListener("touchstart", handleTouchStart, { passive: true });
+    this.mediaFrame.addEventListener("touchmove", handleTouchMove, { passive: true });
+    this.mediaFrame.addEventListener("touchend", handleTouchEnd, { passive: true });
+    this.mediaFrame.addEventListener("touchcancel", handleTouchCancel, { passive: true });
+
+    this._cleanupSwipe = () => {
+      if (this.mediaFrame) {
+        this.mediaFrame.removeEventListener("touchstart", handleTouchStart);
+        this.mediaFrame.removeEventListener("touchmove", handleTouchMove);
+        this.mediaFrame.removeEventListener("touchend", handleTouchEnd);
+        this.mediaFrame.removeEventListener("touchcancel", handleTouchCancel);
+      }
+    };
+  }
+
+  handleSwipe(direction) {
+    const hasBatch = this.photos && this.photos.length > 1;
+
+    if (direction === "next") {
+      if (hasBatch && this.currentPhotoIndex < this.photos.length - 1) {
+        this.setActivePhoto(this.currentPhotoIndex + 1, { swipeAnimation: "next" });
+      } else if (typeof this.onSwipeNext === "function") {
+        this.onSwipeNext();
+      } else {
+        this.applyEdgeBounce("next");
+      }
+    } else if (direction === "prev") {
+      if (hasBatch && this.currentPhotoIndex > 0) {
+        this.setActivePhoto(this.currentPhotoIndex - 1, { swipeAnimation: "prev" });
+      } else if (typeof this.onSwipePrev === "function") {
+        this.onSwipePrev();
+      } else {
+        this.applyEdgeBounce("prev");
+      }
     }
   }
 
@@ -331,11 +481,9 @@ export class RoundStage {
         `;
         this.tabsContainer.querySelectorAll(".round-photo-tab-btn, .replay-photo-tab-btn").forEach((btn) => {
           btn.addEventListener("click", () => {
-            this.currentPhotoIndex = parseInt(btn.getAttribute("data-idx"), 10);
-            this.renderPhotoCanvas();
-            if (this.onPhotoChange) {
-              this.onPhotoChange(this.currentPhotoIndex, this.getCurrentPhoto());
-            }
+            const idx = parseInt(btn.getAttribute("data-idx"), 10);
+            const animDir = idx > this.currentPhotoIndex ? "next" : "prev";
+            this.setActivePhoto(idx, { swipeAnimation: animDir });
           });
         });
       } else {
@@ -432,6 +580,13 @@ export class RoundStage {
 
   getMapElement() {
     return this.mapContainer;
+  }
+
+  destroy() {
+    if (this._cleanupSwipe) {
+      this._cleanupSwipe();
+      this._cleanupSwipe = null;
+    }
   }
 }
 

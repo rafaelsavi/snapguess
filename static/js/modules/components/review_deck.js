@@ -130,6 +130,52 @@ export class ReviewDeck {
         toggleMapFullscreen(this.journeyMapShell);
       });
     }
+
+    const tabsContainer = this.containerEl.querySelector(".review-deck-tabs-container");
+    if (tabsContainer) {
+      let tStartX = 0;
+      let tStartY = 0;
+      let tStartTime = 0;
+      let isTracking = false;
+
+      const onTouchStart = (e) => {
+        if (e.touches.length > 1) return;
+        isTracking = true;
+        tStartX = e.touches[0].clientX;
+        tStartY = e.touches[0].clientY;
+        tStartTime = Date.now();
+      };
+
+      const onTouchEnd = (e) => {
+        if (!isTracking) return;
+        isTracking = false;
+        const dX = e.changedTouches[0].clientX - tStartX;
+        const dY = e.changedTouches[0].clientY - tStartY;
+        const dT = Date.now() - tStartTime;
+        if (Math.abs(dX) >= 40 && Math.abs(dX) > Math.abs(dY) * 1.25 && dT <= 700) {
+          const visibleTabs = this.tabs
+            .filter((btn) => !btn.classList.contains("hidden"))
+            .map((btn) => btn.getAttribute("data-deck-tab"))
+            .filter(Boolean);
+          const currentIdx = visibleTabs.indexOf(this.activeTab);
+          if (currentIdx !== -1) {
+            if (dX < 0 && currentIdx < visibleTabs.length - 1) {
+              this.switchTab(visibleTabs[currentIdx + 1]);
+            } else if (dX > 0 && currentIdx > 0) {
+              this.switchTab(visibleTabs[currentIdx - 1]);
+            }
+          }
+        }
+      };
+
+      tabsContainer.addEventListener("touchstart", onTouchStart, { passive: true });
+      tabsContainer.addEventListener("touchend", onTouchEnd, { passive: true });
+
+      this._cleanupTabsSwipe = () => {
+        tabsContainer.removeEventListener("touchstart", onTouchStart);
+        tabsContainer.removeEventListener("touchend", onTouchEnd);
+      };
+    }
   }
 
   _ensureJourneyMap() {
@@ -272,6 +318,10 @@ export class ReviewDeck {
   }
 
   destroy() {
+    if (this._cleanupTabsSwipe) {
+      this._cleanupTabsSwipe();
+      this._cleanupTabsSwipe = null;
+    }
     if (this.replayViewer) {
       this.replayViewer.destroy();
     }

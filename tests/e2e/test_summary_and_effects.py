@@ -71,6 +71,33 @@ async def test_score_rollup_animation_and_post_game_summary(page: Page) -> None:
     # Verify Share Summary Button
     await expect(page.locator('#share-summary-btn')).to_be_visible()
 
+    # Verify Leaderboard Card in match summary reflects match settings (Pinpoint (Date), 2m)
+    await expect(page.locator('#leaderboard-card')).to_be_visible()
+    scope_pill = page.locator('#leaderboard-scope-pill')
+    await expect(scope_pill).to_contain_text('Pinpoint (Date)')
+    await expect(scope_pill).to_contain_text('2 min')
+
+    # Reopen summary link in a fresh page where setup form has default lobby state
+    summary_url = page.url
+    new_page = await page.context.new_page()
+    await new_page.goto(summary_url)
+    await expect(new_page.locator('#summary-card')).to_be_visible()
+    await expect(new_page.locator('#leaderboard-card')).to_be_visible()
+    new_scope_pill = new_page.locator('#leaderboard-scope-pill')
+    await expect(new_scope_pill).to_contain_text('Pinpoint (Date)')
+    await expect(new_scope_pill).to_contain_text('2 min')
+
+    # Refreshing leaderboard retains match settings rather than falling back to default lobby setup
+    await new_page.locator('#refresh-leaderboard').click()
+    await expect(new_scope_pill).to_contain_text('Pinpoint (Date)')
+    await expect(new_scope_pill).to_contain_text('2 min')
+
+    # Returning to lobby resets leaderboard back to lobby setup form settings
+    await new_page.locator('#home-nav-btn').click()
+    await expect(new_page.locator('#setup-card')).to_be_visible()
+    await expect(new_scope_pill).to_contain_text('1 min')
+    await new_page.close()
+
 
 async def test_multiplayer_podium_and_winner_resolution(page: Page) -> None:
     """Verify multiplayer match summary displays the 1st place podium avatar and ranks both players in results table."""

@@ -1299,7 +1299,7 @@ class LeaderboardStore:
         )
 
         filter_tooltip = ch_config.get('filter_tooltip')
-        if not filter_tooltip and is_custom_filtered:
+        if is_custom_filtered and (not filter_tooltip or not filter_summary):
             lang_enum = SupportedLanguage.from_str(language) if language else SupportedLanguage.EN
             setup_obj = GameSetupRequest(
                 round_count=round_count,
@@ -1314,7 +1314,10 @@ class LeaderboardStore:
                 max_date=max_date,
                 include_shared=include_shared,
             )
-            filter_tooltip = setup_obj.format_filter_tooltip(language=lang_enum)
+            if not filter_tooltip:
+                filter_tooltip = setup_obj.format_filter_tooltip(language=lang_enum)
+            if not filter_summary:
+                _, filter_summary = setup_obj.format_filter_summary(language=lang_enum)
 
         return MatchSummaryResponse(
             match_id=challenge_id or match_row['match_id'],
@@ -2917,6 +2920,18 @@ class LeaderboardStore:
             include_shared=include_shared,
         )
 
+        filter_summary = ch_config.get('filter_summary') or match_row.get('filter_summary')
+        filter_tooltip = ch_config.get('filter_tooltip')
+        is_custom_filtered = bool(
+            (libraries or album_names or person_names or countries or cities or min_date or max_date or include_shared)
+            or match_row.get('is_custom_filtered')
+        )
+        if is_custom_filtered and (not filter_tooltip or not filter_summary):
+            if not filter_tooltip:
+                filter_tooltip = match_config.format_filter_tooltip()
+            if not filter_summary:
+                _, filter_summary = match_config.format_filter_summary()
+
         return MatchReplayResponse(
             match_id=challenge_id or match_row['match_id'],
             played_at=match_row['played_at'],
@@ -2933,4 +2948,6 @@ class LeaderboardStore:
             players=players,
             rounds_data=rounds_data,
             config=match_config,
+            filter_summary=filter_summary,
+            filter_tooltip=filter_tooltip,
         )

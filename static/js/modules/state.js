@@ -84,6 +84,7 @@ export const state = {
   startingMatch: false,
   matchFinished: false,
   justFinishedMatch: false,
+  activeLeaderboardConfig: null,
   leaderboardRows: [],
   leaderboardSort: { key: "accuracy_pct", asc: false },
   timerTotalSeconds: 0,

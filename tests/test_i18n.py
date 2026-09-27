@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Any
 
 from src.i18n import SupportedLanguage, t, t_or, translate
 from src.models import BaseGameConfig, PeopleMode
@@ -190,3 +191,64 @@ def test_frontend_locales_parity() -> None:
     assert not missing_in_pt, f'Keys present in en_US.js but missing in pt_BR.js: {missing_in_pt}'
     assert not missing_in_en, f'Keys present in pt_BR.js but missing in en_US.js: {missing_in_en}'
     assert len(en_keys) >= 400, f'Expected at least 400 translation keys in JS locales, found {len(en_keys)}'
+
+
+def test_strict_four_file_parity() -> None:
+    """Strict 4-File Parity Mandate:
+
+    Verify that locales/en-US.json, locales/pt-BR.json, static/js/modules/locales/en_US.js,
+    and static/js/modules/locales/pt_BR.js have 100% identical key counts and keys.
+    """
+    import json
+    import re
+    from pathlib import Path
+
+    repo_root = Path(__file__).parent.parent
+    en_json_path = repo_root / 'locales' / 'en-US.json'
+    pt_json_path = repo_root / 'locales' / 'pt-BR.json'
+    en_js_path = repo_root / 'static' / 'js' / 'modules' / 'locales' / 'en_US.js'
+    pt_js_path = repo_root / 'static' / 'js' / 'modules' / 'locales' / 'pt_BR.js'
+
+    for p in (en_json_path, pt_json_path, en_js_path, pt_js_path):
+        assert p.exists(), f'Locale file missing: {p}'
+
+    def parse_js_dict(p: Path) -> dict[str, Any]:
+        text = p.read_text(encoding='utf-8').strip()
+        text = re.sub(r'^export\s+default\s+', '', text).rstrip(';')
+        text = re.sub(r',\s*([}\]])', r'\1', text)
+        return json.loads(text)
+
+    with open(en_json_path, encoding='utf-8') as f:
+        en_json = json.load(f)
+    with open(pt_json_path, encoding='utf-8') as f:
+        pt_json = json.load(f)
+    en_js = parse_js_dict(en_js_path)
+    pt_js = parse_js_dict(pt_js_path)
+
+    k_en_json = set(en_json.keys())
+    k_pt_json = set(pt_json.keys())
+    k_en_js = set(en_js.keys())
+    k_pt_js = set(pt_js.keys())
+
+    assert k_en_json == k_pt_json, f'JSON parity mismatch: {k_en_json ^ k_pt_json}'
+    assert k_en_js == k_pt_js, f'JS parity mismatch: {k_en_js ^ k_pt_js}'
+    assert k_en_json == k_en_js, f'JSON vs JS parity mismatch: {k_en_json ^ k_en_js}'
+    assert len(en_json) == len(pt_json) == len(en_js) == len(pt_js)
+
+
+def test_admin_and_error_keys_defined() -> None:
+    """Verify that admin.created_at_label and updated validation error keys are translated in both languages."""
+    from src.i18n import SupportedLanguage, translate
+
+    assert translate('admin.created_at_label', SupportedLanguage.EN) == 'Created'
+    assert translate('admin.created_at_label', SupportedLanguage.PT) == 'Criado em'
+    assert translate('admin.expires_at_label', SupportedLanguage.EN) == 'Expires'
+    assert translate('admin.expires_at_label', SupportedLanguage.PT) == 'Expira em'
+
+    key_rounds = 'error.round_count must be one of: 3, 5, 10, 20'
+    assert translate(key_rounds, SupportedLanguage.EN) == 'Round count must be 3, 5, 10, or 20.'
+    assert translate(key_rounds, SupportedLanguage.PT) == 'A contagem de rodadas deve ser 3, 5, 10 ou 20.'
+
+    key_coords = 'error.guessed_latitude and guessed_longitude must be provided together'
+    assert translate(key_coords, SupportedLanguage.EN) == 'Latitude and longitude must be provided together.'
+    assert translate(key_coords, SupportedLanguage.PT) == 'Latitude e longitude devem ser fornecidas juntas.'

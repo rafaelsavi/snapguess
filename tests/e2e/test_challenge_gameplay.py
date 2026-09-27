@@ -493,6 +493,17 @@ async def test_challenge_multi_tab_session_isolation_and_standings_on_reload(pag
     charlie_pill_tab2 = page2.locator('tr[data-player-name="Charlie"] .challenge-rounds-pill.in-progress')
     await expect(charlie_pill_tab2).to_contain_text('0/3')
 
+    # Verify leaderboard scope pill reflects challenge settings (Pinpoint (Location), Unlimited) on reloaded tab
+    scope_pill_tab1 = page.locator('#leaderboard-scope-pill')
+    await expect(scope_pill_tab1).to_be_visible()
+    await expect(scope_pill_tab1).to_contain_text('Pinpoint (Location)')
+    await expect(scope_pill_tab1).to_contain_text('Unlimited')
+
+    # Refreshing leaderboard on challenge summary retains settings
+    await page.locator('#refresh-leaderboard').click()
+    await expect(scope_pill_tab1).to_contain_text('Pinpoint (Location)')
+    await expect(scope_pill_tab1).to_contain_text('Unlimited')
+
     await page2.close()
     await page3.close()
 

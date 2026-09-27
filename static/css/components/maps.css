@@ -94,6 +94,7 @@
   border: 1.5px solid #b7becd !important;
   border-radius: 8px !important;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12) !important;
+  box-sizing: border-box !important;
   overflow: hidden;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
@@ -105,16 +106,17 @@
   top: 8px;
   right: 8px;
   z-index: 1000;
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  min-height: 32px !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
   padding: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   color: #344054 !important;
   cursor: pointer;
+  box-sizing: border-box !important;
 }
 
 .map-shell .leaflet-top.leaflet-right .map-fullscreen-btn,
@@ -167,18 +169,27 @@
 }
 
 /* Zoom Control Bar */
+.leaflet-touch .leaflet-bar,
+.leaflet-bar {
+  width: 34px !important;
+  min-width: 34px !important;
+  box-sizing: border-box !important;
+}
+
 .leaflet-bar a,
 .leaflet-touch .leaflet-bar a {
-  width: 32px !important;
-  height: 32px !important;
-  line-height: 30px !important;
-  font: bold 20px / 30px 'Lucida Console', Monaco, monospace !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  height: 33px !important;
+  line-height: 31px !important;
+  font: bold 20px / 31px 'Lucida Console', Monaco, monospace !important;
   color: #344054 !important;
   background-color: transparent !important;
   border-bottom: 1.5px solid #e2e8f0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+  box-sizing: border-box !important;
   transition: background 0.2s ease, color 0.2s ease !important;
 }
 
@@ -194,7 +205,13 @@
 }
 
 /* Layer Control Toggle Button & Expanded View */
-.leaflet-control-layers {
+.leaflet-touch .leaflet-control-layers:not(.leaflet-control-layers-expanded),
+.leaflet-control-layers:not(.leaflet-control-layers-expanded) {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  box-sizing: border-box !important;
   border-radius: 8px !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
@@ -205,9 +222,13 @@
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16) !important;
 }
 
+.leaflet-touch .leaflet-control-layers-toggle,
 .leaflet-control-layers-toggle {
-  width: 32px !important;
-  height: 32px !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  box-sizing: border-box !important;
   background-size: 18px 18px !important;
   background-position: center !important;
   border-radius: 8px !important;
@@ -220,6 +241,10 @@
 
 .leaflet-touch .leaflet-control-layers.leaflet-control-layers-expanded,
 .leaflet-control-layers.leaflet-control-layers-expanded {
+  width: auto !important;
+  height: auto !important;
+  min-width: unset !important;
+  min-height: unset !important;
   overflow: visible !important;
   border-radius: 12px !important;
   border: 1.5px solid #b7becd !important;

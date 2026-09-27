@@ -294,6 +294,10 @@ button:disabled {
 .shuffle-card-fullscreen-btn {
   position: absolute;
   z-index: 1000;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
   background: #ffffff;
   color: var(--ink);
   border: 1px solid #c7ccd8;

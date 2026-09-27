@@ -8,6 +8,28 @@ export function renderPolaroidGallery(roundHistory, targetContainer = null) {
   if (!container) return;
   container.replaceChildren();
 
+  const allPhotoUrls = [];
+  (roundHistory || []).forEach((round) => {
+    const batchList =
+      round.batch_reveal && Array.isArray(round.batch_reveal) && round.batch_reveal.length > 0
+        ? round.batch_reveal
+        : round.batch_photos && Array.isArray(round.batch_photos) && round.batch_photos.length > 0
+          ? round.batch_photos
+          : null;
+
+    if (batchList) {
+      batchList.forEach((item) => {
+        const u = item.media_url || `/api/media/${item.photo_id || item.asset_id}`;
+        if (u) allPhotoUrls.push(u);
+      });
+    } else {
+      const u = round.media_url || (round.asset_id ? `/api/media/${round.asset_id}` : "");
+      if (u) allPhotoUrls.push(u);
+    }
+  });
+
+  let photoIndexCounter = 0;
+
   (roundHistory || []).forEach((round) => {
     const batchList =
       round.batch_reveal && Array.isArray(round.batch_reveal) && round.batch_reveal.length > 0
@@ -30,7 +52,13 @@ export function renderPolaroidGallery(roundHistory, targetContainer = null) {
         img.src = imgUrl;
         img.alt = `Round ${round.round_number} - Pin ${item.true_pin_id || ""}`;
         img.style.cursor = "pointer";
-        img.addEventListener("click", () => openPhotoLightbox(imgUrl));
+        const currentIndex = photoIndexCounter++;
+        img.addEventListener("click", () => {
+          openPhotoLightbox(imgUrl, {
+            photos: allPhotoUrls.length > 1 ? allPhotoUrls : null,
+            currentIndex,
+          });
+        });
         imgWrap.appendChild(img);
 
         const caption = document.createElement("div");
@@ -68,7 +96,13 @@ export function renderPolaroidGallery(roundHistory, targetContainer = null) {
         img.src = roundImgUrl;
         img.alt = `Round ${round.round_number}`;
         img.style.cursor = "pointer";
-        img.addEventListener("click", () => openPhotoLightbox(roundImgUrl));
+        const currentIndex = photoIndexCounter++;
+        img.addEventListener("click", () => {
+          openPhotoLightbox(roundImgUrl, {
+            photos: allPhotoUrls.length > 1 ? allPhotoUrls : null,
+            currentIndex,
+          });
+        });
         imgWrap.appendChild(img);
       }
 
