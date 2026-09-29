@@ -16,6 +16,10 @@
   --border: #cbd5e1;
   --border-light: #e2e8f0;
   --bg-surface-secondary: #f8fafc;
+  --bg-card: var(--card);
+  --border-color: var(--border-light);
+  --text-color: var(--ink);
+  --bg-secondary: var(--bg-surface-secondary);
 
   /* Border Radius Tokens */
   --radius-xs: 4px;
@@ -31,6 +35,17 @@
   --input-bg: #ffffff;
   --input-border: #c7ccd8;
   --card-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  /* User Golden Identity Tokens */
+  --user-gold: #d97706;
+  --user-gold-hover: #b45309;
+  --user-gold-bg: rgba(245, 158, 11, 0.05);
+  --user-gold-border: #d97706;
+  --user-gold-ring: 0 0 0 2px var(--bg-card, #ffffff), 0 0 0 4px var(--user-gold);
+  --user-gold-ring-sm: 0 0 0 1.5px var(--bg-card, #ffffff), 0 0 0 3px var(--user-gold);
+  --user-gold-ring-lg: 0 0 0 3px var(--bg-card, #ffffff), 0 0 0 5.5px var(--user-gold);
+  --user-gold-shadow: 0 0 0 1px var(--user-gold), 0 6px 16px -2px rgba(217, 119, 6, 0.18);
+  --user-gold-shadow-hover: 0 0 0 1.5px var(--user-gold), 0 10px 24px -4px rgba(217, 119, 6, 0.25);
 }
 
 @media (min-width: 1200px) {
@@ -60,12 +75,27 @@
   --border: #26344d;
   --border-light: #1d273a;
   --bg-surface-secondary: #0c1322;
+  --bg-card: var(--card);
+  --border-color: var(--border);
+  --text-color: var(--text-main);
+  --bg-secondary: var(--bg-surface-secondary);
   --input-bg: #141d2e;
   --input-border: #283650;
   --shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.45);
   --card-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* User Golden Identity Tokens (Dark Mode) */
+  --user-gold: #f59e0b;
+  --user-gold-hover: #fbbf24;
+  --user-gold-bg: rgba(245, 158, 11, 0.08);
+  --user-gold-border: #f59e0b;
+  --user-gold-ring: 0 0 0 2px var(--bg-card, #131b2e), 0 0 0 4px var(--user-gold);
+  --user-gold-ring-sm: 0 0 0 1.5px var(--bg-card, #131b2e), 0 0 0 3px var(--user-gold);
+  --user-gold-ring-lg: 0 0 0 3px var(--bg-card, #131b2e), 0 0 0 5.5px var(--user-gold);
+  --user-gold-shadow: 0 0 0 1px var(--user-gold), 0 6px 16px -2px rgba(245, 158, 11, 0.25);
+  --user-gold-shadow-hover: 0 0 0 1.5px var(--user-gold-hover), 0 10px 24px -4px rgba(245, 158, 11, 0.35);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -80,6 +110,10 @@
     --border: #26344d;
     --border-light: #1d273a;
     --bg-surface-secondary: #0c1322;
+    --bg-card: var(--card);
+    --border-color: var(--border);
+    --text-color: var(--text-main);
+    --bg-secondary: var(--bg-surface-secondary);
     --input-bg: #141d2e;
     --input-border: #283650;
     --shadow: 0 16px 36px rgba(0, 0, 0, 0.55);

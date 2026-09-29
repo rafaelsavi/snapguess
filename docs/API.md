@@ -59,7 +59,8 @@ Response:
   "role": "creator",
   "email": "user@example.com",
   "name": "Host",
-  "authenticated": true
+  "authenticated": true,
+  "lock_player_name": false
 }
 ```
 
@@ -67,6 +68,8 @@ Response:
 - `email`: Authenticated email string or `null` if unauthenticated.
 - `name`: Resolved display name or `null`. Resolved from identity headers (`Cf-Access-Authenticated-User-Name`, `X-User-Name`, `X-Auth-Name`, `X-Forwarded-User-Name`, `X-Forwarded-User`, `Remote-User`), the decoded `Cf-Access-Jwt-Assertion` token (`name`, `preferred_username`, `user_name`), or falling back to capitalized email prefix.
 - `authenticated`: Boolean indicating whether identity was verified (via email, name header, or JWT assertion).
+- `lock_player_name`: Boolean indicating whether challenge player names are strictly enforced to match verified identity (configured via `CF_LOCK_PLAYER_NAME`).
+
 
 ## Setup, Sync & Metadata (👑 Creator)
 
@@ -592,254 +595,6 @@ Response:
 
 ---
 
-## Player Statistics & Profiles API (👥 User / Creator)
-
-Endpoints powering the Player Directory, career statistics, accuracy tier distributions, and player name autocomplete.
-
-### GET /api/players/names
-
-Returns autocomplete suggestions for known player names ordered by recency and match count.
-
-Query Parameters:
-
-- `q`: Search query substring (default `""`, max 100 characters).
-- `limit`: Maximum suggestions to return (1–50, default `10`).
-
-Response (`200 OK`):
-
-```json
-[
-  {
-    "player_name": "Alice",
-    "matches_played": 14,
-    "last_played_at": "2026-09-12T19:30:00Z"
-  }
-]
-```
-
-### GET /api/players
-
-Returns player directory cards with high-level stats and career metrics across matches.
-
-Query Parameters:
-
-- `search`: Case-insensitive name filter (default `""`, max 100 characters).
-- `sort_by`: Sorting field: `matches` (default), `win_rate`, `points`, or `name`.
-- `limit`: Maximum players to return (1–200, default `50`).
-
-Response (`200 OK`):
-
-```json
-[
-  {
-    "player_name": "Alice",
-    "avatar_color": "#f25f5c",
-    "matches_played": 14,
-    "matches_won": 9,
-    "win_rate_pct": 64.3,
-    "avg_accuracy_pct": 92.4,
-    "career_points": 18450,
-    "last_played_at": "2026-09-12T19:30:00Z"
-  }
-]
-```
-
-### GET /api/players/{player_name}/profile
-
-Returns comprehensive career performance analytics, symmetrical 4-tier accuracy distributions for Location and Date, mode mastery, and match history for a specific player.
-
-Path Parameters:
-
-- `player_name`: The player's exact or case-insensitive name.
-
-Response (`200 OK`):
-
-```json
-{
-  "player": {
-    "player_name": "Alice",
-    "avatar_color": "#f25f5c",
-    "matches_played": 14,
-    "matches_won": 9,
-    "win_rate_pct": 64.3,
-    "first_place_finishes": 9,
-    "second_place_finishes": 3,
-    "third_place_finishes": 1,
-    "career_points": 18450,
-    "avg_accuracy_pct": 92.4,
-    "peak_match_accuracy_pct": 98.2,
-    "first_played_at": "2026-08-01T14:00:00Z",
-    "last_played_at": "2026-09-12T19:30:00Z"
-  },
-  "analytics": {
-    "location_tiers": [
-      { "tier": "Top Tier", "min_pct": 90.0, "max_pct": 100.0, "count": 28, "pct_of_total": 70.0 },
-      { "tier": "Great", "min_pct": 75.0, "max_pct": 89.9, "count": 8, "pct_of_total": 20.0 },
-      { "tier": "Moderate", "min_pct": 50.0, "max_pct": 74.9, "count": 3, "pct_of_total": 7.5 },
-      { "tier": "Low", "min_pct": 0.0, "max_pct": 49.9, "count": 1, "pct_of_total": 2.5 }
-    ],
-    "avg_location_accuracy_pct": 91.8,
-    "best_distance_km": 0.12,
-    "perfect_location_rounds_count": 12,
-    "date_tiers": [
-      { "tier": "Top Tier", "min_pct": 90.0, "max_pct": 100.0, "count": 30, "pct_of_total": 75.0 },
-      { "tier": "Great", "min_pct": 75.0, "max_pct": 89.9, "count": 6, "pct_of_total": 15.0 },
-      { "tier": "Moderate", "min_pct": 50.0, "max_pct": 74.9, "count": 3, "pct_of_total": 7.5 },
-      { "tier": "Low", "min_pct": 0.0, "max_pct": 49.9, "count": 1, "pct_of_total": 2.5 }
-    ],
-    "avg_date_accuracy_pct": 93.0,
-    "exact_year_month_pct": 65.0,
-    "exact_year_pct": 85.0,
-    "perfect_date_rounds_count": 16,
-    "avg_response_time_seconds": 12.4,
-    "fastest_response_time_seconds": 2.1,
-    "total_active_time_seconds": 496.0,
-    "mode_mastery": [
-      { "game_mode": "pinpoint", "rounds_played": 30, "avg_accuracy_pct": 92.5, "win_rate_pct": 66.7 },
-      { "game_mode": "unshuffle", "rounds_played": 10, "avg_accuracy_pct": 91.0, "win_rate_pct": 60.0 }
-    ],
-    "preferred_cadence": "1m"
-  },
-  "recent_matches": [
-    {
-      "match_id": "match-uuid-1234",
-      "played_at": "2026-09-12T19:30:00Z",
-      "game_mode": "pinpoint",
-      "play_mode": "local",
-      "rank": 1,
-      "total_score": 1920,
-      "accuracy_pct": 96.0,
-      "player_count": 3
-    }
-  ]
-}
-```
-
----
-
-## Match History & Interactive Replay API (👥 User / Creator)
-
-Endpoints providing searchable match records and detailed step-by-step replay data with round media, actual coordinates, and player guesses.
-
-### GET /api/matches
-
-Returns a paginated list of completed matches for the Match Replays catalog.
-
-Query Parameters:
-
-- `game_mode`: Filter by game mode (`pinpoint`, `unshuffle`).
-- `play_mode`: Filter by play mode (`local`, `challenge`).
-- `player`: Filter by participating player name.
-- `limit`: Page size (1–100, default `30`).
-- `offset`: Pagination offset (default `0`).
-
-Response (`200 OK`):
-
-```json
-[
-  {
-    "match_id": "match-uuid-1234",
-    "played_at": "2026-09-12T19:30:00Z",
-    "play_mode": "local",
-    "game_mode": "pinpoint",
-    "rounds": 5,
-    "round_length": "1m",
-    "player_count": 3,
-    "duration_seconds": 182.5,
-    "winners": ["Alice"],
-    "players": ["Alice", "Bob", "Charlie"],
-    "top_score": 4820,
-    "top_accuracy_pct": 96.4,
-    "challenge_id": "ch_7b8fd9a46828",
-    "challenge_title": "Summer Roadtrip 2024",
-    "challenge_creator": "Host"
-  }
-]
-```
-
-### GET /api/match/{match_id}/replay
-
-Fetches round-by-round replay datasets including photo assets, true location coordinates and capture dates, reverse-geocoded place names, and every player's guess coordinates and scores.
-
-Path Parameters:
-
-- `match_id`: Unique identifier of the completed match.
-
-Response (`200 OK`):
-
-```json
-{
-  "match_id": "match-uuid-1234",
-  "played_at": "2026-09-12T19:30:00Z",
-  "play_mode": "local",
-  "game_mode": "pinpoint",
-  "rounds_count": 3,
-  "round_length": "1m",
-  "duration_seconds": 124.0,
-  "config": {
-    "location_mode": true,
-    "date_mode": true,
-    "libraries": ["Family"]
-  },
-  "players": [
-    { "player_name": "Alice", "avatar_color": "#f25f5c", "final_score": 2840, "rank": 1, "is_winner": true },
-    { "player_name": "Bob", "avatar_color": "#ffe066", "final_score": 2410, "rank": 2, "is_winner": false }
-  ],
-  "rounds": [
-    {
-      "round_number": 1,
-      "game_mode": "pinpoint",
-      "asset_id": "asset-uuid-1",
-      "media_url": "/api/media/asset-uuid-1",
-      "actual_latitude": 48.8584,
-      "actual_longitude": 2.2945,
-      "actual_date": "2024-07-14",
-      "actual_year": 2024,
-      "actual_month": 7,
-      "actual_city": "Paris",
-      "actual_country": "France",
-      "batch_photos": [
-        {
-          "asset_id": "asset-uuid-1",
-          "true_pin_id": "A",
-          "media_url": "/api/media/asset-uuid-1",
-          "actual_latitude": 48.8584,
-          "actual_longitude": 2.2945,
-          "actual_date": "2024-07-14",
-          "actual_year": 2024,
-          "actual_month": 7,
-          "actual_city": "Paris",
-          "actual_country": "France"
-        }
-      ],
-      "player_guesses": [
-        {
-          "player_name": "Alice",
-          "player_color": "#f25f5c",
-          "location_score": 980,
-          "date_score": 1000,
-          "round_score": 1980,
-          "cumulative_score": 1980,
-          "time_taken_seconds": 8.5,
-          "timed_out": false,
-          "guess_latitude": 48.8580,
-          "guess_longitude": 2.2950,
-          "distance_km": 0.06,
-          "guess_date": "2024-07",
-          "date_diff_days": 0,
-          "is_correct_location": true,
-          "is_correct_date_order": true,
-          "assigned_pin_id": null,
-          "assigned_timeline_index": null
-        }
-      ]
-    }
-  ]
-}
-```
-
----
-
 ## Flagged Asset Management (👑 Creator)
 
 > [!NOTE]
@@ -1035,14 +790,13 @@ Response (`200 OK`):
 
 ### POST /play/api/{capability_token}/start
 
-Initializes or resumes a player's challenge session. If the player name already has an active session, returns the existing session token and current round progress.
+Initializes or resumes a player's challenge session. If the player name already has an active session, returns the existing session token and current round progress. Surrounding and duplicate inner whitespace in `player_name` are automatically normalized. When `CF_LOCK_PLAYER_NAME` is enabled, authenticated reverse proxy/Cloudflare user identity strictly overrides any forged or custom player name submitted in the request body.
 
 Request:
 
 ```json
 {
-  "player_name": "Bob",
-  "player_color": "#ff7043"
+  "player_name": "Bob"
 }
 ```
 
@@ -1056,7 +810,6 @@ Response (`200 OK`):
   "total_rounds": 10,
   "current_round": 0,
   "is_resumed": false,
-  "player_color": "#ff7043",
   "participant_index": 1,
   "participants": ["Alice", "Bob"]
 }
@@ -1196,7 +949,6 @@ Response (`200 OK`):
   "leaderboard": [
     {
       "player_name": "Alice",
-      "player_color": "#4caf50",
       "location_score": 48,
       "date_score": 46,
       "total_score": 94,
@@ -1213,7 +965,6 @@ Response (`200 OK`):
   "round_guesses": [
     {
       "player_name": "Alice",
-      "player_color": "#4caf50",
       "round_index": 0,
       "game_mode": "pinpoint",
       "round_score": 94,
@@ -1425,7 +1176,8 @@ Query Parameters:
 
 - `game_mode` (optional): Filter by `pinpoint` or `unshuffle`.
 - `play_mode` (optional): Filter by `local` or `challenge`.
-- `player` (optional): Filter matches where a player participated.
+- `search` (optional): Case-insensitive partial-text search across match IDs, game/play modes, challenge titles/creators, and participating players.
+- `player` (optional): Filter matches where specified player(s) participated. Supports comma-separated or repeated names for an "AND" search (matches games where all specified players participated together).
 - `limit` (optional, default: 30, max: 100): Results per page.
 - `offset` (optional, default: 0): Pagination offset.
 
@@ -1485,7 +1237,6 @@ Response (`200 OK`):
       "player_guesses": [
         {
           "player_name": "Player",
-          "player_color": "#0f7c7f",
           "location_score": 98,
           "date_score": 100,
           "round_score": 198,

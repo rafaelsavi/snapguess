@@ -95,7 +95,11 @@ export function openPhotoLightbox(src, { photos = null, currentIndex = 0, onInde
           </svg>
         </button>
         <img id="photo-lightbox-img" src="" alt="${t("game.fullscreen_photo_alt")}" data-i18n-alt="game.fullscreen_photo_alt" />
-        <button type="button" class="photo-lightbox-nav photo-lightbox-next hidden" title="${t("game.next_photo")}" data-i18n-title="game.next_photo" aria-label="${t("game.next_photo")}">&rsaquo;</button>
+        <button type="button" class="photo-lightbox-nav photo-lightbox-next hidden" title="${t("game.next_photo")}" data-i18n-title="game.next_photo" aria-label="${t("game.next_photo")}">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
         <div class="photo-lightbox-counter hidden"></div>
       </div>
     `;

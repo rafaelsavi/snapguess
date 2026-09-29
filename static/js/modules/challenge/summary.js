@@ -9,7 +9,6 @@
 import { api } from "../api.js";
 import { state, el } from "../state.js";
 import {
-  registerPlayerColor,
   playerColor,
   escapeHtml,
   formatRankBadge,
@@ -65,11 +64,6 @@ export const challengeSummary = {
         if (participantNames.length > 0) {
           state.players = participantNames;
         }
-        data.leaderboard.forEach((p) => {
-          if (p.player_color) {
-            registerPlayerColor(p.player_name, p.player_color);
-          }
-        });
       }
 
       if (updateUrl && capToken) {
@@ -295,12 +289,6 @@ export const challengeSummary = {
       });
     }
 
-    // Register colors for any newly appeared players
-    data.leaderboard.forEach((p) => {
-      if (p.player_color) {
-        registerPlayerColor(p.player_name, p.player_color);
-      }
-    });
 
     // 2. Update Live Status Pill
     const statusEl = document.getElementById("grand-reveal-live-status");

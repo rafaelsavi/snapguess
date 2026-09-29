@@ -9,7 +9,6 @@ from src.models import (
     PlayMode,
     RoundLength,
 )
-from src.storage.challenge import PLAYER_COLORS
 from src.storage.leaderboard import LeaderboardStore, _deterministic_player_color
 
 
@@ -216,8 +215,8 @@ def test_deterministic_player_color() -> None:
     color2 = _deterministic_player_color('Alice')
     assert color1 == color2
     assert color1.startswith('#')
-    # Custom color overrides deterministic
-    assert _deterministic_player_color('Alice', '#123456') == '#123456'
+    # Case insensitivity
+    assert _deterministic_player_color('Alice') == _deterministic_player_color('alice')
 
 
 def test_get_known_player_names(tmp_path: Path) -> None:
@@ -341,6 +340,31 @@ def test_list_matches_history(tmp_path: Path) -> None:
     bob_matches = store.list_matches_history(player_name='Bob')
     assert len(bob_matches) == 2
 
+    # Filter by multiple players (AND search)
+    alice_bob = store.list_matches_history(player_name='Alice, Bob')
+    assert len(alice_bob) == 1
+    assert alice_bob[0].match_id == 'match-1'
+
+    alice_bob_list = store.list_matches_history(player_name=['Alice', 'Bob'])
+    assert len(alice_bob_list) == 1
+    assert alice_bob_list[0].match_id == 'match-1'
+
+    alice_charlie = store.list_matches_history(player_name='Alice, Charlie')
+    assert len(alice_charlie) == 0
+
+    bob_charlie = store.list_matches_history(player_name='Bob & Charlie')
+    assert len(bob_charlie) == 1
+    assert bob_charlie[0].match_id == 'match-2'
+
+    # Generic text search covers replay-visible metadata and player names.
+    challenge_search = store.list_matches_history(search='challenge')
+    assert len(challenge_search) == 1
+    assert challenge_search[0].match_id == 'match-2'
+
+    player_search = store.list_matches_history(search='ali')
+    assert len(player_search) == 1
+    assert player_search[0].match_id == 'match-1'
+
 
 def test_get_match_replay(tmp_path: Path) -> None:
     db_path = tmp_path / 'leaderboard.db'
@@ -373,9 +397,6 @@ def test_get_match_replay(tmp_path: Path) -> None:
     guesses_by_name = {g.player_name: g for g in r1.player_guesses}
     assert 'Alice' in guesses_by_name
     assert 'Bob' in guesses_by_name
-    # Player 1 (Alice) must have PLAYER_COLORS[0], Player 2 (Bob) must have PLAYER_COLORS[1]
-    assert guesses_by_name['Alice'].player_color == PLAYER_COLORS[0]
-    assert guesses_by_name['Bob'].player_color == PLAYER_COLORS[1]
     assert guesses_by_name['Alice'].round_score == 198
     assert guesses_by_name['Alice'].cumulative_score == 198
     assert guesses_by_name['Bob'].round_score == 30
@@ -383,40 +404,30 @@ def test_get_match_replay(tmp_path: Path) -> None:
 
     # Also verify players roster summary in replay
     players_by_name = {p.player_name: p for p in replay.players}
-    assert players_by_name['Alice'].player_color == PLAYER_COLORS[0]
-    assert players_by_name['Bob'].player_color == PLAYER_COLORS[1]
+    assert 'Alice' in players_by_name
+    assert 'Bob' in players_by_name
 
-    # Round 2 cumulative score accumulation & consistent colors
+    # Round 2 cumulative score accumulation
     r2 = replay.rounds_data[1]
     guesses_r2 = {g.player_name: g for g in r2.player_guesses}
-    assert guesses_r2['Alice'].player_color == PLAYER_COLORS[0]
-    assert guesses_r2['Bob'].player_color == PLAYER_COLORS[1]
+    assert 'Alice' in guesses_r2
+    assert 'Bob' in guesses_r2
     assert guesses_r2['Alice'].round_score == 190
     assert guesses_r2['Alice'].cumulative_score == 198 + 190  # 388
     assert guesses_r2['Bob'].round_score == 135
     assert guesses_r2['Bob'].cumulative_score == 30 + 135  # 165
 
 
-def test_get_match_replay_legacy_missing_player_color(tmp_path: Path) -> None:
-    """Ensure older matches where player_color was NULL still reconstruct standard sequence."""
+def test_get_match_replay_deterministic_player_color(tmp_path: Path) -> None:
+    """Ensure matches always reconstruct replay data cleanly and deterministic colors are distinct."""
     db_path = tmp_path / 'leaderboard.db'
     store = LeaderboardStore(db_path)
     _create_sample_matches(store)
 
-    # Simulate legacy database entries where player_color column is NULL
-    with store.db.connection() as conn:
-        conn.execute("UPDATE match_entries SET player_color = NULL WHERE match_id = 'match-1'")
-
     replay = store.get_match_replay('match-1')
     assert replay is not None
-    r1 = replay.rounds_data[0]
-    guesses = {g.player_name: g for g in r1.player_guesses}
-    assert guesses['Alice'].player_color == PLAYER_COLORS[0]
-    assert guesses['Bob'].player_color == PLAYER_COLORS[1]
-
-    players = {p.player_name: p for p in replay.players}
-    assert players['Alice'].player_color == PLAYER_COLORS[0]
-    assert players['Bob'].player_color == PLAYER_COLORS[1]
+    assert _deterministic_player_color('Alice') != _deterministic_player_color('Bob')
+    assert _deterministic_player_color('Alice') == _deterministic_player_color('alice')
 
 
 def test_get_match_replay_challenge_multiplayer(tmp_path: Path) -> None:
@@ -444,9 +455,9 @@ def test_get_match_replay_challenge_multiplayer(tmp_path: Path) -> None:
             INSERT INTO challenge_sessions (
                 session_token, match_id, challenge_id, player_name,
                 current_round, location_score, date_score, total_score,
-                started_at, player_color
+                started_at
             )
-            VALUES ('tok-1', 'm-ch-1', ?, 'Alice', 1, 100, 100, 200, '2026-03-01T12:00:00', '#ff0000')
+            VALUES ('tok-1', 'm-ch-1', ?, 'Alice', 1, 100, 100, 200, '2026-03-01T12:00:00')
             """,
             (ch_id,),
         )
@@ -455,9 +466,9 @@ def test_get_match_replay_challenge_multiplayer(tmp_path: Path) -> None:
             INSERT INTO challenge_sessions (
                 session_token, match_id, challenge_id, player_name,
                 current_round, location_score, date_score, total_score,
-                started_at, player_color
+                started_at
             )
-            VALUES ('tok-2', 'm-ch-2', ?, 'Bob', 1, 80, 80, 160, '2026-03-01T12:05:00', '#00ff00')
+            VALUES ('tok-2', 'm-ch-2', ?, 'Bob', 1, 80, 80, 160, '2026-03-01T12:05:00')
             """,
             (ch_id,),
         )
@@ -555,9 +566,9 @@ def test_multiple_challenge_sessions_do_not_duplicate_player_stats(tmp_path: Pat
                 INSERT INTO challenge_sessions (
                     session_token, match_id, challenge_id, player_name,
                     current_round, location_score, date_score, total_score,
-                    started_at, player_color
+                    started_at
                 )
-                VALUES (?, ?, ?, 'Alice', 1, 100, 100, 200, '2026-03-01T12:00:00', '#ff0000')
+                VALUES (?, ?, ?, 'Alice', 1, 100, 100, 200, '2026-03-01T12:00:00')
                 """,
                 (f'tok-alice-{i}', f'm-ch-multi-{i}', ch_id),
             )
@@ -578,13 +589,13 @@ def test_multiple_challenge_sessions_do_not_duplicate_player_stats(tmp_path: Pat
     assert profile.player.matches_won == 1
     assert profile.player.win_rate_pct == 100.0
     assert profile.player.podiums_count == 1
-    assert profile.player.avatar_color == '#f25f5c'
+    assert profile.player.avatar_color == _deterministic_player_color('Alice')
 
     # Known player names autocomplete must also succeed
     suggestions = store.get_known_player_names('Alice')
     assert len(suggestions) == 1
     assert suggestions[0].match_count == 1
-    assert suggestions[0].avatar_color == '#f25f5c'
+    assert suggestions[0].avatar_color == _deterministic_player_color('Alice')
 
 
 def test_consolidated_challenge_replays_and_metadata(tmp_path: Path) -> None:
@@ -634,8 +645,8 @@ def test_consolidated_challenge_replays_and_metadata(tmp_path: Path) -> None:
             INSERT INTO challenge_sessions (
                 session_token, match_id, challenge_id, player_name,
                 current_round, location_score, date_score, total_score,
-                started_at, completed_at, player_color
-            ) VALUES (?, ?, ?, ?, 3, 250, 250, 500, '2026-09-13T10:05:00Z', '2026-09-13T10:10:00Z', '#ff0000')
+                started_at, completed_at
+            ) VALUES (?, ?, ?, ?, 3, 250, 250, 500, '2026-09-13T10:05:00Z', '2026-09-13T10:10:00Z')
             """,
             ('tok-alice-100', 'm-alice-100', ch_id, 'Alice'),
         )
@@ -645,8 +656,8 @@ def test_consolidated_challenge_replays_and_metadata(tmp_path: Path) -> None:
             INSERT INTO challenge_sessions (
                 session_token, match_id, challenge_id, player_name,
                 current_round, location_score, date_score, total_score,
-                started_at, completed_at, player_color
-            ) VALUES (?, ?, ?, ?, 3, 150, 150, 300, '2026-09-13T10:15:00Z', '2026-09-13T10:20:00Z', '#0000ff')
+                started_at, completed_at
+            ) VALUES (?, ?, ?, ?, 3, 150, 150, 300, '2026-09-13T10:15:00Z', '2026-09-13T10:20:00Z')
             """,
             ('tok-bob-100', 'm-bob-100', ch_id, 'Bob'),
         )
@@ -686,11 +697,11 @@ def test_consolidated_challenge_replays_and_metadata(tmp_path: Path) -> None:
         conn.execute(
             """
             INSERT INTO match_entries (
-                match_id, player_name, player_color, location_score, date_score,
+                match_id, player_name, location_score, date_score,
                 total_score, max_possible_score, accuracy_pct, rank, is_winner, total_time_seconds
             ) VALUES
-            ('m-alice-100', 'Alice', '#ff0000', 250, 250, 500, 600, 83.3, 1, 1, 15.0),
-            ('m-bob-100', 'Bob', '#0000ff', 150, 150, 300, 600, 50.0, 1, 1, 25.0)
+            ('m-alice-100', 'Alice', 250, 250, 500, 600, 83.3, 1, 1, 15.0),
+            ('m-bob-100', 'Bob', 150, 150, 300, 600, 50.0, 1, 1, 25.0)
             """
         )
 

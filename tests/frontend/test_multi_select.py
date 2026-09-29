@@ -141,3 +141,12 @@ def test_multi_select_event_isolation() -> None:
     # Verify zero-match handling in MultiSelect JS
     assert 'zero-match' in content
     assert 'multi-select-count-badge' in content
+
+
+def test_multi_select_click_safety_no_pointerdown_premature_close() -> None:
+    content = MULTI_SELECT_JS.read_text(encoding='utf-8')
+    # MultiSelect must handle option clicks on 'click' and document dismissal on 'click',
+    # ensuring no pointerdown destruction causes click fall-through to underlying UI
+    assert 'pointerdown' not in content
+    assert 'mousedown' not in content
+    assert 'document.addEventListener("click", this._boundOnDocClick)' in content

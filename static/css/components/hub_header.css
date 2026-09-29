@@ -158,17 +158,64 @@
     gap: 1rem;
   }
 
+  .hub-page-header,
+  .challenges-page-header,
+  .stats-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .hub-page-title-group,
+  .challenges-page-title-group,
+  .stats-page-title-group {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* When a back button is present on sub-screens, wrap cleanly on mobile */
+  .hub-page-header:has(.page-back-btn),
+  .hub-page-header.has-back-btn {
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .hub-page-header:has(.page-back-btn) .page-back-btn,
+  .hub-page-header.has-back-btn .page-back-btn {
+    order: 1;
+  }
+
+  .hub-page-header:has(.page-back-btn) .hub-page-head-actions,
+  .hub-page-header.has-back-btn .hub-page-head-actions {
+    order: 1;
+    margin-left: auto;
+  }
+
+  .hub-page-header:has(.page-back-btn) .hub-page-title-group,
+  .hub-page-header.has-back-btn .hub-page-title-group {
+    order: 2;
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+  }
+
   .hub-page-heading,
   .challenges-page-title-group h2,
   #stats-page-heading,
   #replays-page-heading {
-    font-size: 1.5rem;
+    font-size: 1.45rem;
+    line-height: 1.2;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   .hub-page-desc,
   .challenges-page-desc,
   .stats-page-desc {
     font-size: 0.88rem;
+    line-height: 1.4;
   }
 }
 

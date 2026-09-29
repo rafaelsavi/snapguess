@@ -16,12 +16,14 @@ import { t, formatDate } from "../i18n.js";
 import { showCard } from "./common.js";
 import { navigate } from "../router.js";
 import { showShareToast, copyToClipboard } from "../summary/share.js";
-import { playerColor, playerInitial, registerPlayerColor, formatRank, formatRoundsBadge, formatPlayerCellHtml, formatRelativeTime, escapeHtml } from "../formatters.js";
+import { playerColor, playerInitial, formatRank, formatRoundsBadge, formatPlayerCellHtml, formatRelativeTime, escapeHtml } from "../formatters.js";
 import { buildMatchMetaHtml } from "../components/match_meta.js";
 import { renderShareUrlContainerHtml, setupShareBox } from "../components/share_box.js";
+import { setupHubToolbar } from "../components/hub_toolbar.js";
 
 let _challenges = [];
 let _searchQuery = "";
+let _hubToolbar = null;
 let _statusFilter = "all";
 let _modeFilter = "all";
 let _sortBy = "newest";
@@ -60,57 +62,38 @@ export function initChallengesPage() {
   _refreshBtnEl = document.getElementById("challenges-page-refresh-btn");
   _totalBadgeEl = document.getElementById("challenges-page-total-badge");
 
-  // Search input
-  if (_searchInputEl) {
-    _searchInputEl.addEventListener("input", (e) => {
-      _searchQuery = e.target.value.trim().toLowerCase();
-      if (_searchClearBtnEl) {
-        _searchClearBtnEl.classList.toggle("hidden", !_searchInputEl.value);
-      }
-      renderChallenges();
-    });
-  }
-
-  // Search clear button
-  if (_searchClearBtnEl) {
-    _searchClearBtnEl.addEventListener("click", () => {
-      if (_searchInputEl) {
-        _searchInputEl.value = "";
-        _searchClearBtnEl.classList.add("hidden");
+  // Standardized Hub Toolbar
+  _hubToolbar = setupHubToolbar({
+    container: ".challenges-toolbar",
+    search: {
+      input: _searchInputEl,
+      clearBtn: _searchClearBtnEl,
+      onSearch: (q) => {
+        _searchQuery = q.toLowerCase();
+        renderChallenges();
+      },
+      onClear: () => {
         _searchQuery = "";
-        _searchInputEl.focus();
         renderChallenges();
-      }
-    });
-  }
-
-  // Status filter pills
-  if (_statusTabsEl) {
-    _statusTabsEl.querySelectorAll(".filter-pill").forEach((pill) => {
-      pill.addEventListener("click", () => {
-        _statusTabsEl.querySelectorAll(".filter-pill").forEach((p) => p.classList.remove("active"));
-        pill.classList.add("active");
-        _statusFilter = pill.getAttribute("data-status") || "all";
+      },
+    },
+    tabs: {
+      container: _statusTabsEl,
+      dataAttr: "status",
+      defaultTab: "all",
+      onChange: (tab) => {
+        _statusFilter = tab;
         renderChallenges();
-      });
-    });
-  }
-
-  // Mode filter
-  if (_modeFilterEl) {
-    _modeFilterEl.addEventListener("change", (e) => {
-      _modeFilter = e.target.value;
+      },
+    },
+    selects: [_modeFilterEl, _sortSelectEl],
+    counterBadge: _totalBadgeEl,
+    onChange: () => {
+      _modeFilter = _modeFilterEl ? _modeFilterEl.value : "all";
+      _sortBy = _sortSelectEl ? _sortSelectEl.value : "newest";
       renderChallenges();
-    });
-  }
-
-  // Sort select
-  if (_sortSelectEl) {
-    _sortSelectEl.addEventListener("change", (e) => {
-      _sortBy = e.target.value;
-      renderChallenges();
-    });
-  }
+    },
+  });
 
   // Refresh button
   if (_refreshBtnEl) {
@@ -134,7 +117,7 @@ export function initChallengesPage() {
         return;
       }
 
-      // 3. Play challenge button
+      // 2. Play challenge button
       const playBtn = e.target.closest(".btn-play-challenge");
       if (playBtn) {
         e.preventDefault();
@@ -145,7 +128,7 @@ export function initChallengesPage() {
         return;
       }
 
-      // 4. Results challenge button
+      // 3. Results challenge button
       const resultsBtn = e.target.closest(".btn-results-challenge");
       if (resultsBtn) {
         e.preventDefault();
@@ -156,8 +139,7 @@ export function initChallengesPage() {
         return;
       }
 
-
-      // 6. Deactivate challenge button
+      // 4. Deactivate challenge button
       const deactivateBtn = e.target.closest(".btn-deactivate-challenge-hub");
       if (deactivateBtn) {
         e.stopPropagation();
@@ -169,7 +151,7 @@ export function initChallengesPage() {
         return;
       }
 
-      // 6. Standings toggle button
+      // 5. Standings toggle button
       const standingsBtn = e.target.closest(".btn-standings-toggle");
       if (standingsBtn) {
         const id = standingsBtn.getAttribute("data-id");
@@ -676,11 +658,6 @@ async function renderStandingsDrawerContent(challengeId, capabilityToken) {
   }
 
   const entries = data.leaderboard || [];
-  entries.forEach((p) => {
-    if (p.player_color) {
-      registerPlayerColor(p.player_name, p.player_color);
-    }
-  });
 
   if (entries.length === 0) {
     contentEl.innerHTML = `
@@ -699,15 +676,26 @@ async function renderStandingsDrawerContent(challengeId, capabilityToken) {
     const top3 = finishedEntries.slice(0, 3);
     const podiumItems = top3
       .map((p, idx) => {
-        const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉";
+        const rank = idx + 1;
         const placeCls = idx === 0 ? "podium-1st" : idx === 1 ? "podium-2nd" : "podium-3rd";
+        const badgeCls = `mini-podium-badge-${rank}`;
         const col = playerColor(p.player_name);
         const init = playerInitial(p.player_name);
+        const isCurrentUser = Boolean(
+          state.auth?.name &&
+          p.player_name &&
+          p.player_name.trim().toLowerCase() === state.auth.name.trim().toLowerCase()
+        );
         return `
           <div class="mini-podium-item ${placeCls}">
-            <div class="mini-podium-avatar" style="border-color: ${escapeHtml(col)};">${escapeHtml(init)}</div>
-            <span class="mini-podium-medal">${medal}</span>
-            <strong class="mini-podium-name">${escapeHtml(p.player_name)}</strong>
+            <div class="mini-podium-avatar${isCurrentUser ? " is-current-user user-gold-avatar" : ""}" style="border-color: ${escapeHtml(col)};">${escapeHtml(init)}</div>
+            <span class="mini-podium-medal ${badgeCls}">${rank}</span>
+            <a
+              class="mini-podium-name player-profile-link"
+              href="/players/${encodeURIComponent(p.player_name)}"
+              title="${escapeHtml(t("stats.view_profile"))}: ${escapeHtml(p.player_name)}"
+              aria-label="${escapeHtml(t("stats.view_profile"))}: ${escapeHtml(p.player_name)}"
+            >${escapeHtml(p.player_name)}</a>
             <span class="mini-podium-acc">${escapeHtml(p.accuracy_pct)}%</span>
           </div>
         `;

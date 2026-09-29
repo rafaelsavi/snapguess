@@ -82,7 +82,7 @@ export const challenge = {
   async init(capabilityToken) {
     return challengeGame.init(
       capabilityToken,
-      (name, color) => this.start(name, color),
+      (name) => this.start(name),
       () => this.showGrandReveal()
     );
   },
@@ -107,7 +107,7 @@ export const challenge = {
     return renderLandingScreen(
       data,
       savedSession,
-      (name, color) => this.start(name, color),
+      (name) => this.start(name),
       () => this.showGrandReveal()
     );
   },
@@ -124,12 +124,10 @@ export const challenge = {
   /**
    * Start or resume a player challenge session.
    * @param {string} playerName
-   * @param {string|null} [preferredColor=null]
    */
-  async start(playerName, preferredColor = null) {
+  async start(playerName) {
     return challengeGame.start(
       playerName,
-      preferredColor,
       (roundIndex) => this.loadRound(roundIndex),
       () => this.showGrandReveal()
     );

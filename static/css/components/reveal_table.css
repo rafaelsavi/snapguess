@@ -137,6 +137,25 @@
   font-weight: 700;
 }
 
+.reveal-table .player-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible;
+}
+
+.reveal-table .player-name-text {
+  display: inline-block;
+  vertical-align: middle;
+  min-width: 0;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Mobile responsive transformations */
 @media (max-width: 768px) {
   .reveal-table .group-start-mobile {
@@ -171,9 +190,18 @@
     display: none !important;
   }
 
+  .reveal-table .player-name-text {
+    max-width: clamp(54px, 15vw, 90px);
+  }
+
   .reveal-table th,
   .reveal-table td {
-    padding: 0.4rem 0.35rem;
+    padding: 0.38rem 0.22rem;
     font-size: 0.78rem;
+  }
+
+  .reveal-table th:first-child,
+  .reveal-table td:first-child {
+    padding-left: 0.4rem;
   }
 }

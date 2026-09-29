@@ -22,23 +22,39 @@ export const PLAYER_COLORS = [
 
 export const ACTUAL_COLOR = "#1f2a44";
 
-const _assignedPlayerColors = new Map();
-
 /**
- * Register a specific individual color for a player name (e.g. from challenge session/leaderboard).
- * @param {string} playerName
- * @param {string} color
+ * Resolve a player name from the authenticated identity, local storage, or a fallback.
+ * @param {string|null} [storageKey=null]
+ * @param {function(): string|null} [fallbackFn=null]
+ * @returns {string}
  */
-export function registerPlayerColor(playerName, color) {
-  if (!playerName || !color) return;
-  _assignedPlayerColors.set(playerName, color);
-}
-
-/**
- * Clear all explicitly registered player colors.
- */
-export function clearPlayerColors() {
-  _assignedPlayerColors.clear();
+export function resolvePlayerName(storageKey = null, fallbackFn = null) {
+  if (state.auth?.name && state.auth.name.trim()) {
+    return state.auth.name.trim();
+  }
+  if (state.auth?.email && state.auth.email.trim()) {
+    const userPart = state.auth.email.split("@")[0].trim();
+    if (userPart) {
+      return userPart.charAt(0).toUpperCase() + userPart.slice(1);
+    }
+  }
+  if (storageKey) {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved && saved.trim()) {
+        return saved.trim();
+      }
+    } catch (_) {}
+  }
+  if (typeof fallbackFn === "function") {
+    try {
+      const fallback = fallbackFn();
+      if (fallback && fallback.trim()) {
+        return fallback.trim();
+      }
+    } catch (_) {}
+  }
+  return "";
 }
 
 /**
@@ -60,6 +76,12 @@ export function normalizedName(playerName) {
   return String(playerName || "?").replace(/[^\p{L}\p{N}]/gu, "");
 }
 
+/**
+ * Deterministically computes a persistent hex color token for any player name.
+ * Shares 100% parity with backend deterministic_player_color.
+ * @param {string|number} playerName
+ * @returns {string} Hex color code
+ */
 export function playerColor(playerName) {
   if (typeof playerName === "number") {
     return PLAYER_COLORS[Math.abs(playerName) % PLAYER_COLORS.length];
@@ -68,40 +90,40 @@ export function playerColor(playerName) {
     return PLAYER_COLORS[0];
   }
 
-  // 1. Explicitly registered color (e.g. from challenge session or leaderboard)
-  if (_assignedPlayerColors.has(playerName)) {
-    return _assignedPlayerColors.get(playerName);
+  const clean = String(playerName || "").trim().toLowerCase();
+  if (!clean) {
+    return PLAYER_COLORS[0];
   }
-
-  // 2. Index in state.players (for local games and synced challenge rosters)
-  const index = state.players ? state.players.indexOf(playerName) : -1;
-  if (index >= 0) {
-    return PLAYER_COLORS[index % PLAYER_COLORS.length];
+  let hash = 0;
+  for (let i = 0; i < clean.length; i++) {
+    hash += clean.charCodeAt(i);
   }
-
-  // 3. Sequential fallback for unregistered names so distinct players follow standard sequence
-  const assigned = PLAYER_COLORS[_assignedPlayerColors.size % PLAYER_COLORS.length];
-  _assignedPlayerColors.set(playerName, assigned);
-  return assigned;
+  return PLAYER_COLORS[hash % PLAYER_COLORS.length];
 }
 
+/**
+ * Deterministically computes 1-2 letter initials for player avatar chips.
+ * 1 word -> 1 uppercase letter (e.g. "Ivana" -> "I").
+ * 2+ words -> First and last word initial (e.g. "Player One" -> "RS").
+ * Numbers -> "#N" (e.g. 0 -> "#1").
+ * @param {string|number} playerName
+ * @returns {string}
+ */
 export function playerInitial(playerName) {
   if (typeof playerName === "number") {
     return `#${playerName + 1}`;
   }
-  const letters = normalizedName(playerName);
-  const first = (letters[0] || "?").toUpperCase();
-
-  // Players sharing a first letter get a second character so map pins stay unambiguous.
-  const pool = state.players && state.players.length > 0
-    ? state.players
-    : Array.from(_assignedPlayerColors.keys());
-
-  const clashes = pool.filter((name) => (normalizedName(name)[0] || "?").toUpperCase() === first);
-  if (clashes.length > 1 && letters.length > 1) {
-    return first + letters[1].toLowerCase();
+  const clean = String(playerName || "").trim();
+  if (!clean) return "?";
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length === 1) {
+    const letters = normalizedName(words[0]);
+    return (letters[0] || words[0][0] || "?").toUpperCase();
   }
-  return first;
+  const first = normalizedName(words[0])[0] || words[0][0] || "";
+  const last = normalizedName(words[words.length - 1])[0] || words[words.length - 1][0] || "";
+  const initials = (first + last).toUpperCase();
+  return initials || "?";
 }
 
 export function formatMonth(year, month) {
@@ -133,36 +155,34 @@ export function formatPlace(reveal) {
 }
 
 /**
- * Create a standardized DOM element for a rank medal or number badge.
+ * Create a standardized DOM element for a rank badge or number.
  * @param {number|string} rank
  * @param {object} [options]
  * @param {boolean} [options.dot=false]
- * @param {boolean} [options.showNumber=false]
  * @returns {HTMLSpanElement}
  */
 export function createRankBadge(rank, options = {}) {
   const r = parseInt(rank, 10);
   const span = document.createElement("span");
   if (isNaN(r) || r <= 0) {
-    span.className = "rank-num rank-empty";
+    span.className = "rank-badge rank-num rank-empty";
     span.textContent = "—";
     return span;
   }
-  const showNumber = options.showNumber ?? false;
   if (r === 1) {
-    span.className = "rank-medal";
-    span.textContent = showNumber ? "🥇 1" : "🥇";
+    span.className = "rank-badge rank-medal rank-1st";
+    span.textContent = "1";
     span.setAttribute("title", t("leaderboard.rank_1st"));
   } else if (r === 2) {
-    span.className = "rank-medal";
-    span.textContent = showNumber ? "🥈 2" : "🥈";
+    span.className = "rank-badge rank-medal rank-2nd";
+    span.textContent = "2";
     span.setAttribute("title", t("leaderboard.rank_2nd"));
   } else if (r === 3) {
-    span.className = "rank-medal";
-    span.textContent = showNumber ? "🥉 3" : "🥉";
+    span.className = "rank-badge rank-medal rank-3rd";
+    span.textContent = "3";
     span.setAttribute("title", t("leaderboard.rank_3rd"));
   } else {
-    span.className = "rank-num";
+    span.className = "rank-badge rank-num";
     span.textContent = options.dot ? `${r}.` : `${r}`;
   }
   return span;
@@ -173,38 +193,33 @@ export function createRankBadge(rank, options = {}) {
  * @param {number|string} rank
  * @param {object} [options]
  * @param {boolean} [options.dot=false]
- * @param {boolean} [options.showNumber=false]
  * @returns {string} HTML string
  */
 export function formatRankBadge(rank, options = {}) {
   const r = parseInt(rank, 10);
   if (isNaN(r) || r <= 0) {
-    return `<span class="rank-num rank-empty">—</span>`;
+    return `<span class="rank-badge rank-num rank-empty">—</span>`;
   }
-  const showNumber = options.showNumber ?? false;
   if (r === 1) {
-    const text = showNumber ? "🥇 1" : "🥇";
-    return `<span class="rank-medal" title="${escapeHtml(t("leaderboard.rank_1st"))}">${text}</span>`;
+    return `<span class="rank-badge rank-medal rank-1st" title="${escapeHtml(t("leaderboard.rank_1st"))}">1</span>`;
   }
   if (r === 2) {
-    const text = showNumber ? "🥈 2" : "🥈";
-    return `<span class="rank-medal" title="${escapeHtml(t("leaderboard.rank_2nd"))}">${text}</span>`;
+    return `<span class="rank-badge rank-medal rank-2nd" title="${escapeHtml(t("leaderboard.rank_2nd"))}">2</span>`;
   }
   if (r === 3) {
-    const text = showNumber ? "🥉 3" : "🥉";
-    return `<span class="rank-medal" title="${escapeHtml(t("leaderboard.rank_3rd"))}">${text}</span>`;
+    return `<span class="rank-badge rank-medal rank-3rd" title="${escapeHtml(t("leaderboard.rank_3rd"))}">3</span>`;
   }
   const suffix = options.dot ? "." : "";
-  return `<span class="rank-num">${r}${suffix}</span>`;
+  return `<span class="rank-badge rank-num">${r}${suffix}</span>`;
 }
 
 /**
  * Format a competitive rank or place badge.
- * Returns a medal badge for top 3 (🥇 1, 🥈 2, 🥉 3) or the rank number (e.g. "4").
+ * Returns a styled rank badge or plain text rank.
  * @param {number|string} rank
  * @param {object} [options]
- * @param {boolean} [options.medals=true] Whether to prefix top 3 ranks with medal emojis.
- * @param {boolean} [options.asBadge=false] Whether to wrap in HTML badge span.
+ * @param {boolean} [options.plainText=false] Whether to return unstyled text instead of HTML badge.
+ * @param {boolean} [options.dot=false]
  * @returns {string}
  */
 export function formatRank(rank, options = {}) {
@@ -212,16 +227,11 @@ export function formatRank(rank, options = {}) {
   if (isNaN(r) || r <= 0) {
     return "—";
   }
-  if (options.asBadge) {
-    return formatRankBadge(r, options);
+  if (options.plainText) {
+    const suffix = options.dot ? "." : "";
+    return `${r}${suffix}`;
   }
-  const useMedals = options.medals !== false;
-  if (useMedals) {
-    if (r === 1) return "🥇 1";
-    if (r === 2) return "🥈 2";
-    if (r === 3) return "🥉 3";
-  }
-  return String(r);
+  return formatRankBadge(r, options);
 }
 
 /**
@@ -253,14 +263,18 @@ export function formatRoundsBadge(completedRounds, totalRounds, isFinished = fal
 export function formatPlayerCellHtml(playerName, options = {}) {
   const col = playerColor(playerName);
   const init = playerInitial(playerName);
-  const you = options.isCurrent ? ` <span class="challenge-you-tag">(You)</span>` : "";
+  const isCurrentUser = Boolean(
+    options.isCurrent ||
+    (state.auth?.name && playerName && playerName.trim().toLowerCase() === state.auth.name.trim().toLowerCase())
+  );
+  const badgeCls = isCurrentUser ? "legend-badge is-current-user user-gold-avatar" : "legend-badge";
   const awards = options.awardsHtml ? `<div class="player-awards-list">${options.awardsHtml}</div>` : "";
+  const profileLabel = `${t("stats.view_profile")}: ${playerName}`;
 
   return `
     <span class="player-cell">
-      <span class="legend-badge" style="background:${escapeHtml(col)};">${escapeHtml(init)}</span>
-      <span class="player-name-text">${escapeHtml(playerName)}</span>
-      ${you}
+      <span class="${badgeCls}" style="background:${escapeHtml(col)};">${escapeHtml(init)}</span>
+      <a class="player-name-text player-profile-link" href="/players/${encodeURIComponent(playerName)}" title="${escapeHtml(playerName)}" aria-label="${escapeHtml(profileLabel)}">${escapeHtml(playerName)}</a>
     </span>
     ${awards}
   `;
@@ -346,7 +360,12 @@ export function buildCell(content, isHeader = false) {
 
 export function playerBadge(playerName) {
   const badge = document.createElement("span");
-  badge.className = "legend-badge";
+  const isCurrentUser = Boolean(
+    state.auth?.name &&
+    playerName &&
+    playerName.trim().toLowerCase() === state.auth.name.trim().toLowerCase()
+  );
+  badge.className = isCurrentUser ? "legend-badge is-current-user user-gold-avatar" : "legend-badge";
   badge.style.background = playerColor(playerName);
   badge.textContent = playerInitial(playerName);
   return badge;
@@ -358,6 +377,7 @@ export function playerNameCell(playerName, timedOut = false) {
   const nameSpan = document.createElement("span");
   nameSpan.className = "player-name-text";
   nameSpan.textContent = playerName;
+  nameSpan.title = playerName;
   wrap.append(playerBadge(playerName), nameSpan);
   if (timedOut) {
     const tag = document.createElement("span");

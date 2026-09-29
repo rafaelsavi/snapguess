@@ -13,10 +13,12 @@ MOCK_MATCHES_DATA = [
         'game_mode': 'pinpoint',
         'play_mode': 'challenge',
         'played_at': 1740000000.0,
-        'players': ['Player'],
+        'players': ['Player', 'Ivana'],
+        'player_count': 2,
         'winners': ['Player'],
         'rounds': 5,
-        'top_accuracy_pct': 4.8,
+        'top_score': 100,
+        'top_accuracy_pct': 90.0,
     },
     {
         'match_id': 'match-challenge-2',
@@ -24,18 +26,22 @@ MOCK_MATCHES_DATA = [
         'play_mode': 'challenge',
         'played_at': 1739990000.0,
         'players': ['Player'],
+        'player_count': 1,
         'winners': ['Player'],
         'rounds': 10,
-        'top_accuracy_pct': None,
+        'top_score': 300,
+        'top_accuracy_pct': 76.0,
     },
     {
         'match_id': 'match-local-3',
         'game_mode': 'unshuffle',
         'play_mode': 'local',
         'played_at': 1739980000.0,
-        'players': ['Ivana', 'Player'],
+        'players': ['Ivana', 'Player', 'Maya'],
+        'player_count': 3,
         'winners': ['Ivana'],
         'rounds': 5,
+        'top_score': 200,
         'top_accuracy_pct': 56.8,
     },
 ]
@@ -90,3 +96,32 @@ async def test_replay_catalog_and_challenge_chip_design(page: Page) -> None:
     assert styles['borderRadius'] == '6px', f'Expected 6px border-radius, got {styles["borderRadius"]}'
     assert styles['textTransform'] == 'none', f'Expected none text-transform, got {styles["textTransform"]}'
     assert styles['boxShadow'] == 'none', f'Expected none box-shadow, got {styles["boxShadow"]}'
+
+
+@pytest.mark.asyncio
+async def test_replay_catalog_accuracy_and_player_sorts(page: Page) -> None:
+    """Verify accuracy and player-count sorts use match summary fields."""
+
+    async def handle_matches_route(route):
+        await route.fulfill(
+            status=200,
+            content_type='application/json',
+            body=json.dumps(MOCK_MATCHES_DATA),
+        )
+
+    await page.route('**/api/matches*', handle_matches_route)
+    await page.goto('/replays')
+
+    items = page.locator('.replay-catalog-item')
+    await expect(items).to_have_count(3)
+    sort_select = page.locator('#stats-replays-sort-select')
+
+    await sort_select.select_option('accuracy')
+    await expect(items.nth(0)).to_have_attribute('data-match-id', 'match-challenge-1')
+    await expect(items.nth(1)).to_have_attribute('data-match-id', 'match-challenge-2')
+    await expect(items.nth(2)).to_have_attribute('data-match-id', 'match-local-3')
+
+    await sort_select.select_option('players')
+    await expect(items.nth(0)).to_have_attribute('data-match-id', 'match-local-3')
+    await expect(items.nth(1)).to_have_attribute('data-match-id', 'match-challenge-1')
+    await expect(items.nth(2)).to_have_attribute('data-match-id', 'match-challenge-2')

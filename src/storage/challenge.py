@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import secrets
 import sqlite3
 from datetime import UTC, datetime, timedelta
@@ -49,6 +50,15 @@ PLAYER_COLORS: list[str] = [
     '#ff6b6b',
     '#198754',
 ]
+
+
+def deterministic_player_color(player_name: str) -> str:
+    """Return a deterministic hexadecimal color for a player name."""
+    clean = (player_name or '').strip().lower()
+    if not clean:
+        return PLAYER_COLORS[0]
+    idx = sum(ord(c) for c in clean) % len(PLAYER_COLORS)
+    return PLAYER_COLORS[idx]
 
 
 class ChallengeStore:
@@ -165,44 +175,25 @@ class ChallengeStore:
         self,
         challenge_id: str,
         player_name: str,
-        player_color: str | None = None,
     ) -> dict[str, Any]:
         """Resume an existing session or create a new one for the player.
 
         Uses UNIQUE(challenge_id, player_name) constraint — if a player has an
         existing session (complete or in-progress), it is returned for resume.
-        Assigns a persistent individual icon color based on join order.
         """
+        clean_name = re.sub(r'\s+', ' ', player_name.strip())
         existing = self._db.fetch_one(
             'SELECT * FROM challenge_sessions WHERE challenge_id = ? AND player_name = ? COLLATE NOCASE',
-            (challenge_id, player_name),
+            (challenge_id, clean_name),
         )
         if existing:
             session_dict = dict(existing)
-            color = session_dict.get('player_color')
-            if not color:
-                all_sessions = self._db.fetch_all(
-                    'SELECT session_token FROM challenge_sessions WHERE challenge_id = ? ORDER BY started_at ASC',
-                    (challenge_id,),
-                )
-                idx = next(
-                    (i for i, s in enumerate(all_sessions) if s['session_token'] == session_dict['session_token']),
-                    0,
-                )
-                color = PLAYER_COLORS[idx % len(PLAYER_COLORS)]
-                with self._db.connection() as conn:
-                    conn.execute(
-                        'UPDATE challenge_sessions SET player_color = ? WHERE session_token = ?',
-                        (color, session_dict['session_token']),
-                    )
-                session_dict['player_color'] = color
 
             logger.info(
-                'Resuming session for %r in challenge %s (round %d, color %s)',
+                'Resuming session for %r in challenge %s (round %d)',
                 player_name,
                 challenge_id,
                 existing['current_round'],
-                session_dict.get('player_color'),
             )
             return session_dict
 
@@ -211,11 +202,6 @@ class ChallengeStore:
             (challenge_id,),
         )
         participant_index = len(existing_sessions)
-        assigned_color = (
-            player_color.strip()
-            if player_color and player_color.strip().startswith('#')
-            else PLAYER_COLORS[participant_index % len(PLAYER_COLORS)]
-        )
 
         session_token = secrets.token_urlsafe(24)
         match_id = f'ch_match_{uuid4().hex[:12]}'
@@ -228,33 +214,32 @@ class ChallengeStore:
                     INSERT INTO challenge_sessions (
                         session_token, match_id, challenge_id, player_name,
                         current_round, location_score, date_score, total_score,
-                        total_time_seconds, started_at, player_color
-                    ) VALUES (?, ?, ?, ?, 0, 0, 0, 0, 0.0, ?, ?)
+                        total_time_seconds, started_at
+                    ) VALUES (?, ?, ?, ?, 0, 0, 0, 0, 0.0, ?)
                     """,
-                    (session_token, match_id, challenge_id, player_name, started_at, assigned_color),
+                    (session_token, match_id, challenge_id, clean_name, started_at),
                 )
         except sqlite3.IntegrityError:
             existing = self._db.fetch_one(
                 'SELECT * FROM challenge_sessions WHERE challenge_id = ? AND player_name = ? COLLATE NOCASE',
-                (challenge_id, player_name),
+                (challenge_id, clean_name),
             )
             if existing:
                 return dict(existing)
             raise
 
         logger.info(
-            'Created new session for %r in challenge %s (index %d, color %s)',
-            player_name,
+            'Created new session for %r in challenge %s (index %d)',
+            clean_name,
             challenge_id,
             participant_index,
-            assigned_color,
         )
 
         return {
             'session_token': session_token,
             'match_id': match_id,
             'challenge_id': challenge_id,
-            'player_name': player_name,
+            'player_name': clean_name,
             'current_round': 0,
             'location_score': 0,
             'date_score': 0,
@@ -262,7 +247,6 @@ class ChallengeStore:
             'total_time_seconds': 0.0,
             'started_at': started_at,
             'completed_at': None,
-            'player_color': assigned_color,
             'participant_index': participant_index,
         }
 
@@ -272,7 +256,9 @@ class ChallengeStore:
             'SELECT * FROM challenge_sessions WHERE session_token = ?',
             (session_token,),
         )
-        return dict(row) if row else None
+        if not row:
+            return None
+        return dict(row)
 
     def advance_session(
         self,

@@ -9,7 +9,7 @@ import { api } from "../api.js";
 import { state, el } from "../state.js";
 import { t, showAlert } from "../i18n.js";
 import { playSubmitTone } from "../audio.js";
-import { playerColor, registerPlayerColor, renderRoundMeta } from "../formatters.js";
+import { renderRoundMeta } from "../formatters.js";
 import { startTimer, clearTimer, resetTimerBar } from "../timer.js";
 import { showCard, scrollToGameCard } from "../screens/common.js";
 import { updateSubmitState } from "../maps.js";
@@ -61,9 +61,6 @@ export const challengeGame = {
       if (savedSession) {
         challengeSession.sessionToken = savedSession.token;
         challengeSession.sessionPlayerName = savedSession.playerName;
-        if (savedSession.playerColor) {
-          registerPlayerColor(savedSession.playerName, savedSession.playerColor);
-        }
       }
 
       if (onShowSummary) {
@@ -78,16 +75,12 @@ export const challengeGame = {
   /**
    * Start or resume a player challenge session.
    * @param {string} playerName
-   * @param {string|null} [preferredColor=null]
-   * @param {Function} onLoadRound Callback to load a round index
-   * @param {Function} onShowSummary Callback to show summary
+   * @param {Function} [onLoadRound] Callback to load a round index
+   * @param {Function} [onShowSummary] Callback to show summary
    */
-  async start(playerName, preferredColor = null, onLoadRound = null, onShowSummary = null) {
+  async start(playerName, onLoadRound = null, onShowSummary = null) {
     try {
       const payload = { player_name: playerName };
-      if (preferredColor) {
-        payload.player_color = preferredColor;
-      }
 
       const res = await api(`/play/api/${encodeURIComponent(challengeSession.challengeData.capability_token)}/start`, {
         method: "POST",
@@ -104,15 +97,11 @@ export const challengeGame = {
         state.players = [res.player_name];
       }
 
-      const activeColor = res.player_color || preferredColor || playerColor(res.player_name);
-      registerPlayerColor(res.player_name, activeColor);
-
       // Persist session into tab-scoped sessionStorage and player-indexed localStorage
       challengeSession.saveSession(challengeSession.challengeData.capability_token, {
         token: challengeSession.sessionToken,
         matchId: res.match_id,
         playerName: challengeSession.sessionPlayerName,
-        playerColor: activeColor,
       });
 
       if (res.is_resumed && res.current_round >= res.total_rounds) {

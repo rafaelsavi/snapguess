@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime
 from enum import Enum
 from typing import Any
@@ -137,7 +138,7 @@ def _validate_and_normalize_players(players: list[str], *, allow_empty: bool = F
     normalized_players: list[str] = []
     seen: set[str] = set()
     for player in players:
-        cleaned = player.strip()
+        cleaned = re.sub(r'\s+', ' ', player.strip())
         if not cleaned:
             raise ValueError('Player names must be non-empty')
         key = cleaned.lower()
@@ -800,7 +801,6 @@ class MatchSummaryPlayer(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     player_name: str = Field(min_length=1)
-    player_color: str | None = None
     location_score: int | None = Field(default=None, ge=0)
     date_score: int | None = Field(default=None, ge=0)
     total_score: int = Field(ge=0)
@@ -997,7 +997,6 @@ class MatchReplayPlayerGuess(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     player_name: str = Field(min_length=1)
-    player_color: str | None = None
     location_score: int | None = None
     date_score: int | None = None
     round_score: int = Field(ge=0)
@@ -1213,7 +1212,14 @@ class ChallengeStartRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     player_name: str = Field(min_length=1, max_length=50)
-    player_color: str | None = None
+
+    @field_validator('player_name')
+    @classmethod
+    def validate_player_name(cls, v: str) -> str:
+        cleaned = re.sub(r'\s+', ' ', v.strip())
+        if not cleaned:
+            raise ValueError('Player names must be non-empty')
+        return cleaned
 
 
 class ChallengeStartResponse(BaseModel):
@@ -1227,7 +1233,6 @@ class ChallengeStartResponse(BaseModel):
     total_rounds: int
     current_round: int
     is_resumed: bool = False  # True if player is resuming an incomplete attempt
-    player_color: str | None = None
     participant_index: int = 0
     participants: list[str] = Field(default_factory=list)
 
@@ -1268,7 +1273,6 @@ class ChallengeAnswerResponse(BaseModel):
     total_score: int  # Running total across all completed rounds
     total_time_seconds: float
     timed_out: bool = False
-    player_color: str | None = None
 
 
 class ChallengePinpointGuessData(GroundTruthLocationDate, PinpointGuessFields, PinpointDeviation):
@@ -1296,7 +1300,6 @@ class ChallengeRoundGuessData(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     player_name: str
-    player_color: str | None = None
     round_index: int
     game_mode: GameMode
     location_points: int | None = None
@@ -1314,7 +1317,6 @@ class ChallengeLeaderboardEntry(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     player_name: str
-    player_color: str | None = None
     location_score: int | None = None
     date_score: int | None = None
     total_score: int

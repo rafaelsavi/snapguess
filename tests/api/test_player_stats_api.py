@@ -165,14 +165,43 @@ def test_matches_history_api(tmp_path: Path) -> None:
     assert len(pinpoint_matches) == 1
     assert pinpoint_matches[0]['match_id'] == 'match-1'
 
-    # 3. Filter by player
+    # 3. Filter by single player
     res_player = client.get('/api/matches?player=Charlie')
     assert res_player.status_code == 200
     charlie_matches = res_player.json()
     assert len(charlie_matches) == 1
     assert charlie_matches[0]['match_id'] == 'match-2'
 
-    # 4. Limit & offset
+    # 4. Multi-player AND search (comma-separated)
+    res_multi_comma = client.get('/api/matches?player=Alice,Bob')
+    assert res_multi_comma.status_code == 200
+    assert len(res_multi_comma.json()) == 1
+    assert res_multi_comma.json()[0]['match_id'] == 'match-1'
+
+    # 5. Multi-player AND search (ampersand syntax)
+    res_multi_and = client.get('/api/matches?player=Alice%20%26%20Bob')
+    assert res_multi_and.status_code == 200
+    assert len(res_multi_and.json()) == 1
+    assert res_multi_and.json()[0]['match_id'] == 'match-1'
+
+    # 6. Multi-player AND search (repeated query params)
+    res_multi_rep = client.get('/api/matches?player=Alice&player=Bob')
+    assert res_multi_rep.status_code == 200
+    assert len(res_multi_rep.json()) == 1
+    assert res_multi_rep.json()[0]['match_id'] == 'match-1'
+
+    # 7. Multi-player AND search where players never played together
+    res_no_match = client.get('/api/matches?player=Alice,Charlie')
+    assert res_no_match.status_code == 200
+    assert len(res_no_match.json()) == 0
+
+    # 8. Multi-player AND search for Bob and Charlie
+    res_bob_charlie = client.get('/api/matches?player=Bob,%20Charlie')
+    assert res_bob_charlie.status_code == 200
+    assert len(res_bob_charlie.json()) == 1
+    assert res_bob_charlie.json()[0]['match_id'] == 'match-2'
+
+    # 9. Limit & offset
     res_paging = client.get('/api/matches?limit=1&offset=1')
     assert res_paging.status_code == 200
     assert len(res_paging.json()) == 1

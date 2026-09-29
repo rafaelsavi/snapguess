@@ -29,6 +29,33 @@ export function getLocale() {
   return (state && normalizeLanguage(state.language)) || "en-US";
 }
 
+function calendarDayNumber(date, formatter) {
+  const parts = Object.fromEntries(
+    formatter.formatToParts(date)
+      .filter((part) => ["year", "month", "day"].includes(part.type))
+      .map((part) => [part.type, Number(part.value)])
+  );
+  const day = new Date(0);
+  day.setUTCFullYear(parts.year, parts.month - 1, parts.day);
+  day.setUTCHours(0, 0, 0, 0);
+  return day.getTime() / 86400000;
+}
+
+function relativeCalendarDate(date, options) {
+  const timeZone = options?.timeZone;
+  const formatter = new Intl.DateTimeFormat("en-US-u-ca-gregory", {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    timeZone,
+  });
+  const dateDay = calendarDayNumber(date, formatter);
+  const todayDay = calendarDayNumber(new Date(), formatter);
+  if (dateDay === todayDay) return t("date.today");
+  if (dateDay === todayDay - 1) return t("date.yesterday");
+  return "";
+}
+
 /**
  * Locale-aware date formatter using active language.
  */
@@ -36,6 +63,8 @@ export function formatDate(dateInput, options) {
   if (!dateInput) return "";
   const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
   if (isNaN(d.getTime())) return "";
+  const relativeDate = relativeCalendarDate(d, options);
+  if (relativeDate) return relativeDate;
   return d.toLocaleDateString(getLocale(), options);
 }
 
@@ -46,7 +75,25 @@ export function formatDateTime(dateInput, options) {
   if (!dateInput) return "";
   const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
   if (isNaN(d.getTime())) return "";
-  return d.toLocaleString(getLocale(), options);
+  const formatted = d.toLocaleString(getLocale(), options);
+  const relativeDate = relativeCalendarDate(d, options);
+  if (!relativeDate) return formatted;
+
+  const dateOptionKeys = ["dateStyle", "weekday", "era", "year", "month", "day"];
+  const timeOptionKeys = [
+    "timeStyle", "hour", "minute", "second", "fractionalSecondDigits", "dayPeriod", "hourCycle", "hour12", "timeZoneName",
+  ];
+  const hasDateOptions = dateOptionKeys.some((key) => options?.[key] !== undefined);
+  const hasTimeOptions = timeOptionKeys.some((key) => options?.[key] !== undefined);
+  if (hasDateOptions && !hasTimeOptions) return relativeDate;
+
+  const timeOptionSet = new Set([
+    "localeMatcher", "calendar", "numberingSystem", "timeZone", ...timeOptionKeys,
+  ]);
+  const timeOptions = options
+    ? Object.fromEntries(Object.entries(options).filter(([key]) => timeOptionSet.has(key)))
+    : undefined;
+  return `${relativeDate}, ${d.toLocaleTimeString(getLocale(), timeOptions)}`;
 }
 
 /**

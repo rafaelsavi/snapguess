@@ -8,6 +8,13 @@ import { loadLeaderboardDebounced, renderLeaderboard } from "./leaderboard.js";
 import { checkSyncStatus, triggerLibrarySync } from "./sync.js";
 import { getMatchMetaCategories, renderMatchMetaItemsHtml } from "./components/match_meta.js";
 import { GAME_MODES } from "./modes/index.js";
+import {
+  GAME_SETTINGS_STORAGE_KEY,
+  readGameSettings,
+  writeGameSettings,
+} from "./game_settings.js";
+
+export { GAME_SETTINGS_STORAGE_KEY };
 
 /** @type {MultiSelect|null} */
 export let libraryMultiSelect = null;
@@ -56,21 +63,31 @@ export function initPlayerInput() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        savedPlayers = parsed;
+        const cleaned = parsed
+          .map((p) => (typeof p === "string" ? p.trim().replace(/\s+/g, " ") : p))
+          .filter(Boolean);
+        if (cleaned.length > 0) {
+          savedPlayers = cleaned;
+        }
       }
     }
   } catch (e) {
     console.warn("Failed to load saved players from localStorage:", e);
   }
 
+  const defaultHost = (state.auth?.name && state.auth.name.trim()) || "Player 1";
+
   playerInput = new PlayerInput({
     container: root,
     hiddenInput: el.players,
     countBadge: document.getElementById("player-count-badge"),
-    initialPlayers: savedPlayers && savedPlayers.length > 0 ? savedPlayers : ["Player 1"],
+    initialPlayers: savedPlayers && savedPlayers.length > 0 ? savedPlayers : [defaultHost],
     onChange: (players) => {
+      const cleaned = (players || [])
+        .map((p) => (typeof p === "string" ? p.trim().replace(/\s+/g, " ") : p))
+        .filter(Boolean);
       try {
-        localStorage.setItem(PLAYERS_STORAGE_KEY, JSON.stringify(players));
+        localStorage.setItem(PLAYERS_STORAGE_KEY, JSON.stringify(cleaned));
       } catch (e) {
         console.warn("Failed to save players to localStorage:", e);
       }
@@ -270,15 +287,10 @@ export function initSegmentedControls() {
       set(newVal) {
         const strVal = String(newVal);
         const buttons = container.querySelectorAll(".segmented-btn");
-        let matched = false;
         buttons.forEach((btn) => {
           const isMatch = btn.getAttribute("data-value") === strVal;
           btn.classList.toggle("active", isMatch);
-          if (isMatch) matched = true;
         });
-        if (matched) {
-          container.dispatchEvent(new Event("change", { bubbles: true }));
-        }
       },
       configurable: true,
     });
@@ -289,18 +301,42 @@ export function initSegmentedControls() {
         buttons.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         container.dispatchEvent(new Event("change", { bubbles: true }));
+        saveGameSettings();
       });
     });
   };
 
-  setupControl("round-count", "10");
-  setupControl("round-length", "1m");
+  const savedSettings = readGameSettings();
+
+  const defaultRoundCount = savedSettings?.round_count ? String(savedSettings.round_count) : "10";
+  const defaultRoundLength = savedSettings?.round_length ? String(savedSettings.round_length) : "1m";
+
+  setupControl("round-count", defaultRoundCount);
+  setupControl("round-length", defaultRoundLength);
+
+  if (savedSettings?.round_count) {
+    const rc = document.getElementById("round-count");
+    if (rc) rc.value = defaultRoundCount;
+  }
+  if (savedSettings?.round_length) {
+    const rl = document.getElementById("round-length");
+    if (rl) rl.value = defaultRoundLength;
+  }
 
   const roundCountEl = document.getElementById("round-count");
   if (roundCountEl && !roundCountEl.dataset.changeBound) {
     roundCountEl.dataset.changeBound = "true";
     roundCountEl.addEventListener("change", () => {
+      saveGameSettings();
       onGuessModeChanged();
+    });
+  }
+
+  const roundLengthEl = document.getElementById("round-length");
+  if (roundLengthEl && !roundLengthEl.dataset.changeBound) {
+    roundLengthEl.dataset.changeBound = "true";
+    roundLengthEl.addEventListener("change", () => {
+      saveGameSettings();
     });
   }
 }
@@ -308,6 +344,16 @@ export function initSegmentedControls() {
 function initModeSelector() {
   const container = document.getElementById("game-settings-container");
   const modeButtons = document.querySelectorAll("#game-mode-selector .mode-btn");
+
+  const savedSettings = readGameSettings();
+
+  const savedMode = savedSettings?.game_mode;
+  if (savedMode && (savedMode === "pinpoint" || savedMode === "unshuffle")) {
+    state.gameMode = savedMode;
+    modeButtons.forEach((btn) => {
+      btn.classList.toggle("active", btn.getAttribute("data-mode") === savedMode);
+    });
+  }
 
   const setMode = (modeName) => {
     state.gameMode = modeName;
@@ -318,6 +364,7 @@ function initModeSelector() {
     if (activeMode && container) {
       activeMode.renderSettings(container);
     }
+    saveGameSettings();
     onGuessModeChanged();
     loadLeaderboardDebounced();
   };
@@ -365,10 +412,12 @@ function initModeSelector() {
           e.target.id === "card-goal-date" ||
           e.target.closest?.(".guess-mode-buttons"))
       ) {
+        saveGameSettings();
         onGuessModeChanged();
       }
     });
     container.addEventListener("guess-mode-change", () => {
+      saveGameSettings();
       onGuessModeChanged();
     });
   }
@@ -392,6 +441,114 @@ export function updateDependentCities(selectedCountryNames) {
   }
 }
 
+export function saveGameSettings() {
+  const existingSettings = readGameSettings();
+
+  const locCard = document.getElementById("card-goal-location");
+  const locCheckbox = document.getElementById("goal-location");
+  const dateCard = document.getElementById("card-goal-date");
+  const dateCheckbox = document.getElementById("goal-date");
+  const hasModeDom = Boolean(locCard || locCheckbox || dateCard || dateCheckbox);
+
+  const activeMode = getActiveMode();
+  const modePayload = hasModeDom && activeMode ? activeMode.getModePayload() : null;
+
+  const locationMode = modePayload && typeof modePayload.location_mode === "boolean"
+    ? modePayload.location_mode
+    : (existingSettings && typeof existingSettings.location_mode === "boolean"
+      ? existingSettings.location_mode
+      : true);
+
+  const dateMode = modePayload && typeof modePayload.date_mode === "boolean"
+    ? modePayload.date_mode
+    : (existingSettings && typeof existingSettings.date_mode === "boolean"
+      ? existingSettings.date_mode
+      : true);
+
+  const rc = el.roundCount || document.getElementById("round-count");
+  const rl = el.roundLength || document.getElementById("round-length");
+
+  const roundCount = rc?.value || existingSettings?.round_count || "10";
+  const roundLength = rl?.value || existingSettings?.round_length || "1m";
+
+  const settings = {
+    game_mode: state.gameMode || existingSettings?.game_mode || "pinpoint",
+    location_mode: locationMode,
+    date_mode: dateMode,
+    round_count: String(roundCount),
+    round_length: String(roundLength),
+  };
+  writeGameSettings(settings);
+}
+
+export function restoreGameSettings(configOverride = null) {
+  let settings = configOverride;
+  if (!settings) {
+    settings = readGameSettings();
+  }
+
+  if (!settings) return;
+
+  const targetMode = settings.game_mode || settings.mode;
+  if (targetMode && (targetMode === "pinpoint" || targetMode === "unshuffle")) {
+    state.gameMode = targetMode;
+    const modeButtons = document.querySelectorAll("#game-mode-selector .mode-btn");
+    modeButtons.forEach((btn) => {
+      btn.classList.toggle("active", btn.getAttribute("data-mode") === targetMode);
+    });
+  }
+
+  const container = document.getElementById("game-settings-container");
+  const activeMode = getActiveMode();
+  if (activeMode && container) {
+    activeMode.renderSettings(container);
+  }
+
+  let loc = settings.location_mode;
+  let date = settings.date_mode;
+  if (typeof loc === "boolean" || typeof date === "boolean") {
+    if (loc === false && date === false) {
+      loc = true;
+      date = true;
+    }
+    const locCheckbox = document.getElementById("goal-location");
+    const dateCheckbox = document.getElementById("goal-date");
+    const locCard = document.getElementById("card-goal-location");
+    const dateCard = document.getElementById("card-goal-date");
+
+    if (locCheckbox && typeof loc === "boolean") {
+      locCheckbox.checked = loc;
+      if (locCard) {
+        locCard.classList.toggle("active", loc);
+        locCard.setAttribute("aria-checked", String(loc));
+      }
+    }
+    if (dateCheckbox && typeof date === "boolean") {
+      dateCheckbox.checked = date;
+      if (dateCard) {
+        dateCard.classList.toggle("active", date);
+        dateCard.setAttribute("aria-checked", String(date));
+      }
+    }
+  }
+
+  if (settings.round_count !== undefined && settings.round_count !== null) {
+    const val = String(settings.round_count);
+    if (el.roundCount) {
+      el.roundCount.value = val;
+    }
+  }
+
+  if (settings.round_length) {
+    const val = String(settings.round_length);
+    if (el.roundLength) {
+      el.roundLength.value = val;
+    }
+  }
+
+  onGuessModeChanged();
+}
+
 export function saveCurrentFilters() {
   const { minDate, maxDate } = dateRangeSlider ? dateRangeSlider.getSelectedRange() : { minDate: null, maxDate: null };
   const filterState = {
@@ -412,17 +569,20 @@ export function saveCurrentFilters() {
   }
 }
 
-export function restoreFilters() {
+export function restoreFilters(savedOverride = null) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_PREFIX + "global");
-    if (!raw) {
-      if (el.includeSharedCheckbox) {
-        el.includeSharedCheckbox.checked = false;
-        if (el.labelIncludeShared) el.labelIncludeShared.classList.remove("active");
+    let saved = savedOverride;
+    if (!saved) {
+      const raw = localStorage.getItem(STORAGE_KEY_PREFIX + "global");
+      if (!raw) {
+        if (el.includeSharedCheckbox) {
+          el.includeSharedCheckbox.checked = false;
+          if (el.labelIncludeShared) el.labelIncludeShared.classList.remove("active");
+        }
+        return;
       }
-      return;
+      saved = JSON.parse(raw);
     }
-    const saved = JSON.parse(raw);
     if (saved.libraries && libraryMultiSelect) libraryMultiSelect.setSelectedIds(saved.libraries);
     const albums = saved.albums || saved.album_ids;
     if (albums && albumMultiSelect) albumMultiSelect.setSelectedIds(albums);
@@ -434,8 +594,10 @@ export function restoreFilters() {
     const people = saved.people || saved.person_ids;
     if (people && peopleMultiSelect) peopleMultiSelect.setSelectedIds(people);
     if (saved.people_mode) setPeopleMode(saved.people_mode);
-    if (dateRangeSlider && saved.min_month && saved.max_month) {
-      dateRangeSlider.setSelectedRange(saved.min_month, saved.max_month);
+    const minMonth = saved.min_month || (saved.min_date ? saved.min_date.slice(0, 7) : null);
+    const maxMonth = saved.max_month || (saved.max_date ? saved.max_date.slice(0, 7) : null);
+    if (dateRangeSlider && minMonth && maxMonth) {
+      dateRangeSlider.setSelectedRange(minMonth, maxMonth);
     }
 
     const sharedChecked = Boolean(saved.include_shared);
@@ -991,8 +1153,10 @@ export async function initLibraries() {
   }
   await onLibrariesChanged(false);
   restoreFilters();
+  restoreGameSettings();
   updatePeopleModeToggleVisibility();
   saveCurrentFilters();
+  saveGameSettings();
   updateFiltersSummaryBadge();
   triggerPreflightDebounced();
   checkSyncStatus(onLibrariesChanged);

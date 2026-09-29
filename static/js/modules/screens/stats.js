@@ -9,16 +9,29 @@ import { t, tOr, formatDateTime } from "../i18n.js";
 import { showCard } from "./common.js";
 import { navigate } from "../router.js";
 import { playerColor, playerInitial, escapeHtml, formatRankBadge } from "../formatters.js";
+import { attachPlayerAutocomplete } from "../components/player_autocomplete.js";
 
 let _searchDebounceTimer = null;
 let _cachedPlayers = [];
 let _cachedProfileData = null;
+let _playerAutocomplete = null;
 
 export function initStats() {
   // Player search & sort
   const playerSearch = document.getElementById("stats-players-search");
   const playerSearchClear = document.getElementById("stats-players-search-clear");
   if (playerSearch) {
+    _playerAutocomplete = attachPlayerAutocomplete(playerSearch, {
+      onSelect: (playerName) => {
+        playerSearch.value = playerName;
+        if (playerSearchClear) {
+          playerSearchClear.classList.remove("hidden");
+        }
+        clearTimeout(_searchDebounceTimer);
+        loadPlayerDirectory();
+      },
+    });
+
     playerSearch.addEventListener("input", () => {
       if (playerSearchClear) {
         playerSearchClear.classList.toggle("hidden", !playerSearch.value);
@@ -27,6 +40,29 @@ export function initStats() {
       _searchDebounceTimer = setTimeout(() => {
         loadPlayerDirectory();
       }, 200);
+    });
+
+    playerSearch.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && (!_playerAutocomplete || !_playerAutocomplete.isOpen())) {
+        if (playerSearch.value) {
+          e.preventDefault();
+          playerSearch.value = "";
+          if (playerSearchClear) playerSearchClear.classList.add("hidden");
+          clearTimeout(_searchDebounceTimer);
+          loadPlayerDirectory();
+        }
+      } else if (e.key === "Enter" && (!_playerAutocomplete || !_playerAutocomplete.isOpen())) {
+        clearTimeout(_searchDebounceTimer);
+        loadPlayerDirectory();
+      }
+    });
+
+    playerSearch.addEventListener("search", () => {
+      if (!playerSearch.value) {
+        if (playerSearchClear) playerSearchClear.classList.add("hidden");
+        clearTimeout(_searchDebounceTimer);
+        loadPlayerDirectory();
+      }
     });
   }
 
@@ -62,7 +98,7 @@ export function initStats() {
   }
 }
 
-export function showPlayerDirectory() {
+export function showPlayerDirectory(initialSearch = null) {
   _cachedProfileData = null;
   showCard(el.statsPageCard);
 
@@ -81,6 +117,17 @@ export function showPlayerDirectory() {
   if (desc) {
     desc.setAttribute("data-i18n", "stats.hub_subtitle");
     desc.textContent = t("stats.hub_subtitle");
+  }
+
+  const playerSearch = document.getElementById("stats-players-search");
+  const playerSearchClear = document.getElementById("stats-players-search-clear");
+  const urlParams = new URLSearchParams(window.location.search);
+  const searchParam = initialSearch !== null ? initialSearch : urlParams.get("search");
+  if (searchParam !== null && playerSearch) {
+    playerSearch.value = searchParam;
+    if (playerSearchClear) {
+      playerSearchClear.classList.toggle("hidden", !searchParam);
+    }
   }
 
   loadPlayerDirectory();
@@ -105,6 +152,18 @@ async function loadPlayerDirectory() {
     const players = await api(`/api/players?search=${encodeURIComponent(search)}&sort_by=${encodeURIComponent(sortBy)}&limit=60`);
     _cachedPlayers = Array.isArray(players) ? players : [];
     renderPlayerDirectory(_cachedPlayers);
+
+    // Synchronize URL query parameter without full reload
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (sortBy && sortBy !== "matches") params.set("sort", sortBy);
+      const qs = params.toString();
+      const newPath = qs ? `/players?${qs}` : "/players";
+      if (window.location.pathname === "/players" && window.location.search !== (qs ? `?${qs}` : "")) {
+        window.history.replaceState({ path: newPath }, "", newPath);
+      }
+    } catch (_) {}
   } catch (err) {
     console.error("Error loading players:", err);
     container.innerHTML = `
@@ -181,23 +240,6 @@ function renderPlayerDirectory(players) {
             <span>${t("stats.browse_challenges_cta")}</span>
           </button>
         </div>
-        <div class="stats-empty-features">
-          <div class="stats-empty-feature-item">
-            <span class="stats-empty-feature-icon" aria-hidden="true">🎯</span>
-            <span class="stats-empty-feature-title">${t("stats.feature_accuracy")}</span>
-            <span class="stats-empty-feature-desc">${t("stats.feature_accuracy_desc")}</span>
-          </div>
-          <div class="stats-empty-feature-item">
-            <span class="stats-empty-feature-icon" aria-hidden="true">🏆</span>
-            <span class="stats-empty-feature-title">${t("stats.feature_podiums")}</span>
-            <span class="stats-empty-feature-desc">${t("stats.feature_podiums_desc")}</span>
-          </div>
-          <div class="stats-empty-feature-item">
-            <span class="stats-empty-feature-icon" aria-hidden="true">🎬</span>
-            <span class="stats-empty-feature-title">${t("stats.feature_replays")}</span>
-            <span class="stats-empty-feature-desc">${t("stats.feature_replays_desc")}</span>
-          </div>
-        </div>
       </div>
     `;
 
@@ -210,8 +252,28 @@ function renderPlayerDirectory(players) {
     return;
   }
 
-  container.innerHTML = players
+  const currentUserName = state.auth?.name?.trim() || "";
+  let displayPlayers = players;
+  if (currentUserName && Array.isArray(players) && players.length > 1) {
+    const userIndex = players.findIndex(
+      (p) => p.player_name && p.player_name.trim().toLowerCase() === currentUserName.toLowerCase()
+    );
+    if (userIndex > 0) {
+      displayPlayers = [
+        players[userIndex],
+        ...players.slice(0, userIndex),
+        ...players.slice(userIndex + 1),
+      ];
+    }
+  }
+
+  container.innerHTML = displayPlayers
     .map((p) => {
+      const isCurrentUser = Boolean(
+        currentUserName &&
+        p.player_name &&
+        p.player_name.trim().toLowerCase() === currentUserName.toLowerCase()
+      );
       const initial = (p.player_name || "?").charAt(0).toUpperCase();
       const color = p.avatar_color || playerColor(p.player_name);
       const pointsFormatted = p.career_points ? p.career_points.toLocaleString() : "0";
@@ -219,10 +281,11 @@ function renderPlayerDirectory(players) {
       const lastPlayedStr = p.last_played_at ? formatDateTime(p.last_played_at) : "-";
 
       return `
-        <div class="player-card" data-player="${escapeHtml(p.player_name)}">
+        <div class="player-card ${isCurrentUser ? "is-current-user" : ""}" data-player="${escapeHtml(p.player_name)}">
           <div class="player-card-head">
-            <div class="player-card-avatar" style="background-color: ${color};">
+            <div class="player-card-avatar ${isCurrentUser ? "is-current-user" : ""}" style="background-color: ${color};">
               ${initial}
+              ${isCurrentUser ? `<span class="player-card-avatar-badge" aria-hidden="true">👤</span>` : ""}
             </div>
             <div class="player-card-meta">
               <h3 class="player-card-name">${escapeHtml(p.player_name)}</h3>
@@ -380,6 +443,12 @@ function renderPlayerProfile(data) {
   const analytics = data.analytics;
   const recentMatches = data.recent_matches || [];
 
+  const isCurrentUser = Boolean(
+    state.auth?.name &&
+    player.player_name &&
+    player.player_name.trim().toLowerCase() === state.auth.name.trim().toLowerCase()
+  );
+
   const initial = (player.player_name || "?").charAt(0).toUpperCase();
   const color = player.avatar_color || playerColor(player.player_name);
   const careerPoints = player.career_points.toLocaleString();
@@ -442,12 +511,14 @@ function renderPlayerProfile(data) {
         </div>
 
         <div class="player-profile-hero">
-          <div class="player-hero-avatar" style="background-color: ${color};">
+          <div class="player-hero-avatar ${isCurrentUser ? "is-current-user" : ""}" style="background-color: ${color};">
             ${initial}
           </div>
           <div>
             <h2 class="player-hero-name">${escapeHtml(player.player_name)}</h2>
             <div class="player-hero-badges">
+              ${isCurrentUser ? `<span class="player-hero-badge is-you">👤 ${t("stats.you_badge")}</span>` : ""}
+              ${isCurrentUser ? `<span class="player-hero-badge is-verified">✓ ${t("stats.verified_account")}</span>` : ""}
               <span class="player-hero-badge">📅 ${t("stats.active_since", player.first_played_at ? formatDateTime(player.first_played_at) : "-")}</span>
               <span class="player-hero-badge">⏱️ ${t("stats.last_played", player.last_played_at ? formatDateTime(player.last_played_at) : "-")}</span>
             </div>
@@ -565,7 +636,12 @@ function renderPlayerProfile(data) {
 
       <!-- Recent Matches Log -->
       <div class="recent-matches-card">
-        <h3>📜 ${t("stats.recent_matches")}</h3>
+        <div class="recent-matches-card-header">
+          <h3>📜 ${t("stats.recent_matches")}</h3>
+          <a href="/replays?player=${encodeURIComponent(player.player_name)}" class="profile-all-replays-link" id="profile-view-all-replays-link">
+            <span>${t("stats.view_all_player_replays")}</span>
+          </a>
+        </div>
         <div class="table-scroll">
           <table class="recent-matches-table">
             <thead>
@@ -589,6 +665,11 @@ function renderPlayerProfile(data) {
 
   document.getElementById("profile-back-to-hub-btn")?.addEventListener("click", () => {
     navigate("/players");
+  });
+
+  document.getElementById("profile-view-all-replays-link")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    navigate(`/replays?player=${encodeURIComponent(player.player_name)}`);
   });
 
   container.querySelectorAll(".replay-action-btn").forEach((btn) => {

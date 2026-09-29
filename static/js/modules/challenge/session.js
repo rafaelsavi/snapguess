@@ -48,7 +48,7 @@ export const challengeSession = {
   /**
    * Persist active player session into sessionStorage (tab-scoped) and localStorage (player dictionary).
    * @param {string} capabilityToken
-   * @param {object} sessionData { token, matchId, playerName, playerColor }
+   * @param {object} sessionData { token, matchId, playerName }
    */
   saveSession(capabilityToken, sessionData) {
     if (!capabilityToken || !sessionData) return;
@@ -97,7 +97,7 @@ export const challengeSession = {
    * @param {object} [options]
    * @param {boolean} [options.tabOnly=false] Only check sessionStorage (e.g. for spectator view)
    * @param {string|null} [options.preferredPlayerName=null]
-   * @returns {object|null} { token, matchId, playerName, playerColor }
+   * @returns {object|null} { token, matchId, playerName }
    */
   loadSession(capabilityToken, { tabOnly = false, preferredPlayerName = null } = {}) {
     if (!capabilityToken) return null;

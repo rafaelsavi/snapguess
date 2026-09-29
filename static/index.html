@@ -48,17 +48,51 @@
   <div class="bg-shape bg-2"></div>
   <main class="app-shell">
     <header class="app-header">
-      <div class="header-main">
-        <h1>{{APP_HEADING}}</h1>
-        <p>{{APP_TAGLINE}}</p>
+      <div class="header-brand-row">
+        <div class="header-main">
+          <h1>{{APP_HEADING}}</h1>
+          <p class="header-tagline">{{APP_TAGLINE}}</p>
+        </div>
+        <div class="header-utility-actions">
+          <span id="identity-badge" class="identity-badge hidden"></span>
+          <button type="button" id="pwa-install-btn" class="header-icon-btn pwa-install-btn hidden"
+            data-i18n-title="pwa.install_title" data-i18n-aria-label="pwa.install_title" title="Install App"
+            aria-label="Install App">
+            <span id="pwa-install-icon">📲</span>
+          </button>
+          <div class="settings-dropdown" id="settings-dropdown">
+            <button type="button" id="settings-toggle-btn" class="header-icon-btn settings-toggle-btn"
+              aria-haspopup="true" aria-expanded="false" aria-label="Settings" data-i18n-title="nav.settings"
+              data-i18n-aria-label="nav.settings" title="Settings">
+              <span id="settings-icon">⚙️</span>
+            </button>
+            <div class="settings-menu" id="settings-menu" role="menu" aria-label="Settings">
+              <button type="button" id="theme-toggle-btn" class="header-icon-btn theme-toggle-btn settings-menu-btn"
+                data-i18n-title="theme.light" data-i18n-aria-label="theme.toggle_title"
+                title="Theme: Clear" aria-label="Switch Theme">
+                <span id="theme-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-svg" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></span>
+              </button>
+              <button type="button" id="lang-toggle-btn" class="header-icon-btn lang-toggle-btn settings-menu-btn"
+                title="Language: English" aria-label="Switch Language">
+                <span id="lang-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" class="flag-svg"
+                    aria-hidden="true">
+                    <rect width="60" height="60" fill="#012169" />
+                    <path d="M0,0 L60,60 M60,0 L0,60" stroke="#FFFFFF" stroke-width="10" />
+                    <path d="M0,0 L60,60 M60,0 L0,60" stroke="#C8102E" stroke-width="6" />
+                    <path d="M30,0 V60 M0,30 H60" stroke="#FFFFFF" stroke-width="16" />
+                    <path d="M30,0 V60 M0,30 H60" stroke="#C8102E" stroke-width="10" />
+                  </svg></span>
+              </button>
+              <button type="button" id="audio-toggle-btn" class="header-icon-btn audio-toggle-btn settings-menu-btn"
+                data-i18n-title="audio.toggle_title" data-i18n-aria-label="audio.toggle_title"
+                title="Toggle Sound Effects" aria-label="Toggle Sound Effects">
+                <span id="audio-icon">🔊</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="header-controls">
-        <span id="identity-badge" class="identity-badge hidden"></span>
-        <button type="button" id="pwa-install-btn" class="header-icon-btn pwa-install-btn hidden"
-          data-i18n-title="pwa.install_title" data-i18n-aria-label="pwa.install_title" title="Install App"
-          aria-label="Install App">
-          <span id="pwa-install-icon">📲</span>
-        </button>
+      <nav class="header-nav-bar" id="header-nav-bar" aria-label="Main Navigation">
         <a href="/" id="home-nav-btn" class="header-icon-btn home-nav-btn" data-i18n-title="nav.home_title"
           data-i18n-aria-label="nav.home_title" title="Home" aria-label="Home">
           <span id="home-nav-icon">🏠</span>
@@ -69,45 +103,15 @@
           <span id="challenges-nav-icon">⚔️</span>
           <span id="header-challenges-badge" class="header-challenges-badge hidden">0</span>
         </a>
-        <a href="/players" id="stats-nav-btn" class="header-icon-btn stats-nav-btn" data-i18n-title="nav.players"
-          data-i18n-aria-label="nav.players" title="Players" aria-label="Players">
-          <span id="stats-nav-icon">👥</span>
-        </a>
         <a href="/replays" id="replays-nav-btn" class="header-icon-btn replays-nav-btn" data-i18n-title="nav.replays"
           data-i18n-aria-label="nav.replays" title="Match Replays" aria-label="Match Replays">
           <span id="replays-nav-icon">🎬</span>
         </a>
-        <div class="settings-dropdown" id="settings-dropdown">
-          <button type="button" id="settings-toggle-btn" class="header-icon-btn settings-toggle-btn"
-            aria-haspopup="true" aria-expanded="false" aria-label="Settings" data-i18n-title="nav.settings"
-            data-i18n-aria-label="nav.settings" title="Settings">
-            <span id="settings-icon">⚙️</span>
-          </button>
-          <div class="settings-menu" id="settings-menu" role="menu" aria-label="Settings">
-            <button type="button" id="theme-toggle-btn" class="header-icon-btn theme-toggle-btn settings-menu-btn"
-              data-i18n-title="theme.light" data-i18n-aria-label="theme.toggle_title"
-              title="Theme: Clear" aria-label="Switch Theme">
-              <span id="theme-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-svg" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></span>
-            </button>
-            <button type="button" id="lang-toggle-btn" class="header-icon-btn lang-toggle-btn settings-menu-btn"
-              title="Language: English" aria-label="Switch Language">
-              <span id="lang-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" class="flag-svg"
-                  aria-hidden="true">
-                  <rect width="60" height="60" fill="#012169" />
-                  <path d="M0,0 L60,60 M60,0 L0,60" stroke="#FFFFFF" stroke-width="10" />
-                  <path d="M0,0 L60,60 M60,0 L0,60" stroke="#C8102E" stroke-width="6" />
-                  <path d="M30,0 V60 M0,30 H60" stroke="#FFFFFF" stroke-width="16" />
-                  <path d="M30,0 V60 M0,30 H60" stroke="#C8102E" stroke-width="10" />
-                </svg></span>
-            </button>
-            <button type="button" id="audio-toggle-btn" class="header-icon-btn audio-toggle-btn settings-menu-btn"
-              data-i18n-title="audio.toggle_title" data-i18n-aria-label="audio.toggle_title"
-              title="Toggle Sound Effects" aria-label="Toggle Sound Effects">
-              <span id="audio-icon">🔊</span>
-            </button>
-          </div>
-        </div>
-      </div>
+        <a href="/players" id="stats-nav-btn" class="header-icon-btn stats-nav-btn" data-i18n-title="nav.players"
+          data-i18n-aria-label="nav.players" title="Players" aria-label="Players">
+          <span id="stats-nav-icon">👥</span>
+        </a>
+      </nav>
     </header>
 
     <section id="setup-card" class="card">
@@ -522,10 +526,9 @@
                         <strong id="round-photo-loc" class="reveal-chip-val round-photo-loc replay-photo-loc">-</strong>
                       </span>
                     </div>
-                    <button type="button" id="reveal-report-btn" class="btn-report-discrete round-photo-report-btn" title="Report issue with photo"
-                      data-i18n-title="report.modal_title" aria-label="Report issue with photo" data-i18n-aria-label="report.modal_title">
+                    <button type="button" id="reveal-report-btn" class="btn-report-discrete round-photo-report-btn round-photo-report-btn-icon-only" title="Report Issue"
+                      data-i18n-title="report.btn_label" aria-label="Report Issue" data-i18n-aria-label="report.btn_label">
                       <span aria-hidden="true">🚩</span>
-                      <span class="report-discrete-text" data-i18n="report.btn_label">Report Issue</span>
                     </button>
                   </div>
                 </div>
@@ -640,6 +643,8 @@
 
           <!-- Summary Mode Bottom Actions -->
           <div id="summary-actions" class="summary-actions">
+            <button type="button" id="summary-play-again-btn" class="btn-primary hidden" data-i18n="summary.play_again_btn">Play Again</button>
+            <button type="button" id="summary-home-btn" class="btn-secondary" data-i18n="game_ended.return_lobby_btn">Return to Home</button>
             <button type="button" id="share-summary-btn" class="btn-secondary" data-i18n="summary.share_results_btn">Share Results</button>
             <button type="button" id="challenge-invite-btn" class="btn-secondary hidden" data-i18n="challenge.invite_btn">🔗 Invite Friends</button>
           </div>
@@ -651,7 +656,6 @@
 
           <!-- Replay Mode Bottom Actions -->
           <div id="replay-actions" class="summary-actions hidden">
-            <button type="button" id="replay-exit-bottom-btn" class="btn-secondary" data-i18n="replay.exit">Exit Replay</button>
             <button type="button" id="replay-share-btn" class="btn-secondary" data-i18n="summary.share_results_btn">Share Results</button>
           </div>
         </div>
@@ -698,7 +702,7 @@
       </div>
 
       <!-- Toolbar: Search, Filters & Sorting -->
-      <div class="challenges-toolbar">
+      <div class="hub-toolbar challenges-toolbar">
         <div class="hub-search-box challenges-search-wrap">
           <svg class="hub-search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -709,7 +713,7 @@
             placeholder="Search by title, host, album, person..."
             data-i18n-placeholder="challenges_page.search_placeholder" />
           <button type="button" id="challenges-search-clear" class="hub-search-clear hidden" aria-label="Clear search"
-            title="Clear search" data-i18n-title="challenges_page.clear_search" data-i18n-aria-label="challenges_page.clear_search">✕</button>
+            title="Clear search" data-i18n-title="common.clear_search" data-i18n-aria-label="common.clear_search">✕</button>
         </div>
 
         <div class="hub-filters-group challenges-filters-group">
@@ -942,30 +946,41 @@
 
       <!-- Replays Catalog View -->
       <div id="replays-catalog-view" class="replays-catalog-view">
-        <div class="hub-toolbar stats-toolbar replays-toolbar">
-          <div class="hub-search-box stats-search-wrap">
+        <div class="hub-toolbar replays-toolbar">
+          <div class="hub-search-box replays-search-wrap" id="stats-replays-search-box">
             <svg class="hub-search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
               stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="search" id="stats-replays-player-search" class="hub-search-input stats-search-input"
-              placeholder="Filter by player..." data-i18n-placeholder="replay.filter_player_placeholder" />
+            <input type="search" id="stats-replays-player-search" class="hub-search-input replays-search-input"
+              placeholder="Search replays..." data-i18n-placeholder="replay.search_placeholder" autocomplete="off" />
             <button type="button" id="stats-replays-search-clear" class="hub-search-clear hidden"
-              aria-label="Clear search" title="Clear search" data-i18n-title="stats.clear_search" data-i18n-aria-label="stats.clear_search">✕</button>
+              aria-label="Clear search" title="Clear search" data-i18n-title="common.clear_search" data-i18n-aria-label="common.clear_search">✕</button>
           </div>
-          <div class="hub-filters-group stats-filters-wrap">
-            <select id="stats-replays-mode-filter" class="hub-select select-input">
-              <option value="all" data-i18n="replay.filter_all_modes">All Modes</option>
+          <div class="hub-filters-group replays-filters-group">
+            <select id="stats-replays-mode-filter" class="hub-select select-input replays-mode-select">
+              <option value="all" data-i18n="replay.filter_all_modes">All Game Modes</option>
               <option value="pinpoint" data-i18n="replay.filter_mode_pinpoint">🎯 Pinpoint</option>
               <option value="unshuffle" data-i18n="replay.filter_mode_unshuffle">🔀 Unshuffle</option>
             </select>
-            <select id="stats-replays-type-filter" class="hub-select select-input">
+            <select id="stats-replays-type-filter" class="hub-select select-input replays-type-select">
               <option value="all" data-i18n="replay.filter_all_types">All Types</option>
               <option value="local" data-i18n="replay.filter_type_local">🕹️ Local Match</option>
               <option value="challenge" data-i18n="replay.filter_type_challenge">⚔️ Challenge</option>
             </select>
-            <span id="stats-replays-total-badge" class="hub-counter-pill stats-counter-pill hidden">0 replays</span>
+            <select id="stats-replays-sort-select" class="hub-select select-input replays-sort-select">
+              <option value="newest" data-i18n="replay.sort_newest">Newest First</option>
+              <option value="oldest" data-i18n="replay.sort_oldest">Oldest First</option>
+              <option value="accuracy" data-i18n="replay.sort_accuracy">Highest Accuracy</option>
+              <option value="players" data-i18n="replay.sort_players">Most Players</option>
+            </select>
+            <button type="button" id="stats-replays-my-matches-btn" class="hub-btn-pill replays-my-matches-pill hidden"
+              data-i18n-title="replay.my_matches_filter_title" title="Filter to my matches">
+              <span class="pill-icon" aria-hidden="true">👤</span>
+              <span data-i18n="replay.my_matches_filter">My Matches</span>
+            </button>
+            <span id="stats-replays-total-badge" class="hub-counter-pill replays-counter-pill hidden">0 replays</span>
           </div>
         </div>
         <div id="stats-replays-list" class="stats-replays-list"></div>
@@ -1069,10 +1084,16 @@
             <p class="modal-section-desc" data-i18n="setup.challenge_match_desc">Create a challenge link to share with
               friends and family.</p>
 
-            <div class="form-group">
-              <label for="challenge-creator-name-input" data-i18n="admin.creator_name_label">Your Name (Creator)</label>
-              <input type="text" id="challenge-creator-name-input" class="text-input" placeholder="Your name"
-                data-i18n-placeholder="admin.creator_name_placeholder" maxlength="50" required />
+            <div class="form-group" id="challenge-creator-group">
+              <div class="challenge-label-row">
+                <label for="challenge-creator-name-input" data-i18n="admin.creator_name_label">Your Name (Creator)</label>
+                <span id="challenge-creator-locked-badge" class="challenge-name-locked-badge hidden">🔒 <span data-i18n="challenge.verified_identity">Verified Account</span></span>
+              </div>
+              <div class="challenge-name-input-wrap creator-name-input-wrap">
+                <span class="challenge-player-avatar-preview" id="challenge-creator-avatar-preview" style="background: #0f7c7f;">?</span>
+                <input type="text" id="challenge-creator-name-input" class="text-input input challenge-name-input" placeholder="Your name"
+                  data-i18n-placeholder="admin.creator_name_placeholder" maxlength="50" required autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" />
+              </div>
             </div>
 
             <div class="form-group">

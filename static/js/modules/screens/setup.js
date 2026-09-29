@@ -20,6 +20,12 @@ import {
   getSelectedPeopleMode,
   getLastPreflightData,
   showPreflightWarning,
+  restoreGameSettings,
+  saveGameSettings,
+  restoreFilters,
+  saveCurrentFilters,
+  updateFiltersSummaryBadge,
+  onGuessModeChanged,
 } from "../setup_filters.js";
 
 let _ensureLobbyInitializedFn = null;
@@ -115,6 +121,8 @@ export async function startMatch(event) {
     }
 
     state.lastMatchConfig = payload;
+    saveGameSettings();
+    saveCurrentFilters();
     getActiveMode().unmount();
 
     const response = await api("/api/game/setup", {
@@ -160,6 +168,22 @@ export function returnToSetup({ updateUrl = true } = {}) {
   state.activeLeaderboardConfig = null;
   clearActiveMatchSession();
   resetGameUi();
+
+  if (state.lastMatchConfig) {
+    restoreGameSettings(state.lastMatchConfig);
+    restoreFilters(state.lastMatchConfig);
+    if (state.lastMatchConfig.players && Array.isArray(state.lastMatchConfig.players) && playerInput) {
+      playerInput.setPlayers(state.lastMatchConfig.players, false);
+    }
+  } else {
+    restoreGameSettings();
+    restoreFilters();
+  }
+  saveGameSettings();
+  saveCurrentFilters();
+  updateFiltersSummaryBadge();
+  onGuessModeChanged();
+
   if (state.auth && state.auth.role !== "creator") {
     showCard(el.homeCard);
     if (el.leaderboardCard) {

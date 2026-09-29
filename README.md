@@ -58,7 +58,7 @@
 |                                🗺️ Round Reveal & Distance Vectors                                 |                                  🏆 Winner Podium & Review Deck                                   |
 |:-------------------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------:|
 |          [![Round Reveal](docs/assets/round_reveal.webp)](docs/assets/round_reveal.webp)          |       [![Summary Podium](docs/assets/summary_podium.webp)](docs/assets/summary_podium.webp)       |
-| *True photo location star, player pins, dashed distance vectors, and itemized scoring breakdown.* | *Podium medals (🥇, 🥈, 🥉), dynamic performance awards, standings table, and 3-tab review deck.* |
+| *True photo location star, player pins, dashed distance vectors, and itemized scoring breakdown.* | *Winner podium with metallic rank badges (1st, 2nd, 3rd), dynamic performance awards, standings table, and 3-tab review deck.* |
 
 ---
 
