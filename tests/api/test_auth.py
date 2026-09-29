@@ -302,13 +302,13 @@ def test_resolve_role_name_headers_and_jwt() -> None:
     cf_oidc_claims = {
         'email': 'creator@example.com',
         'sub': '67890',
-        'oidc_fields': {'name': 'Rafael Savi'},
+        'oidc_fields': {'name': 'Alex Morgan'},
     }
     cf_oidc_b64 = base64.urlsafe_b64encode(json.dumps(cf_oidc_claims).encode('utf-8')).decode('ascii').rstrip('=')
     ctx = _resolve_role_cloudflare(make_req({'cf-access-jwt-assertion': f'header.{cf_oidc_b64}.sig'}))
     assert ctx.role == Role.CREATOR
     assert ctx.email == 'creator@example.com'
-    assert ctx.name == 'Rafael Savi'
+    assert ctx.name == 'Alex Morgan'
     assert ctx.authenticated is True
 
     # 6. JWT assertion with deeply nested identity.oidc_fields and given_name/family_name
@@ -371,3 +371,36 @@ def test_resolve_role_loopback_dev_parameters() -> None:
     assert ctx.email == 'dev@example.com'
     assert ctx.name == 'Dev Param'
     assert ctx.authenticated is True
+
+
+def test_auth_me_lock_player_name(tmp_path: Path) -> None:
+    """Verify lock_player_name flag in GET /api/auth/me when CF_LOCK_PLAYER_NAME is enabled."""
+    user_email = 'locked_user@example.com'
+    settings = AppSettings(
+        immich_server_url='https://placeholder.example.com/api',
+        immich_libraries={'family': 'token'},
+        data_path=tmp_path,
+        auth_mode='cloudflare',
+        cf_user_emails=frozenset({user_email}),
+        cf_lock_player_name=True,
+    )
+    app = create_app(settings=settings)
+    app.state.immich_client = FakeImmichClient()
+
+    with TestClient(app) as client:
+        # 1. Unauthenticated guest -> lock_player_name is False
+        resp = client.get('/api/auth/me')
+        assert resp.status_code == 200
+        assert resp.json()['lock_player_name'] is False
+
+        # 2. Authenticated user -> lock_player_name is True
+        headers = {
+            'cf-access-authenticated-user-email': user_email,
+            'cf-access-user-name': 'Verified Player',
+        }
+        resp = client.get('/api/auth/me', headers=headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data['role'] == 'user'
+        assert data['name'] == 'Verified Player'
+        assert data['lock_player_name'] is True

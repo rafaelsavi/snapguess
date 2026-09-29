@@ -2,6 +2,7 @@ import { t, formatDate } from "../i18n.js";
 import { state, el } from "../state.js";
 import { createStandardMap, createBadgePinIcon, updateSubmitState, fitMapToBounds, applySpiderfy, unregisterActiveMap, toggleMapFullscreen } from "../maps.js";
 import { renderGuessingModeSettings } from "./common.js";
+import { readGameSettings } from "../game_settings.js";
 import { playerNameCell, buildCell, renderRoundMeta } from "../formatters.js";
 import { animateScoreRollup, createPerfectBadge } from "../effects.js";
 import { openReportModal } from "../components/report_modal.js";
@@ -153,8 +154,16 @@ export const unshuffleMode = {
     const dateCard = document.getElementById("card-goal-date");
     const dateCheckbox = document.getElementById("goal-date");
 
-    let locationMode = locCheckbox ? locCheckbox.checked : (locCard ? locCard.classList.contains("active") : true);
-    let dateMode = dateCheckbox ? dateCheckbox.checked : (dateCard ? dateCard.classList.contains("active") : true);
+    const savedSettings = readGameSettings();
+    let savedLoc = true;
+    let savedDate = true;
+    if (savedSettings) {
+      if (typeof savedSettings.location_mode === "boolean") savedLoc = savedSettings.location_mode;
+      if (typeof savedSettings.date_mode === "boolean") savedDate = savedSettings.date_mode;
+    }
+
+    let locationMode = locCheckbox ? locCheckbox.checked : (locCard ? locCard.classList.contains("active") : savedLoc);
+    let dateMode = dateCheckbox ? dateCheckbox.checked : (dateCard ? dateCard.classList.contains("active") : savedDate);
 
     if (!locationMode && !dateMode) {
       locationMode = true;

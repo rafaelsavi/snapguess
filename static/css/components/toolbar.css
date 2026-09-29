@@ -12,6 +12,7 @@
 /* ----------------------------------------------------------------- Toolbar Shell */
 .hub-toolbar,
 .challenges-toolbar,
+.replays-toolbar,
 .stats-toolbar,
 .reported-toolbar {
   display: flex;
@@ -30,6 +31,7 @@
 
 [data-theme="dark"] .hub-toolbar,
 [data-theme="dark"] .challenges-toolbar,
+[data-theme="dark"] .replays-toolbar,
 [data-theme="dark"] .stats-toolbar,
 [data-theme="dark"] .reported-toolbar {
   background: rgba(15, 23, 42, 0.65);
@@ -40,6 +42,7 @@
 /* ----------------------------------------------------------------- Search Box */
 .hub-search-box,
 .challenges-search-wrap,
+.replays-search-wrap,
 .stats-search-wrap,
 .reported-search-wrap {
   display: flex;
@@ -58,8 +61,16 @@
   position: relative;
 }
 
+/* Expanded desktop search width for player directory */
+.hub-search-box.stats-search-wrap,
+.stats-search-wrap {
+  flex: 1 1 360px;
+  max-width: 620px;
+}
+
 [data-theme="dark"] .hub-search-box,
 [data-theme="dark"] .challenges-search-wrap,
+[data-theme="dark"] .replays-search-wrap,
 [data-theme="dark"] .stats-search-wrap,
 [data-theme="dark"] .reported-search-wrap {
   background: rgba(30, 41, 59, 0.85);
@@ -68,6 +79,7 @@
 
 .hub-search-box:focus-within,
 .challenges-search-wrap:focus-within,
+.replays-search-wrap:focus-within,
 .stats-search-wrap:focus-within,
 .reported-search-wrap:focus-within {
   border-color: var(--accent, #0f7c7f);
@@ -87,6 +99,7 @@
 
 .hub-search-input,
 .challenges-search-input,
+.replays-search-input,
 .stats-search-input,
 .reported-search-input {
   border: none !important;
@@ -103,6 +116,7 @@
 
 [data-theme="dark"] .hub-search-input,
 [data-theme="dark"] .challenges-search-input,
+[data-theme="dark"] .replays-search-input,
 [data-theme="dark"] .stats-search-input,
 [data-theme="dark"] .reported-search-input {
   color: #f1f5f9;
@@ -110,6 +124,7 @@
 
 .hub-search-input::placeholder,
 .challenges-search-input::placeholder,
+.replays-search-input::placeholder,
 .stats-search-input::placeholder,
 .reported-search-input::placeholder {
   color: var(--text-muted, #94a3b8);
@@ -118,6 +133,7 @@
 
 .hub-search-input::-webkit-search-cancel-button,
 .challenges-search-input::-webkit-search-cancel-button,
+.replays-search-input::-webkit-search-cancel-button,
 .stats-search-input::-webkit-search-cancel-button,
 .reported-search-input::-webkit-search-cancel-button {
   display: none;
@@ -235,6 +251,9 @@
 .hub-select,
 .challenges-mode-select,
 .challenges-sort-select,
+.replays-mode-select,
+.replays-type-select,
+.replays-sort-select,
 .stats-sort-wrap select,
 .stats-filters-wrap select,
 .reported-sort-select {
@@ -266,6 +285,9 @@
 [data-theme="dark"] .hub-select,
 [data-theme="dark"] .challenges-mode-select,
 [data-theme="dark"] .challenges-sort-select,
+[data-theme="dark"] .replays-mode-select,
+[data-theme="dark"] .replays-type-select,
+[data-theme="dark"] .replays-sort-select,
 [data-theme="dark"] .stats-sort-wrap select,
 [data-theme="dark"] .stats-filters-wrap select,
 [data-theme="dark"] .reported-sort-select {
@@ -282,6 +304,9 @@
 .hub-select:hover,
 .challenges-mode-select:hover,
 .challenges-sort-select:hover,
+.replays-mode-select:hover,
+.replays-type-select:hover,
+.replays-sort-select:hover,
 .stats-sort-wrap select:hover,
 .stats-filters-wrap select:hover,
 .reported-sort-select:hover {
@@ -291,6 +316,9 @@
 .hub-select:focus,
 .challenges-mode-select:focus,
 .challenges-sort-select:focus,
+.replays-mode-select:focus,
+.replays-type-select:focus,
+.replays-sort-select:focus,
 .stats-sort-wrap select:focus,
 .stats-filters-wrap select:focus,
 .reported-sort-select:focus {
@@ -345,21 +373,24 @@
 
 /* ----------------------------------------------------------------- Responsive Behavior */
 @media (max-width: 1100px) {
-  .challenges-toolbar {
+  .challenges-toolbar,
+  .replays-toolbar {
     flex-direction: column;
     flex-wrap: nowrap;
     align-items: stretch;
     gap: 0.65rem;
   }
 
-  .challenges-toolbar .challenges-search-wrap {
+  .challenges-toolbar .challenges-search-wrap,
+  .replays-toolbar .replays-search-wrap {
     flex: none;
     max-width: 100%;
     width: 100%;
     height: var(--toolbar-control-height, 38px);
   }
 
-  .challenges-toolbar .challenges-filters-group {
+  .challenges-toolbar .challenges-filters-group,
+  .replays-toolbar .replays-filters-group {
     width: 100%;
   }
 }
@@ -367,6 +398,7 @@
 @media (max-width: 900px) {
   .hub-toolbar,
   .challenges-toolbar,
+  .replays-toolbar,
   .stats-toolbar,
   .reported-toolbar {
     flex-direction: column;
@@ -376,7 +408,9 @@
   }
 
   .hub-search-box,
+  .hub-search-box.stats-search-wrap,
   .challenges-search-wrap,
+  .replays-search-wrap,
   .stats-search-wrap,
   .reported-search-wrap {
     flex: none;
@@ -387,6 +421,7 @@
 
   .hub-filters-group,
   .challenges-filters-group,
+  .replays-filters-group,
   .stats-filters-wrap,
   .stats-sort-wrap,
   .reported-filters-group {
@@ -402,6 +437,9 @@
   .hub-select,
   .challenges-mode-select,
   .challenges-sort-select,
+  .replays-mode-select,
+  .replays-type-select,
+  .replays-sort-select,
   .stats-sort-wrap select,
   .stats-filters-wrap select,
   .reported-sort-select {

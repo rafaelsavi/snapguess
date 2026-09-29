@@ -1,5 +1,6 @@
+import { state } from "../state.js";
 import { t } from "../i18n.js";
-import { PLAYER_COLORS } from "../formatters.js";
+import { playerColor, playerInitial } from "../formatters.js";
 import { attachPlayerAutocomplete } from "./player_autocomplete.js";
 
 /**
@@ -295,16 +296,7 @@ export class PlayerInput {
   }
 
   _getPlayerInitial(playerName) {
-    const letters = String(playerName || "?").replace(/[^\p{L}\p{N}]/gu, "");
-    const first = (letters[0] || "?").toUpperCase();
-    const clashes = this.players.filter((name) => {
-      const l = String(name || "?").replace(/[^\p{L}\p{N}]/gu, "");
-      return (l[0] || "?").toUpperCase() === first;
-    });
-    if (clashes.length > 1 && letters.length > 1) {
-      return first + letters[1].toLowerCase();
-    }
-    return first;
+    return playerInitial(playerName);
   }
 
   _renderChips() {
@@ -316,9 +308,19 @@ export class PlayerInput {
 
       const avatar = document.createElement("span");
       avatar.className = "player-chip-avatar";
-      const color = PLAYER_COLORS[index % PLAYER_COLORS.length];
+      const color = playerColor(playerName);
       avatar.style.background = color;
       avatar.textContent = this._getPlayerInitial(playerName);
+
+      const isCurrentUser = Boolean(
+        state.auth?.name &&
+        playerName &&
+        playerName.trim().toLowerCase() === state.auth.name.trim().toLowerCase()
+      );
+      if (isCurrentUser) {
+        chip.classList.add("is-current-user");
+        avatar.classList.add("user-gold-avatar");
+      }
 
       const nameSpan = document.createElement("span");
       nameSpan.className = "player-chip-name";

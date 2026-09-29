@@ -3,15 +3,19 @@
  * Replays directory (/replays) and delegation to Unified Match Review Screen (/game/:id/replay).
  */
 
-import { el } from "../state.js";
+import { state, el } from "../state.js";
 import { t, tOr, formatDateTime } from "../i18n.js";
 import { showCard } from "./common.js";
 import { navigate } from "../router.js";
-import { escapeHtml, playerColor, playerInitial } from "../formatters.js";
+import { escapeHtml, playerColor, playerInitial, resolvePlayerName } from "../formatters.js";
 import { showMatchSummaryByMatchId, refreshSummaryLanguage } from "./summary.js";
 import { copyToClipboard } from "../summary/share.js";
+import { setupHubToolbar } from "../components/hub_toolbar.js";
 
 let _listenersBound = false;
+let _replaysToolbar = null;
+let _replaysSearch = null;
+const REPLAY_LAST_PLAYER_NAME_KEY = "immich_quiz_last_player_name";
 
 export function initReplay() {
   if (_listenersBound) return;
@@ -26,12 +30,6 @@ export function initReplay() {
     });
   }
 
-  const exitBottomBtn = document.getElementById("replay-exit-bottom-btn");
-  if (exitBottomBtn) {
-    exitBottomBtn.addEventListener("click", () => {
-      navigate("/replays");
-    });
-  }
 
   const errBackBtn = document.getElementById("replay-error-back-btn");
   if (errBackBtn) {
@@ -70,45 +68,171 @@ export async function showMatchReplay(matchId) {
 }
 
 let _cachedMatches = [];
-let _searchDebounceTimer = null;
+
+function getLegacyCurrentPlayerName() {
+  try {
+    const raw = localStorage.getItem("immich_quiz_players");
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length > 0 && typeof arr[0] === "string" && arr[0].trim()) {
+        return arr[0].trim();
+      }
+    }
+  } catch (_) {}
+  return "";
+}
+
+function getCurrentPlayerName() {
+  return resolvePlayerName(REPLAY_LAST_PLAYER_NAME_KEY, getLegacyCurrentPlayerName);
+}
+
+export function parsePlayerNames(query) {
+  if (!query) return [];
+  return query
+    .split(/[,;]+|\s+[&+]\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export function getFilteredPlayers() {
+  const matchPlayerSearch = document.getElementById("stats-replays-player-search");
+  return parsePlayerNames(matchPlayerSearch ? matchPlayerSearch.value : "");
+}
+
+export function setFilteredPlayers(players, reload = true) {
+  const parsed = Array.isArray(players)
+    ? players.map((p) => p.trim()).filter(Boolean)
+    : parsePlayerNames(players || "");
+  if (_replaysSearch) {
+    _replaysSearch.setValue(parsed.join(", "), reload);
+  } else {
+    const matchPlayerSearch = document.getElementById("stats-replays-player-search");
+    if (matchPlayerSearch) {
+      matchPlayerSearch.value = parsed.join(", ");
+    }
+    _updateSearchClearBtn();
+    _updateMyMatchesBtnState();
+    if (reload) {
+      loadMatchesHistory();
+    }
+  }
+}
+
+export function addFilteredPlayer(name, reload = true) {
+  if (!name) return;
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  const current = getFilteredPlayers();
+  if (!current.some((p) => p.toLowerCase() === trimmed.toLowerCase())) {
+    current.push(trimmed);
+    setFilteredPlayers(current, reload);
+  }
+}
+
+export function removeFilteredPlayer(name, reload = true) {
+  if (!name) return;
+  const lower = name.trim().toLowerCase();
+  const current = getFilteredPlayers();
+  const filtered = current.filter((p) => p.toLowerCase() !== lower);
+  setFilteredPlayers(filtered, reload);
+}
+
+export function clearFilteredPlayers(reload = true) {
+  if (_replaysSearch) {
+    _replaysSearch.clear(reload);
+  } else {
+    const matchPlayerSearch = document.getElementById("stats-replays-player-search");
+    if (matchPlayerSearch) {
+      matchPlayerSearch.value = "";
+    }
+    _updateSearchClearBtn();
+    _updateMyMatchesBtnState();
+    if (reload) {
+      loadMatchesHistory();
+    }
+  }
+}
+
+function _updateSearchClearBtn() {
+  if (_replaysSearch) {
+    _replaysSearch.syncClearButton();
+    return;
+  }
+  const matchPlayerSearchClear = document.getElementById("stats-replays-search-clear");
+  const matchPlayerSearch = document.getElementById("stats-replays-player-search");
+  if (!matchPlayerSearchClear) return;
+  const hasInputText = Boolean(matchPlayerSearch && matchPlayerSearch.value.trim());
+  matchPlayerSearchClear.classList.toggle("hidden", !hasInputText);
+}
+
+function _updateMyMatchesBtnState() {
+  const myMatchesBtn = document.getElementById("stats-replays-my-matches-btn");
+  if (!myMatchesBtn) return;
+  const currentName = getCurrentPlayerName();
+  if (!currentName) {
+    myMatchesBtn.classList.add("hidden");
+    return;
+  }
+  myMatchesBtn.classList.remove("hidden");
+  const activePlayers = getActivePlayerQuery();
+  const isFilteredToMe = activePlayers.some(
+    (p) => p.toLowerCase() === currentName.toLowerCase()
+  );
+  myMatchesBtn.classList.toggle("active", isFilteredToMe);
+}
+
+function getActivePlayerQuery() {
+  return getFilteredPlayers();
+}
 
 export function initReplayCatalog() {
   const matchPlayerSearch = document.getElementById("stats-replays-player-search");
   const matchPlayerSearchClear = document.getElementById("stats-replays-search-clear");
-  if (matchPlayerSearch) {
-    matchPlayerSearch.addEventListener("input", () => {
-      if (matchPlayerSearchClear) {
-        matchPlayerSearchClear.classList.toggle("hidden", !matchPlayerSearch.value);
-      }
-      clearTimeout(_searchDebounceTimer);
-      _searchDebounceTimer = setTimeout(() => {
+  const myMatchesBtn = document.getElementById("stats-replays-my-matches-btn");
+
+  _replaysToolbar = setupHubToolbar({
+    container: ".replays-toolbar",
+    search: {
+      input: matchPlayerSearch,
+      clearBtn: matchPlayerSearchClear,
+      debounceMs: 250,
+      onSearch: () => {
+        _updateMyMatchesBtnState();
         loadMatchesHistory();
-      }, 200);
-    });
-  }
-
-  if (matchPlayerSearchClear) {
-    matchPlayerSearchClear.addEventListener("click", () => {
-      if (matchPlayerSearch) {
-        matchPlayerSearch.value = "";
-        matchPlayerSearchClear.classList.add("hidden");
-        matchPlayerSearch.focus();
+      },
+      onClear: () => {
+        _updateMyMatchesBtnState();
+        loadMatchesHistory();
+      },
+    },
+    selects: [
+      "stats-replays-mode-filter",
+      "stats-replays-type-filter",
+      "stats-replays-sort-select",
+    ],
+    counterBadge: "stats-replays-total-badge",
+    onChange: ({ source, data }) => {
+      if (source === "select" && data && data.id === "stats-replays-sort-select") {
+        renderMatchesHistory(_cachedMatches);
+      } else if (source === "select") {
         loadMatchesHistory();
       }
-    });
-  }
+    },
+  });
+  _replaysSearch = _replaysToolbar.search;
 
-  const matchModeFilter = document.getElementById("stats-replays-mode-filter");
-  if (matchModeFilter) {
-    matchModeFilter.addEventListener("change", () => {
-      loadMatchesHistory();
-    });
-  }
-
-  const matchTypeFilter = document.getElementById("stats-replays-type-filter");
-  if (matchTypeFilter) {
-    matchTypeFilter.addEventListener("change", () => {
-      loadMatchesHistory();
+  if (myMatchesBtn) {
+    myMatchesBtn.addEventListener("click", () => {
+      const currentName = getCurrentPlayerName();
+      if (!currentName) return;
+      const lower = currentName.toLowerCase();
+      const current = getFilteredPlayers();
+      if (current.some((p) => p.toLowerCase() === lower)) {
+        removeFilteredPlayer(currentName);
+      } else {
+        addFilteredPlayer(currentName);
+      }
+      if (matchPlayerSearch) matchPlayerSearch.focus();
     });
   }
 
@@ -118,9 +242,12 @@ export function initReplayCatalog() {
       loadMatchesHistory();
     });
   }
+
+  _updateMyMatchesBtnState();
+  _updateSearchClearBtn();
 }
 
-export function showReplaysCatalog() {
+export function showReplaysCatalog(initialPlayer = null) {
   showCard(el.replaysPageCard);
 
   const heading = document.getElementById("replays-page-heading");
@@ -135,6 +262,33 @@ export function showReplaysCatalog() {
     desc.textContent = t("replay.catalog_subtitle");
   }
 
+  const matchPlayerSearch = document.getElementById("stats-replays-player-search");
+  const urlParams = new URLSearchParams(window.location.search);
+  const playerParam = initialPlayer !== null ? initialPlayer : urlParams.get("player");
+  if (playerParam !== null && matchPlayerSearch) {
+    matchPlayerSearch.value = playerParam;
+  }
+  _updateSearchClearBtn();
+  _updateMyMatchesBtnState();
+
+  const modeParam = urlParams.get("game_mode") || urlParams.get("mode");
+  const matchModeFilter = document.getElementById("stats-replays-mode-filter");
+  if (modeParam && matchModeFilter && ["pinpoint", "unshuffle"].includes(modeParam)) {
+    matchModeFilter.value = modeParam;
+  }
+
+  const typeParam = urlParams.get("play_mode") || urlParams.get("type");
+  const matchTypeFilter = document.getElementById("stats-replays-type-filter");
+  if (typeParam && matchTypeFilter && ["local", "challenge"].includes(typeParam)) {
+    matchTypeFilter.value = typeParam;
+  }
+
+  const sortParam = urlParams.get("sort");
+  const matchSortSelect = document.getElementById("stats-replays-sort-select");
+  if (sortParam && matchSortSelect && ["newest", "oldest", "accuracy", "score", "players"].includes(sortParam)) {
+    matchSortSelect.value = sortParam === "score" ? "accuracy" : sortParam;
+  }
+
   loadMatchesHistory();
 }
 
@@ -142,16 +296,32 @@ async function loadMatchesHistory() {
   const container = document.getElementById("stats-replays-list");
   if (!container) return;
 
-  const playerInput = document.getElementById("stats-replays-player-search");
   const modeSelect = document.getElementById("stats-replays-mode-filter");
   const typeSelect = document.getElementById("stats-replays-type-filter");
+  const sortSelect = document.getElementById("stats-replays-sort-select");
 
-  const player = playerInput ? playerInput.value.trim() : "";
+  const searchInput = document.getElementById("stats-replays-player-search");
+  const searchQuery = searchInput ? searchInput.value.trim() : "";
   const mode = modeSelect && modeSelect.value !== "all" ? modeSelect.value : "";
   const type = typeSelect && typeSelect.value !== "all" ? typeSelect.value : "";
+  const sort = sortSelect && sortSelect.value !== "newest" ? sortSelect.value : "";
+
+  // Synchronize URL query parameters without full page reload
+  try {
+    const params = new URLSearchParams();
+    if (searchQuery) params.set("search", searchQuery);
+    if (mode) params.set("mode", mode);
+    if (type) params.set("type", type);
+    if (sort) params.set("sort", sort);
+    const qs = params.toString();
+    const newPath = qs ? `/replays?${qs}` : "/replays";
+    if (window.location.pathname === "/replays" && (window.location.search !== (qs ? `?${qs}` : ""))) {
+      window.history.replaceState({ path: newPath }, "", newPath);
+    }
+  } catch (_) {}
 
   let url = `/api/matches?limit=40`;
-  if (player) url += `&player=${encodeURIComponent(player)}`;
+  if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
   if (mode) url += `&game_mode=${encodeURIComponent(mode)}`;
   if (type) url += `&play_mode=${encodeURIComponent(type)}`;
 
@@ -172,16 +342,18 @@ function renderMatchesHistory(matches) {
   const container = document.getElementById("stats-replays-list");
   if (!container) return;
 
-  const playerInput = document.getElementById("stats-replays-player-search");
   const modeSelect = document.getElementById("stats-replays-mode-filter");
   const typeSelect = document.getElementById("stats-replays-type-filter");
+  const sortSelect = document.getElementById("stats-replays-sort-select");
 
-  const player = playerInput ? playerInput.value.trim() : "";
+  const searchInput = document.getElementById("stats-replays-player-search");
+  const searchQuery = searchInput ? searchInput.value.trim() : "";
   const mode = modeSelect && modeSelect.value !== "all" ? modeSelect.value : "";
   const type = typeSelect && typeSelect.value !== "all" ? typeSelect.value : "";
-  const isFiltered = Boolean(player || mode || type);
+  const isFiltered = Boolean(searchQuery || mode || type);
 
-  const replaysToolbar = document.querySelector("#replays-page-card .stats-toolbar");
+  const replaysToolbar = document.querySelector("#replays-page-card .replays-toolbar") ||
+    document.querySelector("#replays-page-card .hub-toolbar");
   if (replaysToolbar) {
     replaysToolbar.style.display = (!matches || matches.length === 0) && !isFiltered ? "none" : "";
   }
@@ -210,9 +382,10 @@ function renderMatchesHistory(matches) {
         </div>
       `;
       document.getElementById("stats-clear-replays-filter-btn")?.addEventListener("click", () => {
-        if (playerInput) playerInput.value = "";
+        clearFilteredPlayers(false);
         if (modeSelect) modeSelect.value = "all";
         if (typeSelect) typeSelect.value = "all";
+        if (sortSelect) sortSelect.value = "newest";
         loadMatchesHistory();
       });
       return;
@@ -233,23 +406,6 @@ function renderMatchesHistory(matches) {
             <span>${t("stats.browse_challenges_cta")}</span>
           </button>
         </div>
-        <div class="stats-empty-features">
-          <div class="stats-empty-feature-item">
-            <span class="stats-empty-feature-icon" aria-hidden="true">🎯</span>
-            <span class="stats-empty-feature-title">${t("stats.feature_accuracy")}</span>
-            <span class="stats-empty-feature-desc">${t("stats.feature_accuracy_desc")}</span>
-          </div>
-          <div class="stats-empty-feature-item">
-            <span class="stats-empty-feature-icon" aria-hidden="true">🏆</span>
-            <span class="stats-empty-feature-title">${t("stats.feature_podiums")}</span>
-            <span class="stats-empty-feature-desc">${t("stats.feature_podiums_desc")}</span>
-          </div>
-          <div class="stats-empty-feature-item">
-            <span class="stats-empty-feature-icon" aria-hidden="true">🎬</span>
-            <span class="stats-empty-feature-title">${t("stats.feature_replays")}</span>
-            <span class="stats-empty-feature-desc">${t("stats.feature_replays_desc")}</span>
-          </div>
-        </div>
       </div>
     `;
 
@@ -262,7 +418,35 @@ function renderMatchesHistory(matches) {
     return;
   }
 
-  container.innerHTML = matches
+  const sortBy = sortSelect ? sortSelect.value : "newest";
+  const list = [...matches];
+  list.sort((a, b) => {
+    switch (sortBy) {
+      case "oldest": {
+        const aTime = a.played_at ? new Date(a.played_at).getTime() : 0;
+        const bTime = b.played_at ? new Date(b.played_at).getTime() : 0;
+        return aTime - bTime;
+      }
+      case "accuracy": {
+        const aAccuracy = Number(a.top_accuracy_pct) || 0;
+        const bAccuracy = Number(b.top_accuracy_pct) || 0;
+        return bAccuracy - aAccuracy;
+      }
+      case "players": {
+        const aCount = Number(a.player_count) || (a.players || []).length || 0;
+        const bCount = Number(b.player_count) || (b.players || []).length || 0;
+        return bCount - aCount;
+      }
+      case "newest":
+      default: {
+        const aTime = a.played_at ? new Date(a.played_at).getTime() : 0;
+        const bTime = b.played_at ? new Date(b.played_at).getTime() : 0;
+        return bTime - aTime;
+      }
+    }
+  });
+
+  container.innerHTML = list
     .map((m) => {
       const modeIcon = m.game_mode === "unshuffle" ? "🔀" : "🎯";
       const modeLabel = m.game_mode === "unshuffle" ? t("mode.unshuffle") : t("mode.pinpoint");
@@ -305,18 +489,24 @@ function renderMatchesHistory(matches) {
         .map((p) => {
           const playerName = typeof p === "string" ? p : (p.player_name || "");
           if (!playerName) return "";
-          const color = (typeof p === "object" && (p.avatar_color || p.player_color))
-            ? (p.avatar_color || p.player_color)
+          const color = (typeof p === "object" && p.avatar_color)
+            ? p.avatar_color
             : playerColor(playerName);
           const initial = playerInitial(playerName);
           const isWinner = winners.includes(playerName) || (typeof p === "object" && p.is_winner);
+          const isCurrentUser = Boolean(
+            state.auth?.name &&
+            playerName &&
+            playerName.trim().toLowerCase() === state.auth.name.trim().toLowerCase()
+          );
           const scoreInfo = (typeof p === "object" && p.total_score != null) ? ` (${p.total_score} pts)` : "";
           const winnerTooltip = isWinner ? ` 🏆 ${t("replay.winner")}` : "";
+
           const title = `${escapeHtml(playerName)}${scoreInfo}${winnerTooltip}`;
 
           return `
-            <div class="replay-player-chip${isWinner ? " is-winner" : ""}" title="${title}">
-              <span class="replay-player-avatar" style="background-color: ${color};">${initial}</span>
+            <div class="replay-player-chip${isWinner ? " is-winner" : ""}${isCurrentUser ? " is-current-user" : ""}" title="${escapeHtml(title)}">
+              <span class="replay-player-avatar${isCurrentUser ? " is-current-user user-gold-avatar" : ""}" style="background-color: ${color};">${initial}</span>
               <span class="replay-player-name">${escapeHtml(playerName)}</span>
               ${isWinner ? '<span class="replay-winner-crown" aria-hidden="true">👑</span>' : ""}
             </div>
@@ -360,7 +550,9 @@ function renderMatchesHistory(matches) {
         navigate(`/game/${encodeURIComponent(mid)}/replay`);
       }
     };
+
     item.addEventListener("click", handleActivate);
+
     item.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -386,6 +578,12 @@ export function refreshReplayPageLanguage() {
       desc.setAttribute("data-i18n", "replay.catalog_subtitle");
       desc.textContent = t("replay.catalog_subtitle");
     }
+    const playerSearch = document.getElementById("stats-replays-player-search");
+    if (playerSearch) {
+      playerSearch.placeholder = t("replay.search_placeholder");
+    }
+    _updateMyMatchesBtnState();
+    _updateSearchClearBtn();
     renderMatchesHistory(_cachedMatches);
   }
 

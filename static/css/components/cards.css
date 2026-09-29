@@ -562,6 +562,20 @@ html.route-non-lobby #leaderboard-card {
   min-width: 0;
 }
 
+@media (max-width: 480px) {
+  .segmented-control {
+    min-height: 40px;
+    padding: 2px;
+    gap: 2px;
+  }
+
+  .segmented-btn {
+    padding: 0.45rem 0.2rem;
+    font-size: 0.78rem;
+    letter-spacing: -0.01em;
+  }
+}
+
 .segmented-btn:hover {
   color: var(--ink);
   background: rgba(255, 255, 255, 0.6);
@@ -707,13 +721,13 @@ html.route-non-lobby #leaderboard-card {
 [data-theme="dark"] .mode-btn.multi-select::after,
 [data-theme="dark"] .mode-btn.is-checkbox::after {
   border-color: #475569;
-  background: #1e293b;
+  background-color: #1e293b;
 }
 
 [data-theme="dark"] .mode-btn.multi-select.active::after,
 [data-theme="dark"] .mode-btn.is-checkbox.active::after {
   border-color: var(--accent, #0f7c7f);
-  background: var(--accent, #0f7c7f);
+  background-color: var(--accent, #0f7c7f);
 }
 
 /* Segmented Controls */

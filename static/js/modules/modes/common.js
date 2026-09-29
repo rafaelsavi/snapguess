@@ -1,4 +1,5 @@
 import { t } from "../i18n.js";
+import { readGameSettings } from "../game_settings.js";
 
 /**
  * Standard GameMode Interface specification.
@@ -29,8 +30,16 @@ export function renderGuessingModeSettings(containerEl, modeName = "pinpoint") {
   const existingLocCard = document.getElementById("card-goal-location");
   const existingDateCard = document.getElementById("card-goal-date");
 
-  let locActive = existingLocCheckbox ? existingLocCheckbox.checked : (existingLocCard ? existingLocCard.classList.contains("active") : true);
-  let dateActive = existingDateCheckbox ? existingDateCheckbox.checked : (existingDateCard ? existingDateCard.classList.contains("active") : true);
+  const savedSettings = readGameSettings();
+  let defaultLoc = true;
+  let defaultDate = true;
+  if (savedSettings) {
+    if (typeof savedSettings.location_mode === "boolean") defaultLoc = savedSettings.location_mode;
+    if (typeof savedSettings.date_mode === "boolean") defaultDate = savedSettings.date_mode;
+  }
+
+  let locActive = existingLocCheckbox ? existingLocCheckbox.checked : (existingLocCard ? existingLocCard.classList.contains("active") : defaultLoc);
+  let dateActive = existingDateCheckbox ? existingDateCheckbox.checked : (existingDateCard ? existingDateCard.classList.contains("active") : defaultDate);
 
   // Safeguard: Ensure at least one mode is active
   if (!locActive && !dateActive) {

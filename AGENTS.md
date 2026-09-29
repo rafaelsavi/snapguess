@@ -82,7 +82,28 @@ This document provides context, architectural constraints, and standards for AI 
 
 ---
 
-## 6. Database Schema, Migrations & SQLite Performance
+## 6. Mobile & Phone Screen Compatibility Mandate
+
+- **Strict Viewport Coverage (360px - 430px)**:
+  - All screens, cards, modals, tables, and toolbars MUST render cleanly on mobile viewports down to 360px width without horizontal blowout, overlapping text, or squished titles.
+  - Test and verify at standard device resolutions: 360x800 (Android baseline), 375x667 (iPhone SE), and 390x844 (iPhone 14/15/16).
+- **Header Architecture on Mobile**:
+  - **No Squished Brand Titles**: Never place an expanding or fixed button group in a single flex row alongside `.header-main` or page titles without wrapping.
+  - **Standardized Mobile App Header**: `.app-header` MUST use the structured 2-row layout on viewports <= 760px:
+    - Row 1: Brand title `Immich Quiz` (`.header-main`) and utility controls (`.header-utility-actions`: `#identity-badge`, `#pwa-install-btn`, `#settings-dropdown`).
+    - Row 2: Dedicated full-width navigation bar (`.header-nav-bar`) with equal-spaced touch targets for Home, Challenges (with badge), Players, and Replays.
+  - **Hub Headers on Mobile**: In `.hub-page-header`, when a back button is present, use clean mobile wrapping (back button and badges/actions on top row, full-width title and subtitle below).
+  - **Safe Dropdown Positioning**: Dropdowns (such as `.settings-menu`) must never overflow viewport bounds (`right: 0`, safe padding).
+- **Touch Target & Spacing Standards**:
+  - All interactive elements (buttons, navigation tabs, segmented pills, form inputs, back buttons) must meet a minimum touch target size of 38px to 44px.
+  - Respect device safe areas with `env(safe-area-inset-top)` and `env(safe-area-inset-bottom)`.
+- **Table & Content Overflow Protection**:
+  - Data tables, reveal matrices, and chip lists must use container-level horizontal touch scrolling (`overflow-x: auto; -webkit-overflow-scrolling: touch;`) rather than causing page-level `html`/`body` horizontal scrolling.
+  - `document.documentElement.scrollWidth` MUST strictly equal `document.documentElement.clientWidth` across all screens on phone viewports.
+
+---
+
+## 7. Database Schema, Migrations & SQLite Performance
 
 - **Base Schema DDL & Migration Synchronization**:
   - Whenever a new index, table, or column is introduced in SQLite runtime migrations (`_apply_migrations`), **always declare the identical index/table directly in the base table schema definition** (`LEADERBOARD_SCHEMA_SQL` or `METADATA_SCHEMA_SQL`).
@@ -94,7 +115,7 @@ This document provides context, architectural constraints, and standards for AI 
 
 ---
 
-## 7. Playwright E2E Test Resilience
+## 8. Playwright E2E Test Resilience
 
 - **Dynamic Maps & Canvas Interaction Readiness**:
   - Leaflet maps, dynamic canvas elements, and animated DOM views undergo initialization, tile rendering, and dimension stabilization (`invalidateSize`).
@@ -103,7 +124,7 @@ This document provides context, architectural constraints, and standards for AI 
 
 ---
 
-## 8. Documentation & Git Workflow
+## 9. Documentation & Git Workflow
 
 - **Changelog Maintenance (Strict User-Facing Focus)**:
   - Update `CHANGELOG.md` under `[Unreleased]` following the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) standard (`Added`, `Changed`, `Fixed`, `Removed`).
@@ -117,7 +138,7 @@ This document provides context, architectural constraints, and standards for AI 
 
 ---
 
-## 9. Toolchain & Environment Execution
+## 10. Toolchain & Environment Execution
 
 - **Package Manager & Python Runtime**:
   - Always run Python commands, scripts, tests, and linters via **`uv`**:
@@ -138,7 +159,7 @@ This document provides context, architectural constraints, and standards for AI 
 
 ---
 
-## 10. Privacy & Local Path Prevention Mandate
+## 11. Privacy & Local Path Prevention Mandate
 
 - **Strict Ban on Hardcoded Local / Personal Paths**:
   - Never hardcode absolute user profile directories (e.g. user home directories on Windows, macOS, or Linux), Windows drive letters with local paths, or personal usernames in tests, documentation, scripts, or application source code.

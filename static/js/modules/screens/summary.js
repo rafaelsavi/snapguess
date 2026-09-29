@@ -27,7 +27,7 @@ import { renderSummaryTable } from "../summary/table.js";
 import { showCard, clearRevealAnimation } from "./common.js";
 import { ReviewDeck } from "../components/review_deck.js";
 import { renderMatchMeta } from "../components/match_meta.js";
-import { escapeHtml } from "../formatters.js";
+import { escapeHtml, playerColor } from "../formatters.js";
 import { renderShareUrlContainerHtml, setupShareBox } from "../components/share_box.js";
 import { challengeSession } from "../challenge/session.js";
 
@@ -184,7 +184,17 @@ export function renderSummaryContent(summary) {
     currentSessionPlayerName: summary.current_player_name || challengeSession?.sessionPlayerName,
   });
 
-  // 4. Challenge Invite Friends Action & Drawer
+  // 4. Action buttons in summary footer
+  const playAgainBtn = document.getElementById("summary-play-again-btn");
+  const homeBtn = document.getElementById("summary-home-btn");
+  if (playAgainBtn) {
+    playAgainBtn.classList.toggle("hidden", Boolean(isChallenge || !state.lastMatchConfig));
+  }
+  if (homeBtn) {
+    homeBtn.classList.remove("hidden");
+  }
+
+  // 5. Challenge Invite Friends Action & Drawer
   const inviteBtn = document.getElementById("challenge-invite-btn");
   const inviteDrawer = document.getElementById("summary-invite-drawer");
   const inviteBox = document.getElementById("summary-invite-share-box");
@@ -234,7 +244,7 @@ export function replayToSummary(replayData) {
       rank: (typeof p === "object" && p.rank) ? p.rank : (idx + 1),
       max_possible_score: (replayData.rounds || 1) * 10000,
       accuracy_percentage: typeof p === "object" ? p.accuracy_percentage : null,
-      avatar_color: typeof p === "object" ? (p.avatar_color || p.player_color) : null,
+      avatar_color: typeof p === "object" ? (p.avatar_color || playerColor(p.player_name)) : playerColor(p),
       completed_rounds: typeof p === "object" ? p.completed_rounds : null,
       is_finished: typeof p === "object" ? p.is_finished : null,
     }));
@@ -247,7 +257,7 @@ export function replayToSummary(replayData) {
       date_score: g.date_score,
       rank: idx + 1,
       max_possible_score: (replayData.rounds || (replayData.rounds_data ? replayData.rounds_data.length : 1)) * 10000,
-      avatar_color: g.player_color,
+      avatar_color: playerColor(g.player_name),
     }));
   }
 
@@ -582,10 +592,6 @@ export function refreshSummaryLanguage() {
       if (backBtn) {
         const span = backBtn.querySelector("[data-i18n]");
         if (span) span.textContent = t("replay.exit");
-      }
-      const exitBottom = document.getElementById("replay-exit-bottom-btn");
-      if (exitBottom) {
-        exitBottom.textContent = t("replay.exit");
       }
     }
   }

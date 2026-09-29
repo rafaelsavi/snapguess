@@ -1,0 +1,70 @@
+/* =====================================================================
+   User Golden Avatar Architecture & Shared Circular Indicators
+   Standardized visual identity for the authenticated / current player
+   across all views, tables, cards, dropdowns, and headers.
+   ===================================================================== */
+
+/* 1. Universal User Golden Ring Utility & Semantic Targets */
+.user-gold-avatar,
+.is-current-user .player-card-avatar,
+.player-card-avatar.is-current-user,
+.player-hero-avatar.is-current-user,
+.legend-badge.is-current-user,
+.player-chip.is-current-user .player-chip-avatar,
+.player-chip-avatar.user-gold-avatar,
+.player-autocomplete-avatar.is-auth,
+.challenge-player-avatar-preview.is-auth,
+.challenge-player-avatar-preview.user-gold-avatar,
+.player-pill-avatar.is-current-user,
+.mini-podium-avatar.is-current-user,
+.replay-player-avatar.is-current-user,
+.activity-toast-avatar.is-current-user,
+.identity-badge .identity-avatar {
+  box-shadow: var(--user-gold-ring) !important;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.legend-badge.is-current-user,
+.legend-badge.user-gold-avatar {
+  flex-shrink: 0;
+  margin: 3px;
+}
+
+/* 2. Compact / Small circular avatars (table badges, chips, autocompletes, header) */
+.legend-badge.is-current-user,
+.player-chip.is-current-user .player-chip-avatar,
+.player-chip-avatar.user-gold-avatar,
+.player-autocomplete-avatar.is-auth,
+.player-pill-avatar.is-current-user,
+.replay-player-avatar.is-current-user,
+.activity-toast-avatar.is-current-user,
+.identity-badge .identity-avatar {
+  box-shadow: var(--user-gold-ring-sm) !important;
+}
+
+/* 3. Large Hero Avatar (Player Profile) */
+.player-hero-avatar.is-current-user {
+  box-shadow: var(--user-gold-ring-lg) !important;
+}
+
+/* 4. Mini Podium Avatar override (which uses border) */
+.mini-podium-avatar.is-current-user {
+  border-color: var(--user-gold) !important;
+  box-shadow: var(--user-gold-ring-sm) !important;
+}
+
+/* 5. Header Identity Badge Avatar */
+.identity-badge .identity-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--user-gold-ring-sm) !important;
+}

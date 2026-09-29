@@ -265,7 +265,8 @@ async def player_profile(
 async def list_matches(
     game_mode: str | None = Query(default=None),
     play_mode: str | None = Query(default=None),
-    player: str | None = Query(default=None),
+    player: list[str] | str | None = Query(default=None),
+    search: str | None = Query(default=None),
     limit: int = Query(default=30, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     store: LeaderboardStore = Depends(get_leaderboard_store),
@@ -278,6 +279,7 @@ async def list_matches(
         game_mode,
         play_mode,
         player,
+        search,
     )
 
 

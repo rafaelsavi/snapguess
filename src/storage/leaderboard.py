@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import json
 import math
+import re
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
@@ -41,7 +42,7 @@ from src.models import (
     SupportedLanguage,
 )
 from src.scoring import accuracy_pct, max_possible_score
-from src.storage.challenge import PLAYER_COLORS
+from src.storage.challenge import deterministic_player_color
 from src.storage.db import DatabaseManager
 
 logger = get_logger(LOGGER_STORAGE)
@@ -95,7 +96,6 @@ CREATE TABLE IF NOT EXISTS match_entries (
     id                 INTEGER PRIMARY KEY AUTOINCREMENT,
     match_id           TEXT NOT NULL,
     player_name        TEXT NOT NULL,
-    player_color       TEXT,                          -- Hex color assigned to player
     location_score     INTEGER,
     date_score         INTEGER,
     total_score        INTEGER NOT NULL,
@@ -153,7 +153,6 @@ CREATE TABLE IF NOT EXISTS challenge_sessions (
     total_time_seconds REAL NOT NULL DEFAULT 0.0,
     started_at         TEXT NOT NULL,
     completed_at       TEXT,                          -- ISO8601 UTC when all rounds finished
-    player_color       TEXT,                          -- Hex color assigned to player
     FOREIGN KEY(challenge_id) REFERENCES challenges(challenge_id) ON DELETE CASCADE
 );
 
@@ -401,14 +400,7 @@ def _parse_iso_datetime(val: str | None) -> datetime:
     return datetime.now(UTC)
 
 
-def _deterministic_player_color(player_name: str, custom_color: str | None = None) -> str:
-    """Return an assigned or deterministic hexadecimal color for a player."""
-    if custom_color:
-        return custom_color
-    if not player_name:
-        return PLAYER_COLORS[0]
-    idx = sum(ord(c) for c in player_name.lower()) % len(PLAYER_COLORS)
-    return PLAYER_COLORS[idx]
+_deterministic_player_color = deterministic_player_color
 
 
 class LeaderboardStore:
@@ -456,8 +448,8 @@ class LeaderboardStore:
             cursor_s = conn.execute('PRAGMA table_info(challenge_sessions)')
             existing_session_cols = {row[1] for row in cursor_s.fetchall()}
             if existing_session_cols:
-                if 'player_color' not in existing_session_cols:
-                    conn.execute('ALTER TABLE challenge_sessions ADD COLUMN player_color TEXT')
+                if 'player_color' in existing_session_cols:
+                    conn.execute('ALTER TABLE challenge_sessions DROP COLUMN player_color')
                 # Ensure unique index on challenge_sessions uses COLLATE NOCASE for existing databases
                 conn.execute('DROP INDEX IF EXISTS idx_challenge_sessions_unique_player')
                 conn.execute(
@@ -474,12 +466,34 @@ class LeaderboardStore:
             )
             cursor_e = conn.execute('PRAGMA table_info(match_entries)')
             existing_entry_cols = {row[1] for row in cursor_e.fetchall()}
-            if existing_entry_cols and 'player_color' not in existing_entry_cols:
-                conn.execute('ALTER TABLE match_entries ADD COLUMN player_color TEXT')
+            if existing_entry_cols and 'player_color' in existing_entry_cols:
+                conn.execute('ALTER TABLE match_entries DROP COLUMN player_color')
             conn.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_match_entries_player_nocase
                     ON match_entries(player_name COLLATE NOCASE)
+                """
+            )
+            # Standardize whitespace in historical player names
+            conn.execute(
+                """
+                UPDATE match_entries
+                SET player_name = trim(player_name)
+                WHERE player_name != trim(player_name)
+                """
+            )
+            conn.execute(
+                """
+                UPDATE match_round_guesses
+                SET player_name = trim(player_name)
+                WHERE player_name != trim(player_name)
+                """
+            )
+            conn.execute(
+                """
+                UPDATE challenge_sessions
+                SET player_name = trim(player_name)
+                WHERE player_name != trim(player_name)
                 """
             )
             # Backfill challenge_id in matches from challenge_sessions if missing
@@ -690,15 +704,6 @@ class LeaderboardStore:
                 ),
             )
 
-            config_players = getattr(config, 'players', None) or []
-            player_colors_map: dict[str, str] = {}
-            if config_players:
-                for c_idx, p in enumerate(config_players):
-                    player_colors_map[p] = PLAYER_COLORS[c_idx % len(PLAYER_COLORS)]
-            else:
-                for o_idx, p in enumerate(ordered_players):
-                    player_colors_map[p] = PLAYER_COLORS[o_idx % len(PLAYER_COLORS)]
-
             rank = 0
             previous_total: int | None = None
             for idx, player in enumerate(ordered_players):
@@ -713,20 +718,19 @@ class LeaderboardStore:
                 loc_score = scores.get('location') if config.location_mode else None
                 dt_score = scores.get('date') if config.date_mode else None
                 total_time = player_times.get(player) if player_times else None
-                p_color = player_colors_map.get(player, PLAYER_COLORS[idx % len(PLAYER_COLORS)])
+                clean_player = re.sub(r'\s+', ' ', player.strip())
 
                 conn.execute(
                     """
                     INSERT INTO match_entries (
-                        match_id, player_name, player_color, location_score, date_score,
+                        match_id, player_name, location_score, date_score,
                         total_score, max_possible_score, accuracy_pct,
                         rank, is_winner, total_time_seconds
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         match_id,
-                        player,
-                        p_color,
+                        clean_player,
                         loc_score,
                         dt_score,
                         total,
@@ -741,6 +745,11 @@ class LeaderboardStore:
             # Insert round guesses if provided
             if round_guesses:
                 for rg in round_guesses:
+                    rg_player = re.sub(
+                        r'\s+',
+                        ' ',
+                        rg.get('player_name', ordered_players[0] if ordered_players else 'Player').strip(),
+                    )
                     conn.execute(
                         """
                         INSERT INTO match_round_guesses (
@@ -756,7 +765,7 @@ class LeaderboardStore:
                         """,
                         (
                             rg.get('match_id', match_id),
-                            rg.get('player_name', ordered_players[0] if ordered_players else 'Player'),
+                            rg_player,
                             rg.get('round_index', 0),
                             rg.get('photo_index', 0),
                             rg.get('game_mode', config.game_mode.value),
@@ -1136,52 +1145,9 @@ class LeaderboardStore:
             )
             winners = [r['player_name'] for r in entry_rows if r['is_winner']]
 
-        player_colors: dict[str, str] = {
-            r['player_name']: r['player_color'] for r in entry_rows if r.get('player_color')
-        }
-        if challenge_id:
-            session_rows = self._db.fetch_all(
-                """
-                SELECT player_name, player_color FROM challenge_sessions
-                WHERE challenge_id = ? ORDER BY started_at ASC
-                """,
-                (challenge_id,),
-            )
-            for s in session_rows:
-                if s.get('player_name') and s.get('player_color') and s['player_name'] not in player_colors:
-                    player_colors[s['player_name']] = s['player_color']
-
-        if len(player_colors) < len(entry_rows):
-            guess_order_rows = self._db.fetch_all(
-                """
-                SELECT player_name, MIN(id) as first_id
-                FROM match_round_guesses
-                WHERE match_id IN (SELECT match_id FROM challenge_sessions WHERE challenge_id = ?)
-                GROUP BY player_name
-                ORDER BY first_id ASC
-                """
-                if challenge_id
-                else """
-                SELECT player_name, MIN(id) as first_id
-                FROM match_round_guesses
-                WHERE match_id = ?
-                GROUP BY player_name
-                ORDER BY first_id ASC
-                """,
-                (challenge_id or match_id,),
-            )
-            ordered_match_players: list[str] = [r['player_name'] for r in guess_order_rows]
-            for r in entry_rows:
-                if r['player_name'] not in ordered_match_players:
-                    ordered_match_players.append(r['player_name'])
-            for p_idx, p_name in enumerate(ordered_match_players):
-                if p_name not in player_colors:
-                    player_colors[p_name] = PLAYER_COLORS[p_idx % len(PLAYER_COLORS)]
-
         players = [
             MatchSummaryPlayer(
                 player_name=r['player_name'],
-                player_color=player_colors.get(r['player_name']),
                 location_score=r['location_score'],
                 date_score=r['date_score'],
                 total_score=r['total_score'],
@@ -1368,6 +1334,7 @@ class LeaderboardStore:
         true_pin_id: str | None = None,
     ) -> None:
         """Persist a single player's guess for a challenge round."""
+        clean_player_name = re.sub(r'\s+', ' ', player_name.strip())
         now_iso = submitted_at or datetime.now(UTC).isoformat()
         with self._db.connection() as conn:
             # Query challenge configuration so parent match row has accurate filter metadata
@@ -1503,7 +1470,7 @@ class LeaderboardStore:
                 """,
                 (
                     match_id,
-                    player_name,
+                    clean_player_name,
                     round_index,
                     photo_index,
                     game_mode,
@@ -1547,6 +1514,7 @@ class LeaderboardStore:
         libraries: list[str] | None = None,
     ) -> None:
         """Record completed match and match_entry records when a player finishes all challenge rounds."""
+        clean_player_name = re.sub(r'\s+', ' ', player_name.strip())
         played_at = datetime.now(UTC).isoformat()
         game_mode = config.get('game_mode', 'pinpoint')
         location_mode = bool(config.get('location_mode', True))
@@ -1644,23 +1612,17 @@ class LeaderboardStore:
                 ),
             )
 
-            session_row = conn.execute(
-                'SELECT player_color FROM challenge_sessions WHERE challenge_id = ? AND player_name = ? COLLATE NOCASE',
-                (challenge_id, player_name),
-            ).fetchone()
-            assigned_color = session_row[0] if session_row and session_row[0] else PLAYER_COLORS[0]
             conn.execute(
                 """
                 INSERT INTO match_entries (
-                    match_id, player_name, player_color, location_score, date_score,
+                    match_id, player_name, location_score, date_score,
                     total_score, max_possible_score, accuracy_pct,
                     rank, is_winner, total_time_seconds
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?)
                 """,
                 (
                     match_id,
-                    player_name,
-                    assigned_color,
+                    clean_player_name,
                     location_score if location_mode else None,
                     date_score if date_mode else None,
                     total_score,
@@ -1787,7 +1749,6 @@ class LeaderboardStore:
                             'total_time_seconds': 0.0,
                             'completed_rounds': actual_completed_rounds,
                             'is_finished': actual_is_finished,
-                            'player_color': s.get('player_color'),
                         }
                     )
                     continue
@@ -1817,7 +1778,6 @@ class LeaderboardStore:
                         'total_time_seconds': tot_time,
                         'completed_rounds': actual_completed_rounds,
                         'is_finished': actual_is_finished,
-                        'player_color': s.get('player_color'),
                         'match_id': s.get('match_id'),
                     }
                 )
@@ -1836,26 +1796,35 @@ class LeaderboardStore:
                         'total_time_seconds': float(s['total_time_seconds']),
                         'completed_rounds': actual_completed_rounds,
                         'is_finished': actual_is_finished,
-                        'player_color': s.get('player_color'),
                         'match_id': s.get('match_id'),
                     }
                 )
 
-        entries.sort(key=lambda x: (-x['total_score'], x['total_time_seconds'], x['player_name'].lower()))
+        entries.sort(
+            key=lambda x: (
+                -x['accuracy_pct'],
+                -x['total_score'],
+                x['total_time_seconds'],
+                x['player_name'].lower(),
+            )
+        )
 
         finished_scores = [x['total_score'] for x in entries if x['is_finished']]
         best_score = max(finished_scores) if finished_scores else 0
         ranked_entries: list[ChallengeLeaderboardEntry] = []
 
+        prev_accuracy: float | None = None
         prev_total: int | None = None
         prev_time: float | None = None
         current_rank = 0
 
         for idx, item in enumerate(entries):
+            acc = item['accuracy_pct']
             tot = item['total_score']
             t_sec = item['total_time_seconds']
-            if prev_total is None or tot != prev_total or t_sec != prev_time:
+            if prev_accuracy is None or acc != prev_accuracy or tot != prev_total or t_sec != prev_time:
                 current_rank = idx + 1
+                prev_accuracy = acc
                 prev_total = tot
                 prev_time = t_sec
 
@@ -1874,7 +1843,6 @@ class LeaderboardStore:
                     total_time_seconds=item['total_time_seconds'],
                     completed_rounds=item['completed_rounds'],
                     is_finished=item['is_finished'],
-                    player_color=item.get('player_color'),
                     match_id=item.get('match_id'),
                     awards=[],
                 )
@@ -1889,13 +1857,11 @@ class LeaderboardStore:
     ) -> list[ChallengeRoundGuessData]:
         """Query per-player round guesses for a challenge under Fog of War filtering."""
         sessions = self._db.fetch_all(
-            'SELECT match_id, player_name, player_color FROM challenge_sessions WHERE challenge_id = ?',
+            'SELECT match_id, player_name FROM challenge_sessions WHERE challenge_id = ?',
             (challenge_id,),
         )
         if not sessions:
             return []
-
-        player_colors = {s['player_name']: s.get('player_color') for s in sessions}
 
         sql = """
         SELECT * FROM match_round_guesses
@@ -1963,7 +1929,6 @@ class LeaderboardStore:
             guesses.append(
                 ChallengeRoundGuessData(
                     player_name=row['player_name'],
-                    player_color=player_colors.get(row['player_name']),
                     round_index=int(row['round_index']),
                     game_mode=g_mode,
                     location_points=row.get('location_points'),
@@ -2027,18 +1992,11 @@ class LeaderboardStore:
         params: list[Any] = []
         sql = """
         SELECT
-            e.player_name,
+            MIN(e.player_name) as player_name,
             COUNT(DISTINCT e.match_id) as match_count,
-            MAX(m.played_at) as last_played_at,
-            COALESCE(MAX(e.player_color), MAX(cs.custom_color)) as custom_color
+            MAX(m.played_at) as last_played_at
         FROM match_entries e
         JOIN matches m ON e.match_id = m.match_id
-        LEFT JOIN (
-            SELECT player_name, MAX(player_color) as custom_color
-            FROM challenge_sessions
-            WHERE player_color IS NOT NULL AND player_color != ''
-            GROUP BY player_name COLLATE NOCASE
-        ) cs ON e.player_name = cs.player_name COLLATE NOCASE
         """
         if query and query.strip():
             sql += ' WHERE e.player_name LIKE ? COLLATE NOCASE '
@@ -2055,7 +2013,7 @@ class LeaderboardStore:
                 player_name=r['player_name'],
                 match_count=int(r['match_count'] or 0),
                 last_played_at=r['last_played_at'],
-                avatar_color=_deterministic_player_color(r['player_name'], r.get('custom_color')),
+                avatar_color=_deterministic_player_color(r['player_name']),
             )
             for r in rows
         ]
@@ -2070,21 +2028,14 @@ class LeaderboardStore:
         params: list[Any] = []
         sql = """
         SELECT
-            e.player_name,
+            MIN(e.player_name) as player_name,
             COUNT(DISTINCT e.match_id) as matches_played,
             SUM(e.is_winner) as matches_won,
             ROUND(AVG(e.accuracy_pct), 1) as avg_accuracy_pct,
             SUM(e.total_score) as career_points,
-            MAX(m.played_at) as last_played_at,
-            COALESCE(MAX(e.player_color), MAX(cs.custom_color)) as custom_color
+            MAX(m.played_at) as last_played_at
         FROM match_entries e
         JOIN matches m ON e.match_id = m.match_id
-        LEFT JOIN (
-            SELECT player_name, MAX(player_color) as custom_color
-            FROM challenge_sessions
-            WHERE player_color IS NOT NULL AND player_color != ''
-            GROUP BY player_name COLLATE NOCASE
-        ) cs ON e.player_name = cs.player_name COLLATE NOCASE
         """
         if search and search.strip():
             sql += ' WHERE e.player_name LIKE ? COLLATE NOCASE '
@@ -2121,7 +2072,7 @@ class LeaderboardStore:
             items.append(
                 PlayerSummaryItem(
                     player_name=r['player_name'],
-                    avatar_color=_deterministic_player_color(r['player_name'], r.get('custom_color')),
+                    avatar_color=_deterministic_player_color(r['player_name']),
                     matches_played=m_played,
                     matches_won=m_won,
                     win_rate_pct=win_rate,
@@ -2137,7 +2088,7 @@ class LeaderboardStore:
         overall_row = self._db.fetch_one(
             """
             SELECT
-                e.player_name,
+                MIN(e.player_name) as player_name,
                 COUNT(DISTINCT e.match_id) as matches_played,
                 SUM(e.is_winner) as matches_won,
                 COUNT(CASE WHEN e.rank <= 3 THEN 1 END) as podiums_count,
@@ -2145,16 +2096,9 @@ class LeaderboardStore:
                 ROUND(AVG(e.accuracy_pct), 1) as avg_accuracy_pct,
                 SUM(e.total_score) as career_points,
                 MIN(m.played_at) as first_played_at,
-                MAX(m.played_at) as last_played_at,
-                COALESCE(MAX(e.player_color), MAX(cs.custom_color)) as custom_color
+                MAX(m.played_at) as last_played_at
             FROM match_entries e
             JOIN matches m ON e.match_id = m.match_id
-            LEFT JOIN (
-                SELECT player_name, MAX(player_color) as custom_color
-                FROM challenge_sessions
-                WHERE player_color IS NOT NULL AND player_color != ''
-                GROUP BY player_name COLLATE NOCASE
-            ) cs ON e.player_name = cs.player_name COLLATE NOCASE
             WHERE e.player_name = ? COLLATE NOCASE
             GROUP BY e.player_name COLLATE NOCASE
             """,
@@ -2187,7 +2131,7 @@ class LeaderboardStore:
         else:
             legacy_title = 'Contender'
 
-        color = _deterministic_player_color(canonical_name, overall_row.get('custom_color'))
+        color = _deterministic_player_color(canonical_name)
 
         perf_stats = PlayerPerformanceStats(
             player_name=canonical_name,
@@ -2450,7 +2394,8 @@ class LeaderboardStore:
         offset: int = 0,
         game_mode: str | None = None,
         play_mode: str | None = None,
-        player_name: str | None = None,
+        player_name: str | list[str] | None = None,
+        search: str | None = None,
     ) -> list[MatchHistoryItem]:
         """Query paginated match history records for the Match Replays catalog."""
         clauses: list[str] = []
@@ -2462,19 +2407,50 @@ class LeaderboardStore:
         if play_mode:
             clauses.append('m.play_mode = ?')
             params.append(play_mode)
-        if player_name:
+        if search and search.strip():
+            search_pattern = f'%{search.strip()}%'
             clauses.append(
                 """(
-                    m.match_id IN (SELECT match_id FROM match_entries WHERE player_name = ? COLLATE NOCASE)
-                    OR (
-                        m.challenge_id IS NOT NULL
-                        AND m.challenge_id IN (
-                            SELECT challenge_id FROM challenge_sessions WHERE player_name = ? COLLATE NOCASE
-                        )
+                    m.match_id LIKE ? COLLATE NOCASE
+                    OR m.game_mode LIKE ? COLLATE NOCASE
+                    OR m.play_mode LIKE ? COLLATE NOCASE
+                    OR c.title LIKE ? COLLATE NOCASE
+                    OR c.creator_name LIKE ? COLLATE NOCASE
+                    OR m.match_id IN (
+                        SELECT match_id FROM match_entries WHERE player_name LIKE ? COLLATE NOCASE
+                    )
+                    OR m.challenge_id IN (
+                        SELECT challenge_id FROM challenge_sessions WHERE player_name LIKE ? COLLATE NOCASE
                     )
                 )"""
             )
-            params.extend([player_name, player_name])
+            params.extend([search_pattern] * 7)
+        if player_name:
+            raw_tokens: list[str] = []
+            if isinstance(player_name, str):
+                raw_tokens = re.split(r'[,;]+|\s+[&+]\s+', player_name)
+            elif isinstance(player_name, (list, tuple, set)):
+                for item in player_name:
+                    raw_tokens.extend(re.split(r'[,;]+|\s+[&+]\s+', str(item)))
+            players: list[str] = []
+            for token in raw_tokens:
+                cleaned = token.strip()
+                if cleaned and not any(p.lower() == cleaned.lower() for p in players):
+                    players.append(cleaned)
+
+            for p in players:
+                clauses.append(
+                    """(
+                        m.match_id IN (SELECT match_id FROM match_entries WHERE player_name = ? COLLATE NOCASE)
+                        OR (
+                            m.challenge_id IS NOT NULL
+                            AND m.challenge_id IN (
+                                SELECT challenge_id FROM challenge_sessions WHERE player_name = ? COLLATE NOCASE
+                            )
+                        )
+                    )"""
+                )
+                params.extend([p, p])
 
         where_sql = f'WHERE {" AND ".join(clauses)}' if clauses else ''
 
@@ -2648,16 +2624,6 @@ class LeaderboardStore:
                 """,
                 (challenge_id,),
             )
-            guess_order_rows = self._db.fetch_all(
-                """
-                SELECT player_name, MIN(id) as first_id
-                FROM match_round_guesses
-                WHERE match_id IN (SELECT match_id FROM challenge_sessions WHERE challenge_id = ?)
-                GROUP BY player_name
-                ORDER BY first_id ASC
-                """,
-                (challenge_id,),
-            )
         else:
             entry_rows = self._db.fetch_all(
                 'SELECT * FROM match_entries WHERE match_id = ? ORDER BY rank ASC, player_name ASC',
@@ -2672,57 +2638,10 @@ class LeaderboardStore:
                 """,
                 (match_id,),
             )
-            guess_order_rows = self._db.fetch_all(
-                """
-                SELECT player_name, MIN(id) as first_id
-                FROM match_round_guesses
-                WHERE match_id = ?
-                GROUP BY player_name
-                ORDER BY first_id ASC
-                """,
-                (match_id,),
-            )
-
-        # 1. Existing player colors from match_entries
-        player_colors: dict[str, str] = {
-            r['player_name']: r['player_color'] for r in entry_rows if r.get('player_color')
-        }
-
-        # 2. Challenge session player colors if challenge match
-        if challenge_id:
-            session_rows = self._db.fetch_all(
-                """
-                SELECT player_name, player_color FROM challenge_sessions
-                WHERE challenge_id = ? ORDER BY started_at ASC
-                """,
-                (challenge_id,),
-            )
-            for s in session_rows:
-                if s.get('player_name') and s.get('player_color') and s['player_name'] not in player_colors:
-                    player_colors[s['player_name']] = s['player_color']
-        else:
-            session_rows = self._db.fetch_all(
-                'SELECT player_name, player_color FROM challenge_sessions WHERE match_id = ?',
-                (match_id,),
-            )
-            for s in session_rows:
-                if s.get('player_name') and s.get('player_color') and s['player_name'] not in player_colors:
-                    player_colors[s['player_name']] = s['player_color']
-
-        # 3. For any remaining players without color, determine standard sequence from match roster order
-        ordered_match_players: list[str] = [r['player_name'] for r in guess_order_rows]
-        for r in entry_rows:
-            if r['player_name'] not in ordered_match_players:
-                ordered_match_players.append(r['player_name'])
-
-        for p_idx, p_name in enumerate(ordered_match_players):
-            if p_name not in player_colors:
-                player_colors[p_name] = PLAYER_COLORS[p_idx % len(PLAYER_COLORS)]
 
         players = [
             MatchSummaryPlayer(
                 player_name=r['player_name'],
-                player_color=player_colors.get(r['player_name']),
                 location_score=r['location_score'],
                 date_score=r['date_score'],
                 total_score=r['total_score'],
@@ -2789,12 +2708,10 @@ class LeaderboardStore:
                 is_timed_out = any(bool(x.get('timed_out')) for x in p_g_list)
 
                 cumulative_scores[p_name] = cumulative_scores.get(p_name, 0) + r_score
-                p_color = player_colors.get(p_name) or PLAYER_COLORS[0]
 
                 player_guesses.append(
                     MatchReplayPlayerGuess(
                         player_name=p_name,
-                        player_color=p_color,
                         location_score=round_loc_score if match_row.get('location_mode') else None,
                         date_score=round_date_score if match_row.get('date_mode') else None,
                         round_score=r_score,

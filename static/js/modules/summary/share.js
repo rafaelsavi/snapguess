@@ -1,5 +1,6 @@
 import { t, tOr } from "../i18n.js";
 import { challengeSession } from "../challenge/session.js";
+import { escapeHtml } from "../formatters.js";
 
 export function showShareToast(message) {
   let toast = document.querySelector(".share-toast");
@@ -8,9 +9,19 @@ export function showShareToast(message) {
     toast.className = "share-toast";
     document.body.appendChild(toast);
   }
-  toast.textContent = message;
+  const isError = /fail|error|erro|falha/i.test(message);
+  const iconSvg = isError
+    ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`
+    : `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2dd4bf" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+
+  toast.innerHTML = `<span class="share-toast-icon">${iconSvg}</span><span class="share-toast-text">${escapeHtml(message)}</span>`;
   toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 3000);
+  if (toast._timer) {
+    clearTimeout(toast._timer);
+  }
+  toast._timer = setTimeout(() => {
+    toast.classList.remove("show");
+  }, 3000);
 }
 
 /**
@@ -100,10 +111,10 @@ export async function shareMatchSummary(summary) {
       summary.capability_token ||
       challengeSession?.challengeData?.capability_token;
     shareUrl = capToken
-      ? `${window.location.origin}/play/${encodeURIComponent(capToken)}`
+      ? `${window.location.origin}/play/${encodeURIComponent(capToken)}/summary`
       : window.location.href;
-    title = tOr("challenge.invite_message", "Immich Quiz Challenge");
-    successMessage = tOr("challenge.link_copied", "Challenge link copied to clipboard!");
+    title = tOr("summary.share_title", "Immich Quiz Results");
+    successMessage = tOr("summary.share_copied", "Replay link copied to clipboard!");
   } else {
     shareUrl = summary.match_id
       ? `${window.location.origin}/game/${encodeURIComponent(summary.match_id)}/replay`

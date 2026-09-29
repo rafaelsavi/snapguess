@@ -9,7 +9,7 @@ import { api } from "../api.js";
 import { state, el } from "../state.js";
 import { t } from "../i18n.js";
 import { showCard } from "../screens/common.js";
-import { registerPlayerColor, playerColor } from "../formatters.js";
+import { playerColor } from "../formatters.js";
 import { updateSubmitState } from "../maps.js";
 import { getActiveMode } from "../modes/index.js";
 import { challengeSession, POLL_INTERVAL_MS } from "./session.js";
@@ -169,11 +169,6 @@ export const challengeReveal = {
       if (participantNames.length > 0) {
         state.players = participantNames;
       }
-      leaderboardData.leaderboard.forEach((p) => {
-        if (p.player_color) {
-          registerPlayerColor(p.player_name, p.player_color);
-        }
-      });
     }
 
     const currentGuesses = (leaderboardData.round_guesses || []).filter((g) => g.round_index === roundIndex);

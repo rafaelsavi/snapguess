@@ -9,10 +9,12 @@ import { state, el } from "../state.js";
 import { t, TRANSLATIONS, translateError } from "../i18n.js";
 import { showCard } from "../screens/common.js";
 import { navigate } from "../router.js";
-import { playerColor, playerInitial, registerPlayerColor, escapeHtml } from "../formatters.js";
+import { playerColor, playerInitial, escapeHtml, resolvePlayerName } from "../formatters.js";
 import { buildMatchMetaHtml } from "../components/match_meta.js";
 import { challengeSession } from "./session.js";
 import { attachPlayerAutocomplete } from "../components/player_autocomplete.js";
+
+export const LAST_PLAYER_NAME_KEY = "immich_quiz_last_player_name";
 
 /**
  * Render the challenge landing / entry screen with resume detection.
@@ -34,8 +36,11 @@ export function renderLandingScreen(data, savedSession, onStart, onSeeResults) {
   if (participantsList.length > 0) {
     state.players = participantsList;
   }
-  const nextPlayerIndex = participantsList.length || totalParticipants;
-  const nextPlayerColor = playerColor(nextPlayerIndex);
+  const placeholderColor = playerColor(participantsList.length || totalParticipants);
+
+  const defaultPlayerName = resolvePlayerName(LAST_PLAYER_NAME_KEY);
+  const isLocked = Boolean(state.auth?.lock_player_name && defaultPlayerName);
+  const defaultInitial = defaultPlayerName ? escapeHtml(playerInitial(defaultPlayerName)) : "?";
 
   const participantsText = t("challenge.participants", totalParticipants);
   let mainActionHtml = "";
@@ -54,7 +59,7 @@ export function renderLandingScreen(data, savedSession, onStart, onSeeResults) {
       </div>
     `;
   } else if (savedSession) {
-    const resumeColor = savedSession.playerColor || playerColor(savedSession.playerName);
+    const resumeColor = playerColor(savedSession.playerName);
     mainActionHtml = `
       <div class="challenge-paths-container">
         <!-- Path 1: Resume Active Session -->
@@ -71,7 +76,7 @@ export function renderLandingScreen(data, savedSession, onStart, onSeeResults) {
             </div>
           </div>
           <div class="challenge-player-pill">
-            <span class="player-pill-avatar" style="background: ${escapeHtml(resumeColor)};">${escapeHtml(playerInitial(savedSession.playerName))}</span>
+            <span class="player-pill-avatar${(state.auth?.name && savedSession.playerName && savedSession.playerName.trim().toLowerCase() === state.auth.name.trim().toLowerCase()) ? " is-current-user user-gold-avatar" : ""}" style="background: ${escapeHtml(resumeColor)};">${escapeHtml(playerInitial(savedSession.playerName))}</span>
             <span class="player-name">${escapeHtml(savedSession.playerName)}</span>
           </div>
           <button type="button" class="btn btn-primary btn-large challenge-path-btn" id="challenge-resume-btn">
@@ -98,9 +103,12 @@ export function renderLandingScreen(data, savedSession, onStart, onSeeResults) {
           </div>
           <form id="challenge-join-form" class="challenge-form">
             <div class="challenge-input-group">
-              <label for="player-name-input">${t("challenge.new_player_label")}</label>
+              <div class="challenge-label-row">
+                <label for="player-name-input">${t("challenge.new_player_label")}</label>
+                ${isLocked ? `<span class="challenge-name-locked-badge">🔒 ${t("challenge.verified_identity")}</span>` : ""}
+              </div>
               <div class="challenge-name-input-wrap">
-                <span class="challenge-player-avatar-preview" id="challenge-avatar-preview" style="background: ${nextPlayerColor};">?</span>
+                <span class="challenge-player-avatar-preview" id="challenge-avatar-preview" style="background: ${placeholderColor};">?</span>
                 <input
                   type="text"
                   id="player-name-input"
@@ -108,6 +116,7 @@ export function renderLandingScreen(data, savedSession, onStart, onSeeResults) {
                   placeholder="${t("challenge.new_player_placeholder")}"
                   maxlength="30"
                   required
+                  ${isLocked ? "readonly" : ""}
                 />
               </div>
             </div>
@@ -128,17 +137,21 @@ export function renderLandingScreen(data, savedSession, onStart, onSeeResults) {
         </div>
         <form id="challenge-join-form" class="challenge-form">
           <div class="challenge-input-group">
-            <label for="player-name-input">${t("challenge.name_label")}</label>
+            <div class="challenge-label-row">
+              <label for="player-name-input">${t("challenge.name_label")}</label>
+              ${isLocked ? `<span class="challenge-name-locked-badge">🔒 ${t("challenge.verified_identity")}</span>` : ""}
+            </div>
             <div class="challenge-name-input-wrap">
-              <span class="challenge-player-avatar-preview" id="challenge-avatar-preview" style="background: ${nextPlayerColor};">?</span>
+              <span class="challenge-player-avatar-preview" id="challenge-avatar-preview" style="background: ${defaultPlayerName ? playerColor(defaultPlayerName) : placeholderColor};">${defaultInitial}</span>
               <input
                 type="text"
                 id="player-name-input"
                 class="input challenge-name-input"
+                value="${escapeHtml(defaultPlayerName)}"
                 placeholder="${t("challenge.name_placeholder")}"
                 maxlength="30"
                 required
-                autofocus
+                ${isLocked ? "readonly" : "autofocus"}
               />
             </div>
           </div>
@@ -174,26 +187,45 @@ export function renderLandingScreen(data, savedSession, onStart, onSeeResults) {
   const nameInput = document.getElementById("player-name-input");
   const avatarPreview = document.getElementById("challenge-avatar-preview");
   if (nameInput && avatarPreview) {
-    nameInput.addEventListener("input", () => {
-      const val = nameInput.value.trim();
+    const updateJoinAvatar = () => {
+      const val = nameInput.value.trim().replace(/\s+/g, " ");
       avatarPreview.textContent = val ? playerInitial(val) : "?";
-    });
+      avatarPreview.style.background = val ? playerColor(val) : placeholderColor;
+      const isAuth = Boolean(
+        state.auth?.name &&
+        val &&
+        val.toLowerCase() === state.auth.name.trim().toLowerCase()
+      );
+      avatarPreview.classList.toggle("is-auth", isAuth);
+      avatarPreview.classList.toggle("user-gold-avatar", isAuth);
+    };
 
-    attachPlayerAutocomplete(nameInput, {
-      onSelect: (playerName) => {
-        nameInput.value = playerName;
-        avatarPreview.textContent = playerInitial(playerName);
-        nameInput.dispatchEvent(new Event("input", { bubbles: true }));
-      },
-    });
+    nameInput.addEventListener("input", updateJoinAvatar);
+    updateJoinAvatar();
+
+    if (!isLocked) {
+      attachPlayerAutocomplete(nameInput, {
+        onSelect: (playerName) => {
+          nameInput.value = playerName;
+          updateJoinAvatar();
+          nameInput.dispatchEvent(new Event("input", { bubbles: true }));
+        },
+      });
+    }
   }
 
   const form = document.getElementById("challenge-join-form");
   form?.addEventListener("submit", (e) => {
     e.preventDefault();
-    const name = document.getElementById("player-name-input")?.value?.trim();
+    const raw = document.getElementById("player-name-input")?.value;
+    const name = raw ? raw.trim().replace(/\s+/g, " ") : "";
     if (name && onStart) {
-      onStart(name, nextPlayerColor);
+      try {
+        localStorage.setItem(LAST_PLAYER_NAME_KEY, name);
+      } catch (err) {
+        console.warn("Failed to save last player name:", err);
+      }
+      onStart(name);
     }
   });
 
@@ -202,14 +234,11 @@ export function renderLandingScreen(data, savedSession, onStart, onSeeResults) {
     resumeBtn.addEventListener("click", () => {
       challengeSession.sessionToken = savedSession.token;
       challengeSession.sessionPlayerName = savedSession.playerName;
-      if (savedSession.playerColor) {
-        registerPlayerColor(savedSession.playerName, savedSession.playerColor);
-      }
       if (data?.capability_token) {
         challengeSession.saveSession(data.capability_token, savedSession);
       }
       if (onStart) {
-        onStart(savedSession.playerName, savedSession.playerColor);
+        onStart(savedSession.playerName);
       }
     });
   }
@@ -220,9 +249,6 @@ export function renderLandingScreen(data, savedSession, onStart, onSeeResults) {
       if (savedSession && !challengeSession.sessionToken && data?.capability_token) {
         challengeSession.sessionToken = savedSession.token;
         challengeSession.sessionPlayerName = savedSession.playerName;
-        if (savedSession.playerColor) {
-          registerPlayerColor(savedSession.playerName, savedSession.playerColor);
-        }
         challengeSession.saveSession(data.capability_token, savedSession);
       }
       onSeeResults();

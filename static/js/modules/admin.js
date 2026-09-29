@@ -23,11 +23,9 @@ import {
 } from "./setup_filters.js";
 import { loadChallengesList } from "./screens/challenges.js";
 import { getActiveMode } from "./modes/index.js";
-import { attachPlayerAutocomplete } from "./components/player_autocomplete.js";
+import { SinglePlayerInput, CREATOR_NAME_STORAGE_KEY } from "./components/single_player_input.js";
 import { setupShareBox, SHARE_ICONS } from "./components/share_box.js";
 import { activateFocusTrap, deactivateFocusTrap } from "./components/focus_trap.js";
-
-const CREATOR_NAME_STORAGE_KEY = "immich_challenge_creator_name";
 
 let _isInitialized = false;
 let _modalEl = null;
@@ -42,6 +40,7 @@ let _modalChallengeFooter = null;
 let _formViewEl = null;
 let _titleInput = null;
 let _creatorNameInput = null;
+let _creatorSingleInput = null;
 let _expirationSelect = null;
 let _generateBtn = null;
 let _startMatchBtn = null;
@@ -107,7 +106,16 @@ export function initAdminModal() {
   _titleInput = document.getElementById("challenge-title-input");
   _creatorNameInput = document.getElementById("challenge-creator-name-input");
   if (_creatorNameInput) {
-    attachPlayerAutocomplete(_creatorNameInput);
+    _creatorSingleInput = new SinglePlayerInput({
+      input: _creatorNameInput,
+      avatarPreview: document.getElementById("challenge-creator-avatar-preview"),
+      lockedBadge: document.getElementById("challenge-creator-locked-badge"),
+      storageKey: CREATOR_NAME_STORAGE_KEY,
+      getFallback: () => {
+        const players = playerInput ? playerInput.getPlayers() : [];
+        return players.length > 0 && players[0] && players[0] !== "Player 1" ? players[0] : "";
+      },
+    });
   }
   _expirationSelect = document.getElementById("challenge-expiration");
   _generateBtn = document.getElementById("challenge-generate-btn");
@@ -190,16 +198,20 @@ export function openAdminModal(initialTab = "local") {
   if (!_modalEl) initAdminModal();
   if (!_modalEl) return;
 
-  // Restore saved creator name or default from lobby
-  let savedName = localStorage.getItem(CREATOR_NAME_STORAGE_KEY);
-  if (!savedName) {
-    const players = playerInput ? playerInput.getPlayers() : [];
-    if (players.length > 0 && players[0] && players[0] !== "Player 1") {
-      savedName = players[0];
+  // Restore/prefill creator name using SinglePlayerInput
+  if (_creatorSingleInput) {
+    _creatorSingleInput.syncFromAuth();
+  } else {
+    let savedName = localStorage.getItem(CREATOR_NAME_STORAGE_KEY);
+    if (!savedName) {
+      const players = playerInput ? playerInput.getPlayers() : [];
+      if (players.length > 0 && players[0] && players[0] !== "Player 1") {
+        savedName = players[0];
+      }
     }
-  }
-  if (_creatorNameInput && savedName) {
-    _creatorNameInput.value = savedName;
+    if (_creatorNameInput && savedName) {
+      _creatorNameInput.value = savedName;
+    }
   }
 
   // Pre-fill challenge title with automatic value
@@ -255,17 +267,24 @@ export function switchTab(tabName) {
 async function handleGenerateChallenge(e) {
   if (e) e.preventDefault();
 
-  const creatorName = _creatorNameInput?.value?.trim();
+  const creatorName = _creatorSingleInput
+    ? _creatorSingleInput.getValue()
+    : (_creatorNameInput?.value?.trim().replace(/\s+/g, " ") || "");
   if (!creatorName) {
-    if (_creatorNameInput) _creatorNameInput.focus();
+    if (_creatorSingleInput) _creatorSingleInput.focus();
+    else if (_creatorNameInput) _creatorNameInput.focus();
     showShareToast(t("admin.creator_name_required"));
     return;
   }
 
   // Save creator name for future sessions
-  try {
-    localStorage.setItem(CREATOR_NAME_STORAGE_KEY, creatorName);
-  } catch (_) { }
+  if (_creatorSingleInput) {
+    _creatorSingleInput.save();
+  } else {
+    try {
+      localStorage.setItem(CREATOR_NAME_STORAGE_KEY, creatorName);
+    } catch (_) { }
+  }
 
   let title = _titleInput?.value?.trim() || generateAutoChallengeTitle();
   if (title.length > 100) {
@@ -463,4 +482,13 @@ async function copyCreatedUrl() {
     copiedHtml: `<span class="btn-icon" aria-hidden="true">${SHARE_ICONS.CHECKMARK}</span>`,
     successMessage: t("challenge.link_copied"),
   });
+}
+
+/**
+ * Force synchronization of creator name with active auth context.
+ */
+export function syncCreatorName() {
+  if (_creatorSingleInput) {
+    _creatorSingleInput.syncFromAuth();
+  }
 }

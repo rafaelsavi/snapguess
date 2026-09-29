@@ -30,6 +30,7 @@ export const state = {
     email: null,
     name: null,
     authenticated: false,
+    lock_player_name: false,
   },
   lastMatchConfig: null,
   lastSummary: null,
@@ -298,6 +299,12 @@ export const el = {
   summaryTableHead: document.querySelector("#summary-table thead"),
   summaryTableBody: document.querySelector("#summary-table tbody"),
   shareSummaryBtn: document.getElementById("share-summary-btn"),
+  get summaryPlayAgainBtn() {
+    return document.getElementById("summary-play-again-btn");
+  },
+  get summaryHomeBtn() {
+    return document.getElementById("summary-home-btn");
+  },
   get challengeInviteBtn() {
     return document.getElementById("challenge-invite-btn");
   },

@@ -246,6 +246,28 @@
   color: var(--ink);
 }
 
+.challenge-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.challenge-name-locked-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(15, 124, 127, 0.1);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 124, 127, 0.25);
+  letter-spacing: 0.02em;
+}
+
 .challenge-name-input-wrap {
   display: flex;
   align-items: center;
@@ -271,6 +293,7 @@
 
 .challenge-name-input-wrap .challenge-name-input {
   flex: 1;
+  min-width: 0;
 }
 
 .challenge-form {
@@ -279,7 +302,8 @@
   width: 100%;
 }
 
-.challenge-form input.input {
+.challenge-form input.input,
+input.challenge-name-input {
   width: 100%;
   padding: 0.75rem 0.95rem;
   font-size: 1rem;
@@ -291,10 +315,25 @@
   box-sizing: border-box;
 }
 
-.challenge-form input.input:focus {
+.challenge-form input.input:focus,
+input.challenge-name-input:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(15, 124, 127, 0.2);
+}
+
+.challenge-form input.input[readonly],
+input.challenge-name-input[readonly] {
+  background: var(--bg);
+  cursor: default;
+  opacity: 0.95;
+  border-color: rgba(15, 124, 127, 0.3);
+}
+
+.challenge-form input.input[readonly]:focus,
+input.challenge-name-input[readonly]:focus {
+  border-color: rgba(15, 124, 127, 0.5);
+  box-shadow: none;
 }
 
 .challenge-path-btn {
@@ -813,17 +852,6 @@
   border: 1px solid rgba(245, 158, 11, 0.28);
 }
 
-.challenge-you-tag {
-  display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--accent);
-  background: rgba(15, 124, 127, 0.1);
-  padding: 0.15rem 0.45rem;
-  border-radius: 4px;
-  margin-left: 0.35rem;
-  vertical-align: middle;
-}
 
 tr.highlight-player-row {
   background: rgba(15, 124, 127, 0.05);
@@ -1373,12 +1401,65 @@ tr.highlight-player-row {
 }
 
 .mini-podium-medal {
-  font-size: 1.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 800;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-sizing: border-box;
+}
+
+.mini-podium-badge-1 {
+  background: linear-gradient(135deg, #fef08a 0%, #fde047 100%);
+  color: #854d0e;
+  border: 1.5px solid #eab308;
+  box-shadow: 0 1px 4px rgba(234, 179, 8, 0.25);
+}
+
+.mini-podium-badge-2 {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+  box-shadow: 0 1px 4px rgba(148, 163, 184, 0.2);
+}
+
+.mini-podium-badge-3 {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  color: #9a3412;
+  border: 1.5px solid #f97316;
+  box-shadow: 0 1px 4px rgba(249, 115, 22, 0.2);
+}
+
+[data-theme="dark"] .mini-podium-badge-1 {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.3) 0%, rgba(202, 138, 4, 0.45) 100%);
+  color: #fef08a;
+  border-color: rgba(234, 179, 8, 0.7);
+  box-shadow: 0 0 8px rgba(234, 179, 8, 0.25);
+}
+
+[data-theme="dark"] .mini-podium-badge-2 {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.25) 0%, rgba(100, 116, 139, 0.4) 100%);
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.6);
+  box-shadow: 0 0 8px rgba(148, 163, 184, 0.2);
+}
+
+[data-theme="dark"] .mini-podium-badge-3 {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(194, 65, 12, 0.4) 100%);
+  color: #fed7aa;
+  border-color: rgba(249, 115, 22, 0.6);
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.2);
 }
 
 .mini-podium-name {
+  display: inline-block;
   font-size: 0.85rem;
+  font-weight: 700;
   color: var(--ink);
   max-width: 100px;
   white-space: nowrap;
@@ -1660,17 +1741,19 @@ tr.highlight-player-row {
   }
 
   .round-date-table .player-cell {
-    gap: 0.3rem;
-    max-width: 120px;
+    gap: 0.35rem;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .round-date-table .player-name-text {
-    max-width: 85px;
+    max-width: 150px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     display: inline-block;
     vertical-align: middle;
+    min-width: 0;
   }
 
   /* Challenges Hub Standings Table */
@@ -1691,16 +1774,22 @@ tr.highlight-player-row {
   }
 
   .standings-table .col-player {
-    max-width: 120px;
+    min-width: 135px;
+  }
+
+  .standings-table .player-cell {
+    max-width: 100%;
+    min-width: 0;
   }
 
   .standings-table .player-name-text {
-    max-width: 85px;
+    max-width: 150px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     display: inline-block;
     vertical-align: middle;
+    min-width: 0;
   }
 
   .standings-table .col-score .max-score {
@@ -1725,18 +1814,24 @@ tr.highlight-player-row {
     padding-right: 0.2rem;
   }
 
+  #grand-reveal-table .col-player {
+    min-width: 135px;
+  }
+
   #grand-reveal-table .player-cell {
     gap: 0.35rem;
-    max-width: 125px;
+    max-width: 100%;
+    min-width: 0;
   }
 
   #grand-reveal-table .player-name-text {
-    max-width: 90px;
+    max-width: 150px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     display: inline-block;
     vertical-align: middle;
+    min-width: 0;
   }
 
   #grand-reveal-table .legend-badge {
@@ -1817,8 +1912,10 @@ tr.highlight-player-row {
     min-height: 230px;
   }
 
-  #grand-reveal-table .player-name-text {
-    max-width: 75px;
+  #grand-reveal-table .player-name-text,
+  .standings-table .player-name-text,
+  .round-date-table .player-name-text {
+    max-width: 135px;
   }
 
   .match-meta-category {

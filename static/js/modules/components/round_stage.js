@@ -87,10 +87,9 @@ export class RoundStage {
                     <strong class="reveal-chip-val round-photo-loc replay-photo-loc">-</strong>
                   </span>
                 </div>
-                <button type="button" class="btn-report-discrete round-photo-report-btn" title="${escapeHtml(t("report.modal_title"))}"
-                  data-i18n-title="report.modal_title" aria-label="${escapeHtml(t("report.modal_title"))}">
+                <button type="button" class="btn-report-discrete round-photo-report-btn round-photo-report-btn-icon-only" title="${escapeHtml(t("report.btn_label"))}"
+                  data-i18n-title="report.btn_label" aria-label="${escapeHtml(t("report.btn_label"))}" data-i18n-aria-label="report.btn_label">
                   <span aria-hidden="true">🚩</span>
-                  <span class="report-discrete-text" data-i18n="report.btn_label">${escapeHtml(t("report.btn_label"))}</span>
                 </button>
               </div>
             </div>
@@ -136,10 +135,10 @@ export class RoundStage {
 
     if (this.reportBtn) {
       this.reportBtn.style.display = this.showReportButton ? "inline-flex" : "none";
-      this.reportBtn.setAttribute("data-i18n-title", "report.modal_title");
-      this.reportBtn.setAttribute("data-i18n-aria-label", "report.modal_title");
-      this.reportBtn.setAttribute("title", t("report.modal_title"));
-      this.reportBtn.setAttribute("aria-label", t("report.modal_title"));
+      this.reportBtn.setAttribute("data-i18n-title", "report.btn_label");
+      this.reportBtn.setAttribute("data-i18n-aria-label", "report.btn_label");
+      this.reportBtn.setAttribute("title", t("report.btn_label"));
+      this.reportBtn.setAttribute("aria-label", t("report.btn_label"));
     }
 
     // Apply specific element IDs for prefix compatibility
@@ -180,6 +179,18 @@ export class RoundStage {
           this.onReportPhoto(cur.photo_id || cur.asset_id, cur.media_url || (this.photoImg ? this.photoImg.src : ""));
         }
       });
+    }
+
+    if (typeof ResizeObserver !== "undefined" && this.revealActualRow) {
+      this._captionObserver = new ResizeObserver((entries) => {
+        const entry = entries && entries[0];
+        const currentWidth = entry ? Math.round(entry.contentRect.width) : Math.round(this.revealActualRow.clientWidth);
+        if (currentWidth > 0 && Math.abs(currentWidth - (this._lastObservedCaptionWidth || 0)) >= 2) {
+          this._lastObservedCaptionWidth = currentWidth;
+          this.updateCaptionFolding();
+        }
+      });
+      this._captionObserver.observe(this.revealActualRow);
     }
   }
 
@@ -261,7 +272,7 @@ export class RoundStage {
       if (this.mapFullscreenBtn) this.mapFullscreenBtn.id = `${prefix}map-fullscreen`;
     }
 
-    if (prefix && prefix.includes("replay") && this.reportBtn) {
+    if (this.reportBtn) {
       const textSpan = this.reportBtn.querySelector(".report-discrete-text");
       if (textSpan) {
         textSpan.remove();
@@ -539,6 +550,7 @@ export class RoundStage {
           valSpan.id = "round-photo-date";
         }
         valSpan.textContent = dateText;
+        dateChip.title = dateText || "";
         dateChip.append(dateIcon, valSpan);
         this.revealActual.appendChild(dateChip);
       }
@@ -558,10 +570,64 @@ export class RoundStage {
         } else {
           valSpan.id = "round-photo-loc";
         }
-        valSpan.textContent = locStr || t("stats.location_unknown");
+        const fullLoc = locStr || t("stats.location_unknown");
+        valSpan.textContent = fullLoc;
+        locChip.title = fullLoc;
         locChip.append(locIcon, valSpan);
         this.revealActual.appendChild(locChip);
       }
+      this.updateCaptionFolding();
+      requestAnimationFrame(() => this.updateCaptionFolding());
+    }
+  }
+
+  /**
+   * Dynamically fold the photo caption into 2 rows if date + location do not fit
+   * on a single line, placing the date on row 1 (left), report flag on row 1 (right),
+   * and location on row 2 (left).
+   */
+  updateCaptionFolding() {
+    if (!this.revealActualRow || this._isUpdatingFolding) return;
+    const dateChip = this.revealActualRow.querySelector(".reveal-chip-date");
+    const locChip = this.revealActualRow.querySelector(".reveal-chip-location");
+    const reportBtn = this.revealActualRow.querySelector(".btn-report-discrete, .round-photo-report-btn");
+
+    if (!dateChip || !locChip) {
+      this.revealActualRow.classList.remove("folded-two-rows");
+      return;
+    }
+
+    const availableW = this.revealActualRow.clientWidth;
+    if (availableW <= 0) return;
+
+    this._isUpdatingFolding = true;
+    try {
+      const dateW = Math.ceil(dateChip.getBoundingClientRect().width || dateChip.offsetWidth || 0);
+      const btnW = (reportBtn && reportBtn.style.display !== "none")
+        ? Math.ceil(reportBtn.getBoundingClientRect().width || reportBtn.offsetWidth || 26)
+        : 0;
+
+      const locVal = locChip.querySelector(".reveal-chip-val");
+      const icon = locChip.querySelector(".reveal-chip-icon");
+      const iconW = icon ? Math.ceil(icon.getBoundingClientRect().width || icon.offsetWidth || 16) : 16;
+
+      // Calculate unconstrained natural width needed by the location chip:
+      // val text scrollWidth + icon width + icon-text gap (5px) + chip horizontal padding (0.55rem * 2 ~ 18px) + border (2px)
+      const locTextW = locVal ? locVal.scrollWidth : 0;
+      const locNaturalW = locTextW > 0
+        ? (locTextW + iconW + 25)
+        : Math.ceil(locChip.scrollWidth || locChip.offsetWidth || 0);
+
+      const gap = 6;
+      const totalNeeded = dateW + locNaturalW + btnW + (btnW > 0 ? gap * 2 : gap);
+
+      const isFolded = this.revealActualRow.classList.contains("folded-two-rows");
+      // Use hysteresis buffer (6px) to prevent borderline oscillation
+      const shouldFold = isFolded ? (totalNeeded > availableW - 6) : (totalNeeded > availableW);
+
+      this.revealActualRow.classList.toggle("folded-two-rows", shouldFold);
+    } finally {
+      this._isUpdatingFolding = false;
     }
   }
 
@@ -586,6 +652,10 @@ export class RoundStage {
     if (this._cleanupSwipe) {
       this._cleanupSwipe();
       this._cleanupSwipe = null;
+    }
+    if (this._captionObserver) {
+      this._captionObserver.disconnect();
+      this._captionObserver = null;
     }
   }
 }
