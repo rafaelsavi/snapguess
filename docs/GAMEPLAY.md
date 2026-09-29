@@ -1,6 +1,6 @@
 # How to Play Immich Quiz
 
-Immich Quiz turns your personal Immich photo collection into an engaging trivia game. Test how well you and your friends remember where photos were taken, when they were captured, or both!
+Immich Quiz turns photos from your Immich library into a guessing game. See how well you remember where a photo was taken, when it was captured, or both.
 
 The game supports two distinct play modes:
 
@@ -11,11 +11,11 @@ The game supports two distinct play modes:
 
 ## Setting Up a Game
 
-All games begin on the main setup screen. Once configured, clicking **🎮 Prepare Game** opens a dialog allowing you to choose between launching a **Local Game** or creating a **Challenge**.
+Choose your game settings, then select **🎮 Prepare Game** to start a **Local Game** or create a **Challenge**.
 
 ### 1. Game Mode
 
-- **🎯 Pinpoint**: 1 photo per round. Players click the interactive Leaflet map to place their pin and/or guess the month and year of capture.
+- **🎯 Pinpoint**: Guess the location and/or the month and year for one photo each round.
 - **🔀 Unshuffle**: 3 photos per round. Players match photos to lettered map pins (**A**, **B**, **C**) and/or arrange the photos in chronological sequence along a timeline.
 
 ### 2. What to Guess
@@ -28,26 +28,23 @@ All games begin on the main setup screen. Once configured, clicking **🎮 Prepa
 
 - **Rounds**: Choose **5**, **10**, or **20** rounds per game.
 - **Time per Round**: Set a turn timer: **30s**, **1 min**, **2 min**, **5 min**, or **Unlimited**.
-  - Timers feature silky-smooth 60 FPS transitions, adaptive formatting (`2:00` → `1:15` → `59s` → `5s`), and shifting color gradients (teal → amber → crimson).
-  - Subtle audio ticks play at 10s and accelerate smoothly as time expires.
-  - On timeout, inputs freeze, a yellow time-up banner appears, and zero points are scored cleanly.
+  - A countdown shows how much time remains. When time runs out, the guess is submitted with no points for that turn.
+- **Remembered Settings**: Your game mode, guesses, round count, and timer are remembered for next time.
 
 ### 4. Photo Filters (Optional)
 
-Expand the **Photo Filters** accordion to tailor your photo candidate pool:
+Use **Photo Filters** to choose which photos can appear in the game:
 
 - **Libraries**: Select one or more Immich media libraries, or select all.
 - **Albums**: Search and select specific albums (e.g. *"Summer Vacation 2024"*).
-- **Date Range**: Use the dual-handle interactive timeline slider to restrict photos to a specific year/month span.
-- **Countries & Cities**: Searchable multi-select dropdowns. Selecting a country dynamically narrows the available cities to that country.
-- **People / Faces**: Filter by recognized people:
-  - **Any (ANY)**: Photos containing at least one of the selected individuals.
-  - **All (ALL)**: Photos where all selected individuals appear together.
+- **Date Range**: Choose a range of years and months.
+- **Countries & Cities**: Choose places; selecting a country narrows the city choices.
+- **People / Faces**: Choose who should appear. **Any** includes photos with at least one selected person; **All** requires every selected person.
 - **Shared & Partner Media**: Toggles to include or exclude shared albums and partner photos.
 
-### 5. Live Preflight Validation
+### 5. Photo Count
 
-As you adjust filters, a live preflight indicator validates your library in real-time, verifying that enough diverse, geotagged, and dated photos exist to satisfy your game requirements.
+As you change your settings, the photo count updates to show whether there are enough photos for the game. If there are too few, adjust your filters or choose fewer rounds.
 
 ---
 
@@ -57,148 +54,128 @@ Designed for parties, family gatherings, or solo play on a single screen.
 
 ### 1. Setup & Player Roster
 
-- In the **Local Game** tab of the Prepare Game modal, add players using the tag input (type a name and press **Enter** or **,**).
-- Each player receives an assigned avatar badge color and distinct marker style.
+- In the **Local Game** tab, add each player's name and press **Enter** or **,**.
+- Each player gets a color and map marker so guesses are easy to tell apart.
 - Click **Start Game** to launch the game.
 
 ### 2. Pass the Device
 
-- Before each turn, a privacy curtain hides the upcoming photo (`Pass device to [Player]`).
-- Hand the device to the active player and click **I'm Ready** to reveal the photo and start the timer.
+- Before each turn, a screen hides the photo and shows whose turn it is.
+- Pass the device to that player. They can select **I'm Ready** to see the photo and begin their turn.
 
 ### 3. Making Your Guess
 
-- **Inspect Photo**: Click the photo or the fullscreen expand icon (`⛶`) to inspect details in high resolution with the modal lightbox.
-- **Pinpoint Location**: Click on the world map to place or adjust your pin. Use the **Focus region** button to snap back to the album's auto-framed bounding box.
+- **Inspect Photo**: Select the photo or expand button (`⛶`) to view it larger.
+- **Pinpoint Location**: Select a place on the map to set or move your guess. Use **Focus region** to return to the photo area's map view.
 - **Pinpoint Date**: Pick the month and year using the date selectors.
-- **Unshuffle Matching**: Tap the letter chips (**A**, **B**, **C**) directly on each photo card to assign its location. Assigned map pins display the photo thumbnail preview directly inside the pin marker.
-- **Unshuffle Timeline**: Reorder photo cards chronologically using the ▲ and ▼ buttons.
+- **Unshuffle Matching**: Match each photo to a map pin (**A**, **B**, or **C**).
+- **Unshuffle Timeline**: Put the photos in chronological order using the ▲ and ▼ buttons.
 - Click **Submit Guess** when finished.
 
 ### 4. Round Reveal
 
-- Once all players finish the round, the reveal screen compares each player's guess to reality:
-  - True photo location marked with a gold star, connected to player pins with colored dashed lines indicating distance error in kilometers.
-  - Actual capture date compared to guessed dates, with day differences.
-  - Point breakdown and celebratory badges for spot-on guesses.
-  - **🚩 Report Inconsistencies**: Click the flag button (🚩) to open the Report Issue modal and report inaccurate GPS coordinates, wrong capture dates, or notes, with a direct link to Immich Web for editing.
+- After everyone has guessed, compare the answers with the photo's location and date. The map shows how close each location guess was, and the results show points earned.
+- If a photo's location or date looks wrong, select **🚩 Report Issue** and describe the problem.
 - Click **Next Round** to continue to the next turn.
 
 ### 5. Game Summary & Review Deck
 
-- When all rounds conclude, celebrate with confetti, fanfare audio, and the **Outcome Hero**:
-  - **3D Winner Podium**: Metallic rank badges for 1st, 2nd, and 3rd place with celebratory crowns and player avatar badges.
+- When all rounds are complete, see the final results:
+  - **Winner Podium**: See the top players and their places.
   - **Standings Table**: Full breakdown of total scores, location points, date points, and accuracy percentages.
   - **Performance Awards**: Earned badges for exceptional play (🎯 *Sniper*, ⏳ *Time Traveler*, ⚡ *Speed Demon*).
-- Explore the match through the universal 3-tab **Review Deck**:
-  - **🎬 Match Replay**: Interactive round-by-round replay with stepper navigation (◀ / ▶), photo canvas, batch photo tabs, guess maps with spider lines, and round reveal table.
-  - **🗺️ Journey Map**: Full-match Leaflet world map with chronological flight arcs and numbered photo pin locations (automatically omitted when Location mode is off).
-  - **📸 Photo Memories**: Polaroid photo gallery with reverse-geocoded locations, capture dates, and click-to-zoom Lightbox.
-- Contextual actions allow you to **Start New Game** or **Share Game** with a single click.
+- Review the game with **🎬 Match Replay**, **🗺️ Journey Map**, and **📸 Photo Memories**. Move through rounds, revisit guesses, and browse the photos.
+- Choose **Start New Game** to play again or **Share Game** to send the results.
 
 ---
 
 ## Play Style 2: ⚔️ Challenges
 
-Allows anyone with a browser to join a shared game on their own device.
+Challenges let friends play the same game on their own devices, whenever they are ready.
 
 ### 1. Generating a Challenge
 
-- In the **Challenge Link** tab of the Prepare Game modal, choose an expiration window (`1h`, `6h`, `24h`, `48h`, `7d`, or `Never`) and enter an optional challenge title.
-- Click **Create Challenge Link** to generate an unguessable capability URL and an instant SVG QR code.
-- Share the link via the standardized share box (1-click copy, native Web Share, or expandable vector QR code).
+- In the **Challenge Link** tab, choose how long the challenge stays open and add an optional title.
+- Select **Create Challenge Link**, then share the link or QR code with friends.
 
-### 2. Joining a Challenge (`/play/:token`)
+### 2. Joining a Challenge
 
 - Friends open the link on mobile or desktop without needing an account.
-- **New Players**: Type a name; a live preview circle displays their assigned avatar color and initials in real-time.
+- **New Players**: Enter a name and see the player color and initials before joining.
 - **Returning Players**: If a player has played on the device before, a two-path layout offers:
-  1. *Resume Active Session*: One-click button to resume their exact round.
+  1. *Resume Active Session*: Return to the round where they left off.
   2. *Play as Someone Else*: Form to start a fresh attempt under a different name.
 
 ### 3. Gameplay Rounds
 
-- Players play through rounds on their own devices with the full interactive map, date pickers, photo lightbox, and turn timer.
+- Players make their location and date guesses on their own devices, using the map, date choices, photo viewer, and timer.
 - Restart buttons are hidden to prevent accidental session abandonment.
 
-### 4. Round Reveal & Live Opponent Polling
+### 4. Seeing Friends' Guesses
 
-- After submitting a guess, players immediately see their personal distance error, date difference, points, and map polyline.
-- **Social Polling (3s)**: While reviewing the reveal screen, the app polls the server. As friends complete the round, their colored pins drop into the map with animated pulses and sound cues, and the score table updates live!
+- After submitting a guess, players see how close they were and how many points they earned.
+- While players review the round, friends' guesses and scores appear as they finish.
 
-### 5. Post-Game "Invite Friends" Intermission
+### 5. Invite Friends After the Final Round
 
-- Shown to **all players** upon completing the final round.
-- Features a celebratory header, standardized share box with icon-only actions (copy link, native share, collapsible vector QR code), and a live tally:
+- After the final round, players can invite friends who have not finished yet. The screen includes sharing options and a live tally:
   > *"You + 2 friends have finished"*
-- Players click **🏆 See Results** when ready to view the podium.
+- Select **🏆 See Results** to view the standings and review the game.
 
-### 6. Grand Reveal Summary (`/play/:token/summary`)
+### 6. Results & Review
 
-- Features gold confetti, fanfare audio, and a 3D podium:
+- The results show the standings and podium:
   - **Provisional Standings**: Displayed if only 1 player has completed the game.
-  - **Settled Podium**: Displays ranks, crowns, metallic badges, and completed round counts (`5/5`).
+  - **Settled Podium**: Shows final places once players have finished.
 - **Mode-Specific Review**:
-  - *Pinpoint*: Interactive **Round Carousel** with photo preview, lightbox zoom, multi-player scatter map with connector lines, and date comparison chips.
-  - *Unshuffle*: Full **World Journey Map** with spiderfy clustering and **Photo Memories** polaroid gallery.
-- **Quick Actions**: Buttons to *Copy Invite Link*, *Copy Summary Link*, open *Challenges*, or return *Home*.
+  - *Pinpoint*: Revisit each photo, the players' map guesses, and their date guesses.
+  - *Unshuffle*: Follow the places in the **Journey Map** and browse **Photo Memories**.
+- Use the available actions to share the invite or results, browse other challenges, or return home.
 
 ---
 
-## Challenges (`/challenges`)
+## Challenges
 
-Navigate to **Challenges** via the header navbar to track and manage all multiplayer games:
+Open **Challenges** to find games you've created or joined:
 
-- **Search & Filter**: Search by title, host, album, or tagged person. Filter by status (**All**, **Active**, **Expired**) or game mode (**Pinpoint**, **Unshuffle**).
-- **Share Drawer**: Expand any challenge card's header share button (`🔗`) to view the direct URL and scan the SVG QR code.
-- **Standings Drawer**: Click **View Standings** to inspect real-time participant progress, completed round counts, and scores without leaving the hub.
-- **Play / Results**: Direct action button to play active challenges or jump directly to the Grand Reveal summary for concluded matches.
+- Find a challenge by searching its title, host, album, or person. Filter by whether it is active or expired, or by game mode.
+- Share a challenge link or QR code, check how players are progressing, or open a finished game's results.
 
 ---
 
-## Match Replays & Archives (`/replays` & `/game/:id/replay`)
+## Match Replays
 
-Every completed game—whether a local Pass & Play match or a multiplayer challenge—is permanently archived in SQLite and viewable through the unified match review screen:
+Completed local games and challenges are available to review:
 
-- **Replays Catalog (`/replays`)**:
-  - **Search & Filter**: Search matches by participating player names; filter by game mode (**Pinpoint**, **Unshuffle**) or match type (**Local**, **Challenge**).
-  - **Match Cards**: View date played, mode badges, challenge creator and title tags, player score chips, and winner crowns.
-  - **1-Click Replay**: Launch the full interactive replay via the **🎬 Replay** button.
-- **Unified Review Experience (`/game/:id/replay`)**:
-  - **Header & Meta**: Standard back navigation (`← Exit Replay`), match title, played date, and configuration chips (libraries, album filters, date bounds, people, countries).
-  - **Outcome Hero**: Displays the final winner podium and complete player standings table.
-  - **Universal Review Deck**: Seamlessly switch between the round-by-round **🎬 Match Replay** stage, full-game **🗺️ Journey Map**, and polaroid **📸 Photo Memories**.
+- **Replays Catalog**:
+  - Search for a match or player, filter by game mode or match type, and sort by newest, oldest, highest accuracy, or number of players.
+  - **My Matches** shows games associated with your player name.
+  - Open a match to revisit its results, guesses, and photos.
+- See the match settings and final standings, then switch between **🎬 Match Replay**, **🗺️ Journey Map**, and **📸 Photo Memories**.
 
 ---
 
-## Player Directory & Profiles (`/players`)
+## Player Directory & Profiles
 
-Track career records and individual performance across all completed games:
+See how players have done across completed games:
 
-- **Player Directory**: Browse all historical participants with total matches played, win rates, podium finishes (1st/2nd/3rd), and rank records.
-- **Player Profiles (`/players/:name`)**:
-  - **Career Overview**: Total score, matches played, win rate percentage, and average active response time.
-  - **Symmetrical 4-Tier Accuracy Analytics**: Visual distribution of Location and Date accuracy across 4 balanced tiers (*Top Tier 90–100%*, *Great 75–89%*, *Moderate 50–74%*, *Low <50%*).
-  - **Match History**: Comprehensive list of all matches played by the player, with direct links to view replays.
+- Browse player records, wins, and recent activity in the directory.
+- Open a profile to see a player's strengths in location and date guesses, personal records, and past games.
 
 ---
 
-## Reported Photos Moderation (`/reported`)
+## Reporting a Photo Problem
 
-Administrators and hosts can access the **Reported Assets Dashboard** at `/reported`:
-
-- **Inspection & Filtering**: Browse all flagged photos with report timestamps, reporting player names, and issue badges (Location, Date, Notes). Filter by issue type and sort by newest or oldest.
-- **Immich Web Integration**: Open the source photo directly in Immich Web to adjust location coordinates or EXIF capture timestamps.
-- **Resolve Reports**: Click **Resolve Issue** to unflag the photo, returning it to the active candidate pool in real time.
+- If a photo's location or date is incorrect, report it from the round reveal. Include a note to help the host find the problem in Immich.
 
 ---
 
 ## Scoring & Awards
 
-- **Exponential Decay**: Points are awarded on a 0–100 scale using pool-adaptive exponential decay formulas. See [SCORING.md](SCORING.md) for full mathematical specifications.
+- **Scoring**: Location guesses score more points when they are closer to the true place. Date guesses score more points when the month and year are closer to the photo's capture date. See [SCORING.md](SCORING.md) for details.
 - **Performance Awards**: Earned at the end of matches for exceptional play:
   - 🎯 **Sniper**: Most perfect location guesses (<100m).
   - ⏳ **Time Traveler**: Most perfect date guesses (exact month & year).
   - ⚡ **Speed Demon**: Fastest average response time with zero timeouts.
   - Full award criteria are detailed in [AWARDS.md](AWARDS.md).
-- **Persistent Leaderboard**: All matches are recorded in SQLite (`data/leaderboard.db`) and displayed on the home page leaderboard with dedicated badges for `🕹️ Local` and `⚔️ Challenge` play modes.
+- **Leaderboard**: Compare results from local games and challenges on the home page.

@@ -135,6 +135,7 @@ immich-quiz/
         ├── maps.js      Leaflet map wrapper, marker placement, auto-zoom, and updateSubmitState.
         ├── router.js    Client-side History API router (normalizePath, parseRoute, setNavigationGuard).
         ├── setup_filters.js Setup filter controls, dependent cities, persistence, and live preflight.
+        ├── game_settings.js Normalizes and persists game mode, guess modes, round count, and round length in localStorage.
         ├── shortcuts.js Global keyboard navigation (<kbd>Space</kbd> / <kbd>Enter</kbd>).
         ├── state.js     Centralized reactive application state store.
         ├── sync.js      Library metadata sync trigger, polling, and status badges.
