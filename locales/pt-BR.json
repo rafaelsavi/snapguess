@@ -156,7 +156,7 @@
   "game.fullscreen_btn": "Tela Cheia",
   "game.fullscreen_exit_btn": "Sair da Tela Cheia",
   "game.location_guess_label": "Palpite de Local",
-  "game.date_guess_label": "Palpite de Data (mês e ano)",
+  "game.date_guess_label": "Palpite de Data",
   "game.submit_btn": "Confirmar Palpite",
   "game.restart_btn": "Reiniciar",
   "game.exit_btn": "Sair",

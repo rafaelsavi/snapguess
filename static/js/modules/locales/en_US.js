@@ -156,7 +156,7 @@ export default {
   "game.fullscreen_btn": "Fullscreen",
   "game.fullscreen_exit_btn": "Exit Fullscreen",
   "game.location_guess_label": "Location Guess",
-  "game.date_guess_label": "Date Guess (month & year)",
+  "game.date_guess_label": "Date Guess",
   "game.submit_btn": "Submit Guess",
   "game.restart_btn": "Restart",
   "game.exit_btn": "Exit",

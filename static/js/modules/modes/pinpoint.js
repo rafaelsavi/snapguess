@@ -148,7 +148,12 @@ function renderMonthOptions(keepSelection = true) {
   for (let month = 1; month <= maxMonth; month += 1) {
     const option = document.createElement("option");
     option.value = String(month);
-    option.textContent = String(month).padStart(2, "0");
+    const locale = document.documentElement.lang || "en";
+    const monthName = new Intl.DateTimeFormat(locale, { month: "long" }).format(
+      new Date(2000, month - 1, 1)
+    );
+    const [firstLetter, ...remainingLetters] = Array.from(monthName);
+    option.textContent = `${firstLetter.toLocaleUpperCase(locale)}${remainingLetters.join("")}`;
     el.dateGuessMonth.appendChild(option);
   }
 
@@ -877,6 +882,7 @@ export const pinpointMode = {
     if (el.dateGuessWrap) {
       const label = el.dateGuessWrap.querySelector("label");
       if (label) label.textContent = t("game.date_guess_label");
+      renderMonthOptions(true);
     }
   },
 };

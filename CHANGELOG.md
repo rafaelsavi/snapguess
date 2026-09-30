@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Pinpoint date guessing**: Month names display in full and update when the language changes.
 - **Compact city filter locations**: Narrow city dropdowns show ISO-2 country codes beside each city, while the Countries dropdown keeps full names.
 
 ### Fixed
