@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Compact city filter locations**: Narrow city dropdowns show ISO-2 country codes beside each city, while the Countries dropdown keeps full names.
+
 ## [3.3.0] - 2026-09-29
 
 ### Added

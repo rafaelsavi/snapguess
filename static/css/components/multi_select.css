@@ -187,6 +187,7 @@
   display: flex;
   flex-direction: column;
   max-height: 280px;
+  min-width: 0;
 }
 
 .multi-select-dropdown.hidden {
@@ -290,12 +291,15 @@
 /* Options list */
 .multi-select-options {
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
+  min-width: 0;
 }
 
 .multi-select-option {
   display: flex;
   align-items: center;
+  min-width: 0;
   gap: 0.5rem;
   padding: 0.45rem 0.75rem;
   cursor: pointer;
@@ -322,9 +326,28 @@
 
 .multi-select-option-label {
   flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+#city-multi-select {
+  container-type: inline-size;
+}
+
+#city-multi-select .multi-select-option-sub-compact {
+  display: none;
+}
+
+@container (max-width: 280px) {
+  #city-multi-select .multi-select-option-sub-full {
+    display: none;
+  }
+
+  #city-multi-select .multi-select-option-sub-compact {
+    display: inline;
+  }
 }
 
 .multi-select-option.zero-match {
@@ -342,7 +365,10 @@
   font-style: italic;
   margin-left: 0.25rem;
   white-space: nowrap;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .multi-select-count-badge {
