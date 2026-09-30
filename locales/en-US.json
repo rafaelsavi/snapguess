@@ -607,8 +607,6 @@
   "replay.sort_players": "Most Players",
   "replay.filter_player_placeholder": "Filter by players (e.g. Alice, Bob)...",
   "replay.search_placeholder": "Search replays...",
-  "replay.my_matches_filter": "My Matches",
-  "replay.my_matches_filter_title": "Filter to my matches",
   "replay.empty_matches": "No match replays found.",
   "replay.watch_replay": "Watch Replay",
   "replay.title": "Match Replay",

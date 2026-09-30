@@ -607,8 +607,6 @@
   "replay.sort_players": "Mais Jogadores",
   "replay.filter_player_placeholder": "Filtrar por jogadores (ex: Alice, Bob)...",
   "replay.search_placeholder": "Pesquisar replays...",
-  "replay.my_matches_filter": "Minhas Partidas",
-  "replay.my_matches_filter_title": "Filtrar minhas partidas",
   "replay.empty_matches": "Nenhum replay de partida encontrado.",
   "replay.watch_replay": "Replay",
   "replay.title": "Replay da Partida",

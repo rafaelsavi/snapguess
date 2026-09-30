@@ -7,7 +7,7 @@ import { state, el } from "../state.js";
 import { t, tOr, formatDateTime } from "../i18n.js";
 import { showCard } from "./common.js";
 import { navigate } from "../router.js";
-import { escapeHtml, playerColor, playerInitial, resolvePlayerName } from "../formatters.js";
+import { escapeHtml, playerColor, playerInitial } from "../formatters.js";
 import { showMatchSummaryByMatchId, refreshSummaryLanguage } from "./summary.js";
 import { copyToClipboard } from "../summary/share.js";
 import { setupHubToolbar } from "../components/hub_toolbar.js";
@@ -15,7 +15,6 @@ import { setupHubToolbar } from "../components/hub_toolbar.js";
 let _listenersBound = false;
 let _replaysToolbar = null;
 let _replaysSearch = null;
-const REPLAY_LAST_PLAYER_NAME_KEY = "immich_quiz_last_player_name";
 
 export function initReplay() {
   if (_listenersBound) return;
@@ -69,23 +68,6 @@ export async function showMatchReplay(matchId) {
 
 let _cachedMatches = [];
 
-function getLegacyCurrentPlayerName() {
-  try {
-    const raw = localStorage.getItem("immich_quiz_players");
-    if (raw) {
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr) && arr.length > 0 && typeof arr[0] === "string" && arr[0].trim()) {
-        return arr[0].trim();
-      }
-    }
-  } catch (_) {}
-  return "";
-}
-
-function getCurrentPlayerName() {
-  return resolvePlayerName(REPLAY_LAST_PLAYER_NAME_KEY, getLegacyCurrentPlayerName);
-}
-
 export function parsePlayerNames(query) {
   if (!query) return [];
   return query
@@ -111,7 +93,6 @@ export function setFilteredPlayers(players, reload = true) {
       matchPlayerSearch.value = parsed.join(", ");
     }
     _updateSearchClearBtn();
-    _updateMyMatchesBtnState();
     if (reload) {
       loadMatchesHistory();
     }
@@ -146,7 +127,6 @@ export function clearFilteredPlayers(reload = true) {
       matchPlayerSearch.value = "";
     }
     _updateSearchClearBtn();
-    _updateMyMatchesBtnState();
     if (reload) {
       loadMatchesHistory();
     }
@@ -165,30 +145,9 @@ function _updateSearchClearBtn() {
   matchPlayerSearchClear.classList.toggle("hidden", !hasInputText);
 }
 
-function _updateMyMatchesBtnState() {
-  const myMatchesBtn = document.getElementById("stats-replays-my-matches-btn");
-  if (!myMatchesBtn) return;
-  const currentName = getCurrentPlayerName();
-  if (!currentName) {
-    myMatchesBtn.classList.add("hidden");
-    return;
-  }
-  myMatchesBtn.classList.remove("hidden");
-  const activePlayers = getActivePlayerQuery();
-  const isFilteredToMe = activePlayers.some(
-    (p) => p.toLowerCase() === currentName.toLowerCase()
-  );
-  myMatchesBtn.classList.toggle("active", isFilteredToMe);
-}
-
-function getActivePlayerQuery() {
-  return getFilteredPlayers();
-}
-
 export function initReplayCatalog() {
   const matchPlayerSearch = document.getElementById("stats-replays-player-search");
   const matchPlayerSearchClear = document.getElementById("stats-replays-search-clear");
-  const myMatchesBtn = document.getElementById("stats-replays-my-matches-btn");
 
   _replaysToolbar = setupHubToolbar({
     container: ".replays-toolbar",
@@ -196,14 +155,8 @@ export function initReplayCatalog() {
       input: matchPlayerSearch,
       clearBtn: matchPlayerSearchClear,
       debounceMs: 250,
-      onSearch: () => {
-        _updateMyMatchesBtnState();
-        loadMatchesHistory();
-      },
-      onClear: () => {
-        _updateMyMatchesBtnState();
-        loadMatchesHistory();
-      },
+      onSearch: loadMatchesHistory,
+      onClear: loadMatchesHistory,
     },
     selects: [
       "stats-replays-mode-filter",
@@ -221,21 +174,6 @@ export function initReplayCatalog() {
   });
   _replaysSearch = _replaysToolbar.search;
 
-  if (myMatchesBtn) {
-    myMatchesBtn.addEventListener("click", () => {
-      const currentName = getCurrentPlayerName();
-      if (!currentName) return;
-      const lower = currentName.toLowerCase();
-      const current = getFilteredPlayers();
-      if (current.some((p) => p.toLowerCase() === lower)) {
-        removeFilteredPlayer(currentName);
-      } else {
-        addFilteredPlayer(currentName);
-      }
-      if (matchPlayerSearch) matchPlayerSearch.focus();
-    });
-  }
-
   const refreshBtn = document.getElementById("replays-page-refresh-btn");
   if (refreshBtn) {
     refreshBtn.addEventListener("click", () => {
@@ -243,7 +181,6 @@ export function initReplayCatalog() {
     });
   }
 
-  _updateMyMatchesBtnState();
   _updateSearchClearBtn();
 }
 
@@ -269,7 +206,6 @@ export function showReplaysCatalog(initialPlayer = null) {
     matchPlayerSearch.value = playerParam;
   }
   _updateSearchClearBtn();
-  _updateMyMatchesBtnState();
 
   const modeParam = urlParams.get("game_mode") || urlParams.get("mode");
   const matchModeFilter = document.getElementById("stats-replays-mode-filter");
@@ -582,7 +518,6 @@ export function refreshReplayPageLanguage() {
     if (playerSearch) {
       playerSearch.placeholder = t("replay.search_placeholder");
     }
-    _updateMyMatchesBtnState();
     _updateSearchClearBtn();
     renderMatchesHistory(_cachedMatches);
   }

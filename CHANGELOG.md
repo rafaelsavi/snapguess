@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Compact city filter locations**: Narrow city dropdowns show ISO-2 country codes beside each city, while the Countries dropdown keeps full names.
 
+### Fixed
+
+- Regular users can only view replays they participated in, including when opening a direct replay link.
+
 ## [3.3.0] - 2026-09-29
 
 ### Added

@@ -5,7 +5,7 @@ from typing import Annotated, Any
 from cachetools import TTLCache
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
-from src.auth.models import Role
+from src.auth.models import AuthContext, Role
 from src.auth.service import require_role
 from src.config import AppSettings
 from src.game.service import GameService
@@ -261,8 +261,9 @@ async def player_profile(
     return profile
 
 
-@router.get('/matches', response_model=list[MatchHistoryItem], dependencies=[Depends(require_role(Role.USER))])
+@router.get('/matches', response_model=list[MatchHistoryItem])
 async def list_matches(
+    auth: Annotated[AuthContext, Depends(require_role(Role.USER))],
     game_mode: str | None = Query(default=None),
     play_mode: str | None = Query(default=None),
     player: list[str] | str | None = Query(default=None),
@@ -272,6 +273,11 @@ async def list_matches(
     store: LeaderboardStore = Depends(get_leaderboard_store),
 ) -> list[MatchHistoryItem]:
     """Return searchable match history listing with participating players, winner, and mode tags."""
+    if auth.role == Role.USER:
+        if not auth.name or not auth.name.strip():
+            return []
+        player = [*(player if isinstance(player, list) else [player] if player else []), auth.name.strip()]
+
     return await asyncio.to_thread(
         store.list_matches_history,
         limit,
@@ -283,16 +289,24 @@ async def list_matches(
     )
 
 
-@router.get(
-    '/match/{match_id}/replay', response_model=MatchReplayResponse, dependencies=[Depends(require_role(Role.USER))]
-)
+@router.get('/match/{match_id}/replay', response_model=MatchReplayResponse)
 async def match_replay(
     match_id: str,
+    auth: Annotated[AuthContext, Depends(require_role(Role.USER))],
     store: LeaderboardStore = Depends(get_leaderboard_store),
 ) -> MatchReplayResponse:
     """Return detailed round-by-round guess data, actual coords/dates, and running scoreboard for replay."""
     replay = await asyncio.to_thread(store.get_match_replay, match_id)
     if replay is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Match {match_id} not found or has no replay records',
+        )
+    if auth.role == Role.USER and (
+        not auth.name
+        or not auth.name.strip()
+        or not any(player.player_name.casefold() == auth.name.strip().casefold() for player in replay.players)
+    ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Match {match_id} not found or has no replay records',
