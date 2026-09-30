@@ -51,12 +51,6 @@
   overflow-wrap: break-word;
 }
 
-.header-main p,
-.header-tagline {
-  margin-top: 0.4rem;
-  margin-bottom: 0;
-}
-
 .header-nav-bar {
   display: flex;
   align-items: center;
@@ -240,10 +234,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .header-tagline {
-    display: none;
   }
 
   .header-utility-actions,

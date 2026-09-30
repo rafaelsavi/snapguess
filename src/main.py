@@ -45,7 +45,6 @@ def _render_index_html(
     return (
         template.replace('{{APP_TITLE}}', settings.app_title)
         .replace('{{APP_HEADING}}', settings.app_title)
-        .replace('{{APP_TAGLINE}}', settings.app_tagline)
         .replace('{{LANG_CODE}}', lang_code)
         .replace('{{APP_VERSION_BADGE}}', version_badge)
         .replace('{{APP_VERSION}}', APP_VERSION)
