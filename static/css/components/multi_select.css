@@ -332,21 +332,25 @@
   text-overflow: ellipsis;
 }
 
-#city-multi-select {
+.multi-select {
   container-type: inline-size;
 }
 
-#city-multi-select .multi-select-option-sub-compact {
+.multi-select .multi-select-option-sub-compact {
   display: none;
 }
 
 @container (max-width: 280px) {
-  #city-multi-select .multi-select-option-sub-full {
+  .multi-select .multi-select-option-sub-full {
     display: none;
   }
 
-  #city-multi-select .multi-select-option-sub-compact {
+  .multi-select .multi-select-option-sub-compact {
     display: inline;
+  }
+
+  .multi-select .multi-select-option-sub {
+    flex-shrink: 0;
   }
 }
 
@@ -364,6 +368,7 @@
   color: #7b879c;
   font-style: italic;
   margin-left: 0.25rem;
+  padding-right: 0.25rem;
   white-space: nowrap;
   flex-shrink: 1;
   min-width: 0;

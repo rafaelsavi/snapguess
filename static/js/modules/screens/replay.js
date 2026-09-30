@@ -201,7 +201,7 @@ export function showReplaysCatalog(initialPlayer = null) {
 
   const matchPlayerSearch = document.getElementById("stats-replays-player-search");
   const urlParams = new URLSearchParams(window.location.search);
-  const playerParam = initialPlayer !== null ? initialPlayer : urlParams.get("player");
+  const playerParam = initialPlayer !== null ? initialPlayer : (urlParams.get("search") || urlParams.get("player"));
   if (playerParam !== null && matchPlayerSearch) {
     matchPlayerSearch.value = playerParam;
   }

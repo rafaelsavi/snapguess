@@ -273,7 +273,7 @@ async def list_matches(
     store: LeaderboardStore = Depends(get_leaderboard_store),
 ) -> list[MatchHistoryItem]:
     """Return searchable match history listing with participating players, winner, and mode tags."""
-    if auth.role == Role.USER:
+    if not auth.has_role(Role.CREATOR):
         if not auth.name or not auth.name.strip():
             return []
         player = [*(player if isinstance(player, list) else [player] if player else []), auth.name.strip()]
@@ -302,7 +302,7 @@ async def match_replay(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Match {match_id} not found or has no replay records',
         )
-    if auth.role == Role.USER and (
+    if not auth.has_role(Role.CREATOR) and (
         not auth.name
         or not auth.name.strip()
         or not any(player.player_name.casefold() == auth.name.strip().casefold() for player in replay.players)

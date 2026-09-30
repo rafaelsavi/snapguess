@@ -473,6 +473,8 @@ function renderPlayerProfile(data) {
   const pinpointStats = modeMap["pinpoint"] || { matches_played: 0, avg_accuracy_pct: 0, wins: 0, win_rate_pct: 0 };
   const shuffleStats = modeMap["unshuffle"] || { matches_played: 0, avg_accuracy_pct: 0, wins: 0, win_rate_pct: 0 };
 
+  const canWatchReplays = Boolean(isCurrentUser || state.auth?.role === "creator");
+
   const recentRowsHtml = recentMatches.length > 0
     ? recentMatches
         .map((m) => {
@@ -480,6 +482,14 @@ function renderPlayerProfile(data) {
           const modeIcon = m.game_mode === "unshuffle" ? "🔀" : "🎯";
           const modeLabel = m.game_mode === "unshuffle" ? t("mode.unshuffle") : t("mode.pinpoint");
           const rankBadge = formatRankBadge(m.rank, { dot: true });
+          const replayCell = canWatchReplays
+            ? `
+              <td class="col-replay text-right">
+                <a href="/game/${encodeURIComponent(m.match_id)}/replay" class="btn-secondary replay-action-btn" data-match-id="${escapeHtml(m.match_id)}" title="${t("replay.watch_replay")}" aria-label="${t("replay.watch_replay")}">
+                  <span class="replay-icon" aria-hidden="true">🎬</span>
+                </a>
+              </td>`
+            : "";
 
           return `
             <tr>
@@ -488,16 +498,12 @@ function renderPlayerProfile(data) {
               <td class="col-rank">${rankBadge}</td>
               <td class="col-score">${m.total_score.toLocaleString()}</td>
               <td class="col-acc"><strong>${m.accuracy_pct}%</strong></td>
-              <td class="col-replay text-right">
-                <a href="/game/${encodeURIComponent(m.match_id)}/replay" class="btn-secondary replay-action-btn" data-match-id="${escapeHtml(m.match_id)}" title="${t("replay.watch_replay")}" aria-label="${t("replay.watch_replay")}">
-                  <span class="replay-icon" aria-hidden="true">🎬</span>
-                </a>
-              </td>
+              ${replayCell}
             </tr>
           `;
         })
         .join("")
-    : `<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">${t("stats.no_recent_matches")}</td></tr>`;
+    : `<tr><td colspan="${canWatchReplays ? 6 : 5}" style="text-align:center; color: var(--text-muted);">${t("stats.no_recent_matches")}</td></tr>`;
 
   container.innerHTML = `
     <div class="player-profile-view">
@@ -638,7 +644,7 @@ function renderPlayerProfile(data) {
       <div class="recent-matches-card">
         <div class="recent-matches-card-header">
           <h3>📜 ${t("stats.recent_matches")}</h3>
-          <a href="/replays?player=${encodeURIComponent(player.player_name)}" class="profile-all-replays-link" id="profile-view-all-replays-link">
+          <a href="/replays?player=${encodeURIComponent(player.player_name)}" class="profile-all-replays-link ${canWatchReplays ? "" : "hidden"}" id="profile-view-all-replays-link">
             <span>${t("stats.view_all_player_replays")}</span>
           </a>
         </div>
@@ -651,7 +657,7 @@ function renderPlayerProfile(data) {
                 <th class="col-rank">${t("stats.rank_col")}</th>
                 <th class="col-score">${t("stats.score_col")}</th>
                 <th class="col-acc">${t("stats.accuracy_col")}</th>
-                <th class="col-replay text-right" data-i18n="leaderboard.col_replay">${t("leaderboard.col_replay")}</th>
+                ${canWatchReplays ? `<th class="col-replay text-right" data-i18n="leaderboard.col_replay">${t("leaderboard.col_replay")}</th>` : ""}
               </tr>
             </thead>
             <tbody>

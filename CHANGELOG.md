@@ -13,7 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Regular users can only view replays they participated in, including when opening a direct replay link.
+- **Match replay scoping**: Regular users can only view replays they participated in, including when opening a direct replay link or viewing match history in player profiles.
+- **City dropdown country code display**: Fixed italic letter clipping on compact country codes in the city filter dropdown.
+
+### Removed
+
+- **"My Matches" replay filter**: Removed from the Replay catalog toolbar since regular users' match history is now automatically scoped to their own games.
 
 ## [3.3.0] - 2026-09-29
 

@@ -482,7 +482,10 @@ const countryNameAliases = new Map([
   ["southkorea", "KR"],
   ["northkorea", "KP"],
   ["turkey", "TR"],
+  ["uk", "GB"],
   ["unitedstatesofamerica", "US"],
+  ["usa", "US"],
+  ["vietna", "VN"],
   ["vietname", "VN"],
 ]);
 
