@@ -186,7 +186,7 @@ def _resolve_role_disabled(settings: Any = None) -> AuthContext:
     """When auth is disabled everyone is a Creator (backward-compatible default)."""
     # --- DEV TESTING HOOK ---
     # To test custom name/email under AUTH_MODE=disabled without Cloudflare:
-    # return AuthContext(role=Role.CREATOR, email="admin@example.com", name="Creator")
+    # return AuthContext(role=Role.USER, email='admin@example.com', name='Tester')
     return AuthContext(role=Role.CREATOR, email=None, name='Host')
 
 
