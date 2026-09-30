@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [3.3.1] - 2026-09-30
 
 ### Changed
 
@@ -15,11 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Match replay scoping**: Regular users can only view replays they participated in, including when opening a direct replay link or viewing match history in player profiles.
-- **City dropdown country code display**: Fixed italic letter clipping on compact country codes in the city filter dropdown.
-
-### Removed
-
-- **"My Matches" replay filter**: Removed from the Replay catalog toolbar since regular users' match history is now automatically scoped to their own games.
 
 ## [3.3.0] - 2026-09-29
 
