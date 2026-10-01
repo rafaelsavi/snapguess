@@ -1172,6 +1172,8 @@ Response (`200 OK`):
 
 List paginated past match records for the Match Replays catalog.
 
+Regular users only receive matches that include their authenticated player name. The optional `player` filter narrows those results and cannot expose matches for other players. Creators can list all matches.
+
 Query Parameters:
 
 - `game_mode` (optional): Filter by `pinpoint` or `unshuffle`.
@@ -1208,6 +1210,8 @@ Response (`200 OK`):
 ### GET /api/match/{match_id}/replay
 
 Fetch interactive step-through telemetry for a match, including photo references, actual coordinates/dates, each player's guess coordinates/dates/points, and cumulative scoreboard progression. For challenges, passing either a participant's session `match_id` or the `challenge_id` automatically aggregates guesses and standings progression across all completed challenge participants.
+
+Regular users can fetch a replay only when their authenticated player name is among its participants; otherwise, or when no player name is available, the endpoint returns `404 Not Found`. Creators can fetch any replay.
 
 Response (`200 OK`):
 

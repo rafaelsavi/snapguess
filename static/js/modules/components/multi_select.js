@@ -4,6 +4,7 @@ import { t } from "../i18n.js";
  * @typedef {Object} MultiSelectItem
  * @property {string} id - Unique identifier (UUID, country name, or album ID)
  * @property {string} name - Display label
+ * @property {string} [compactSubtitle] - Optional compact subtitle for narrow layouts
  */
 
 export class MultiSelect {
@@ -419,6 +420,7 @@ export class MultiSelect {
 
       const optEl = document.createElement("div");
       optEl.className = `multi-select-option ${isSelected ? "selected" : ""} ${isZeroMatch ? "zero-match" : ""}`;
+      if (item.subtitle) optEl.title = `${item.name}, ${item.subtitle}`;
 
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
@@ -434,7 +436,21 @@ export class MultiSelect {
       if (item.subtitle) {
         const sub = document.createElement("span");
         sub.className = "multi-select-option-sub";
-        sub.textContent = item.subtitle;
+        sub.title = item.subtitle;
+        sub.setAttribute("aria-label", item.subtitle);
+        if (item.compactSubtitle) {
+          const fullSubtitle = document.createElement("span");
+          fullSubtitle.className = "multi-select-option-sub-full";
+          fullSubtitle.textContent = item.subtitle;
+
+          const compactSubtitle = document.createElement("span");
+          compactSubtitle.className = "multi-select-option-sub-compact";
+          compactSubtitle.textContent = item.compactSubtitle;
+
+          sub.append(fullSubtitle, compactSubtitle);
+        } else {
+          sub.textContent = item.subtitle;
+        }
         optEl.appendChild(sub);
       }
 

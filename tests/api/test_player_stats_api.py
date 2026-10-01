@@ -6,6 +6,8 @@ from pathlib import Path
 
 from conftest import FakeImmichClient, build_client
 
+from src.auth.models import AuthContext, Role
+from src.auth.service import get_current_auth
 from tests.storage.test_player_stats import _create_sample_matches
 
 
@@ -205,6 +207,35 @@ def test_matches_history_api(tmp_path: Path) -> None:
     res_paging = client.get('/api/matches?limit=1&offset=1')
     assert res_paging.status_code == 200
     assert len(res_paging.json()) == 1
+
+
+def test_replay_access_is_scoped_to_authenticated_player(tmp_path: Path) -> None:
+    client = build_client(tmp_path, FakeImmichClient([]))
+    store = client.app.state.leaderboard_store
+    _create_sample_matches(store)
+
+    client.app.dependency_overrides[get_current_auth] = lambda: AuthContext(role=Role.USER, name='aLiCe')
+
+    res_matches = client.get('/api/matches')
+    assert res_matches.status_code == 200
+    assert [match['match_id'] for match in res_matches.json()] == ['match-1']
+
+    res_broadened = client.get('/api/matches?player=Charlie')
+    assert res_broadened.status_code == 200
+    assert res_broadened.json() == []
+
+    assert client.get('/api/match/match-1/replay').status_code == 200
+    assert client.get('/api/match/match-2/replay').status_code == 404
+
+    client.app.dependency_overrides[get_current_auth] = lambda: AuthContext(role=Role.USER)
+    assert client.get('/api/matches').json() == []
+    assert client.get('/api/match/match-1/replay').status_code == 404
+
+    client.app.dependency_overrides[get_current_auth] = lambda: AuthContext(role=Role.CREATOR)
+    res_creator_matches = client.get('/api/matches')
+    assert res_creator_matches.status_code == 200
+    assert {match['match_id'] for match in res_creator_matches.json()} == {'match-1', 'match-2'}
+    assert client.get('/api/match/match-2/replay').status_code == 200
 
 
 def test_match_replay_api(tmp_path: Path) -> None:

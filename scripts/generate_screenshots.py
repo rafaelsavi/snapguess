@@ -215,7 +215,6 @@ async def main() -> None:
             immich_server_url='https://photos.example.com/api',
             immich_libraries={'Family': 'token123'},
             app_title='Immich Quiz',
-            app_tagline='Photo trivia powered by your Immich library',
             app_host='127.0.0.1',
             app_port=port,
             language='EN',

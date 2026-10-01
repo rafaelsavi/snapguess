@@ -431,14 +431,72 @@ function initModeSelector() {
 export function updateDependentCities(selectedCountryNames) {
   if (!cityMultiSelect) return;
   if (!selectedCountryNames || selectedCountryNames.length === 0) {
-    cityMultiSelect.setItems(cachedRawCities.map((c) => ({ id: c.name, name: c.name, subtitle: c.country })));
+    cityMultiSelect.setItems(cachedRawCities.map((c) => ({
+      id: c.name,
+      name: c.name,
+      subtitle: c.country,
+      compactSubtitle: getCountryCode(c.country) || c.country,
+    })));
   } else {
     const lowerCountries = selectedCountryNames.map((c) => (c || "").toLowerCase());
     const filtered = cachedRawCities.filter(
       (c) => !c.country || lowerCountries.includes(c.country.toLowerCase())
     );
-    cityMultiSelect.setItems(filtered.map((c) => ({ id: c.name, name: c.name, subtitle: c.country })));
+    cityMultiSelect.setItems(filtered.map((c) => ({
+      id: c.name,
+      name: c.name,
+      subtitle: c.country,
+      compactSubtitle: getCountryCode(c.country) || c.country,
+    })));
   }
+}
+
+const countryNameToCode = (() => {
+  if (typeof Intl.DisplayNames !== "function") return new Map();
+
+  const displayNames = new Intl.DisplayNames(["en"], { type: "region" });
+  const names = new Map();
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const nonIsoRegionCodes = new Set([
+    "AC", "AN", "CP", "CS", "DG", "EA", "EU", "EZ", "FX", "IC", "NT", "QO", "SU", "TA", "TP", "UK", "UN", "XA", "XB", "XK", "YU", "ZR",
+  ]);
+
+  for (const first of letters) {
+    for (const second of letters) {
+      const code = `${first}${second}`;
+      const name = displayNames.of(code);
+      if (!nonIsoRegionCodes.has(code) && name && name !== code) {
+        names.set(normalizeCountryName(name), code);
+      }
+    }
+  }
+
+  return names;
+})();
+
+const countryNameAliases = new Map([
+  ["czechrepublic", "CZ"],
+  ["democraticpeoplesrepublicofkorea", "KP"],
+  ["republicofkorea", "KR"],
+  ["russianfederation", "RU"],
+  ["southkorea", "KR"],
+  ["northkorea", "KP"],
+  ["turkey", "TR"],
+  ["uk", "GB"],
+  ["unitedstatesofamerica", "US"],
+  ["usa", "US"],
+  ["vietna", "VN"],
+  ["vietname", "VN"],
+]);
+
+function normalizeCountryName(name) {
+  return name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function getCountryCode(name) {
+  if (typeof name !== "string" || !name) return undefined;
+  const normalizedName = normalizeCountryName(name);
+  return countryNameAliases.get(normalizedName) || countryNameToCode.get(normalizedName);
 }
 
 export function saveGameSettings() {

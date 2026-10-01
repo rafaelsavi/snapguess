@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.1] - 2026-09-30
+
+### Changed
+
+- **Pinpoint date guessing**: Month names display in full and update when the language changes.
+- **Compact city filter locations**: Narrow city dropdowns show ISO-2 country codes beside each city, while the Countries dropdown keeps full names.
+
+### Fixed
+
+- **Match replay scoping**: Regular users can only view replays they participated in, including when opening a direct replay link or viewing match history in player profiles.
+
 ## [3.3.0] - 2026-09-29
 
 ### Added

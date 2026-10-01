@@ -2438,9 +2438,8 @@ def test_player_name_prefill_and_cf_identity_standardization() -> None:
     assert resolver_body.index('if (storageKey)') < resolver_body.index('if (typeof fallbackFn')
     assert 'resolvePlayerName(LAST_PLAYER_NAME_KEY)' in landing_js
     assert 'localStorage.setItem(LAST_PLAYER_NAME_KEY, name);' in landing_js
-    assert 'resolvePlayerName(REPLAY_LAST_PLAYER_NAME_KEY, getLegacyCurrentPlayerName)' in replay_js
-    assert 'const REPLAY_LAST_PLAYER_NAME_KEY = "immich_quiz_last_player_name";' in replay_js
-    assert 'localStorage.getItem("immich_quiz_players")' in replay_js
+    assert 'REPLAY_LAST_PLAYER_NAME_KEY' not in replay_js
+    assert 'localStorage.getItem("immich_quiz_players")' not in replay_js
 
     # 2. Challenge landing markup supports locked identity and prefilled default
     assert 'isLocked' in landing_js

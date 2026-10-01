@@ -197,7 +197,7 @@ def test_stats_players_search_autocomplete_and_deeplink() -> None:
     assert '.profile-all-replays-link' in stats_css
 
 
-def test_replays_player_search_and_my_matches() -> None:
+def test_replays_player_search_and_sort_select() -> None:
     replay_js = (STATIC_DIR / 'js' / 'modules' / 'screens' / 'replay.js').read_text(encoding='utf-8')
     replay_css = (STATIC_DIR / 'css' / 'components' / 'replay.css').read_text(encoding='utf-8')
     index_html = INDEX_HTML.read_text(encoding='utf-8')
@@ -225,13 +225,13 @@ def test_replays_player_search_and_my_matches() -> None:
     assert 'replay-player-chip' in replay_js
     assert '.replay-player-chip' in replay_css
 
-    # 4. My Matches quick button & Sort select
-    assert 'id="stats-replays-my-matches-btn"' in index_html
+    # 4. Removed My Matches shortcut & retained Sort select
+    assert 'id="stats-replays-my-matches-btn"' not in index_html
+    assert 'stats-replays-my-matches-btn' not in replay_js
+    assert '.replays-my-matches-pill' not in replay_css
+    assert 'replay.my_matches_filter' not in index_html
     assert 'id="stats-replays-sort-select"' in index_html
-    assert 'stats-replays-my-matches-btn' in replay_js
     assert 'stats-replays-sort-select' in replay_js
-    assert '.replays-my-matches-pill' in replay_css
-    assert 'replay.my_matches_filter' in index_html
     assert 'replay.sort_newest' in index_html
 
     # 5. Query string deep linking
