@@ -77,9 +77,30 @@ async def test_pinpoint_single_year_and_month_date_selection(page: Page) -> None
     await expect(year_select).to_be_visible()
     await expect(month_select).to_be_visible()
 
+    june_label = await month_select.evaluate(
+        "select => { const locale = document.documentElement.lang || 'en'; "
+        "const monthName = new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(2000, 5, 1)); "
+        'const [firstLetter, ...remainingLetters] = Array.from(monthName); '
+        "return firstLetter.toLocaleUpperCase(locale) + remainingLetters.join(''); }"
+    )
+    await expect(month_select.locator('option[value="6"]')).to_have_text(june_label)
+
     # Select Year 2021 and Month 06 (June)
     await year_select.select_option('2021')
     await month_select.select_option('6')
+
+    await page.evaluate("() => document.getElementById('lang-toggle-btn')?.click()")
+    await page.wait_for_timeout(150)
+    translated_june_label = await month_select.evaluate(
+        "select => { const locale = document.documentElement.lang || 'en'; "
+        "const monthName = new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(2000, 5, 1)); "
+        'const [firstLetter, ...remainingLetters] = Array.from(monthName); '
+        "return firstLetter.toLocaleUpperCase(locale) + remainingLetters.join(''); }"
+    )
+    await expect(month_select.locator('option[value="6"]')).to_have_text(translated_june_label)
+    await expect(month_select).to_have_value('6')
+    await page.evaluate("() => document.getElementById('lang-toggle-btn')?.click()")
+    await page.wait_for_timeout(150)
 
     # Submit date guess
     await page.locator('#submit-answer').click()

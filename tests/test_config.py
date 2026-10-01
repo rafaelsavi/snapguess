@@ -17,7 +17,6 @@ def isolated_env(monkeypatch: pytest.MonkeyPatch) -> None:
         'IMMICH_SERVER_URL',
         'IMMICH_LIBRARIES',
         'APP_TITLE',
-        'APP_TAGLINE',
         'APP_HOST',
         'APP_PORT',
         'DATE_LOWER_BOUND',
@@ -91,7 +90,6 @@ def test_valid_settings_normalizes_url(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.immich_server_url == 'https://example.test/api'
     assert settings.immich_libraries == {'family': 'token'}
     assert settings.app_title == 'Immich Quiz'
-    assert settings.app_tagline == ''
     assert settings.app_host == '127.0.0.1'
     assert settings.app_port == 8010
     assert settings.date_lower_bound is None
@@ -333,7 +331,6 @@ def test_app_settings_dataclass_defaults() -> None:
     assert settings.immich_server_url == 'https://example.test/api'
     assert settings.immich_libraries == {'family': 'token'}
     assert settings.app_title == 'Immich Quiz'
-    assert settings.app_tagline == ''
     assert settings.app_host == '127.0.0.1'
     assert settings.app_port == 8010
     assert settings.language == SupportedLanguage.EN
@@ -379,7 +376,6 @@ def test_empty_and_whitespace_env_vars_fallback_to_defaults(monkeypatch: pytest.
     monkeypatch.setenv('IMMICH_SERVER_URL', 'https://example.test/api')
     monkeypatch.setenv('IMMICH_LIBRARIES', '{"family": "token"}')
     monkeypatch.setenv('APP_TITLE', '   ')
-    monkeypatch.setenv('APP_TAGLINE', '')
     monkeypatch.setenv('APP_HOST', '  ')
     monkeypatch.setenv('APP_PORT', '')
     monkeypatch.setenv('LANGUAGE', '  ')
@@ -390,7 +386,6 @@ def test_empty_and_whitespace_env_vars_fallback_to_defaults(monkeypatch: pytest.
 
     settings = load_settings()
     assert settings.app_title == 'Immich Quiz'
-    assert settings.app_tagline == ''
     assert settings.app_host == '127.0.0.1'
     assert settings.app_port == 8010
     assert settings.language == SupportedLanguage.EN

@@ -51,7 +51,6 @@
       <div class="header-brand-row">
         <div class="header-main">
           <h1>{{APP_HEADING}}</h1>
-          <p class="header-tagline">{{APP_TAGLINE}}</p>
         </div>
         <div class="header-utility-actions">
           <span id="identity-badge" class="identity-badge hidden"></span>
@@ -340,15 +339,6 @@
               <span class="home-quick-title" data-i18n="home.quick_challenges_title">Active Challenges</span>
               <span class="home-quick-desc" data-i18n="home.quick_challenges_desc">Browse and join available community challenges</span>
             </div>
-            <span class="home-quick-arrow" aria-hidden="true">→</span>
-          </a>
-          <a href="/players" id="home-quick-players" class="home-quick-card">
-            <div class="home-quick-icon">👥</div>
-            <div class="home-quick-info">
-              <span class="home-quick-title" data-i18n="home.quick_players_title">Player Directory</span>
-              <span class="home-quick-desc" data-i18n="home.quick_players_desc">View lifetime rankings, win rates, and player cards</span>
-            </div>
-            <span class="home-quick-arrow" aria-hidden="true">→</span>
           </a>
           <a href="/replays" id="home-quick-replays" class="home-quick-card">
             <div class="home-quick-icon">🎬</div>
@@ -356,7 +346,13 @@
               <span class="home-quick-title" data-i18n="home.quick_replays_title">Match Replays</span>
               <span class="home-quick-desc" data-i18n="home.quick_replays_desc">Relive round-by-round guesses and photo journeys</span>
             </div>
-            <span class="home-quick-arrow" aria-hidden="true">→</span>
+          </a>
+          <a href="/players" id="home-quick-players" class="home-quick-card">
+            <div class="home-quick-icon">👥</div>
+            <div class="home-quick-info">
+              <span class="home-quick-title" data-i18n="home.quick_players_title">Player Directory</span>
+              <span class="home-quick-desc" data-i18n="home.quick_players_desc">View lifetime rankings, win rates, and player cards</span>
+            </div>
           </a>
         </div>
       </div>
@@ -444,7 +440,7 @@
               </div>
             </div>
             <div id="date-guess-wrap" class="pinpoint-guess-wrap pinpoint-date-wrap hidden">
-              <label data-i18n="game.date_guess_label">Date Guess (year / month)</label>
+              <label data-i18n="game.date_guess_label">Date Guess</label>
               <div class="grid-2 date-guess-grid pinpoint-date-grid">
                 <select id="date-guess-year" aria-label="Guessed year"></select>
                 <select id="date-guess-month" aria-label="Guessed month"></select>
@@ -975,11 +971,6 @@
               <option value="accuracy" data-i18n="replay.sort_accuracy">Highest Accuracy</option>
               <option value="players" data-i18n="replay.sort_players">Most Players</option>
             </select>
-            <button type="button" id="stats-replays-my-matches-btn" class="hub-btn-pill replays-my-matches-pill hidden"
-              data-i18n-title="replay.my_matches_filter_title" title="Filter to my matches">
-              <span class="pill-icon" aria-hidden="true">👤</span>
-              <span data-i18n="replay.my_matches_filter">My Matches</span>
-            </button>
             <span id="stats-replays-total-badge" class="hub-counter-pill replays-counter-pill hidden">0 replays</span>
           </div>
         </div>
