@@ -2660,3 +2660,29 @@ def test_replay_round_stepper_button_sizing() -> None:
     # 3. Mobile touch-target compliance: at least 38px
     assert 'width: 38px;' in replay_css
     assert 'height: 38px;' in replay_css
+
+
+def test_summary_table_mobile_overflow_and_responsive_fit() -> None:
+    """Verify that match summary and challenge standings tables use container-level horizontal touch scrolling
+    and compact responsive styling on mobile screens to prevent right-edge total score truncation.
+    """
+    summary_css = (STATIC_DIR / 'css' / 'components' / 'summary.css').read_text(encoding='utf-8')
+    table_js = (JS_DIR / 'modules' / 'summary' / 'table.js').read_text(encoding='utf-8')
+    challenge_summary_js = (JS_DIR / 'modules' / 'challenge' / 'summary.js').read_text(encoding='utf-8')
+
+    # 1. summary.css allows container-level horizontal touch scrolling instead of clipping with overflow: hidden
+    assert '.review-content > .table-scroll {' in summary_css
+    assert 'overflow-x: auto;' in summary_css.split('.review-content > .table-scroll')[1].split('}')[0]
+    assert '-webkit-overflow-scrolling: touch;' in summary_css.split('.review-content > .table-scroll')[1].split('}')[0]
+    assert 'overflow: hidden;' not in summary_css.split('.review-content > .table-scroll')[1].split('}')[0]
+
+    # 2. Compact mobile sizing and player name ellipsis in summary.css
+    assert '.col-rank {\n    width: 30px;' in summary_css
+    assert '.player-name-text' in summary_css
+    assert '.challenge-rounds-pill' in summary_css
+
+    # 3. table.js and challenge/summary.js mark duplicate single-goal scores with hide-on-mobile
+    assert 'isLocDuplicate ? "hide-on-mobile" : ""' in table_js
+    assert 'isDateDuplicate ? "hide-on-mobile" : ""' in table_js
+    assert 'isLocDuplicate ? "hide-on-mobile" : ""' in challenge_summary_js
+    assert 'isDateDuplicate ? "hide-on-mobile" : ""' in challenge_summary_js

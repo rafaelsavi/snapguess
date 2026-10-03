@@ -28,6 +28,11 @@ export function renderSummaryTable(summary, perfectCounts = {}, { currentSession
     summary.challenge_id
   );
 
+  const hasLocation = summary.location_mode !== false;
+  const hasDate = summary.date_mode !== false;
+  const isLocDuplicate = hasLocation && !hasDate;
+  const isDateDuplicate = hasDate && !hasLocation;
+
   const columns = [
     { key: "rank", label: t("summary.col_rank"), className: "col-rank" },
     { key: "player", label: t("summary.col_player"), className: "col-player" },
@@ -36,14 +41,22 @@ export function renderSummaryTable(summary, perfectCounts = {}, { currentSession
   if (isChallenge) {
     columns.push({ key: "rounds", label: t("summary.col_rounds"), className: "col-rounds text-center" });
   }
-  if (summary.location_mode !== false) {
-    columns.push({ key: "location", label: t("summary.col_location"), className: "col-score text-right" });
+  if (hasLocation) {
+    columns.push({
+      key: "location",
+      label: t("summary.col_location"),
+      className: `col-score text-right ${isLocDuplicate ? "hide-on-mobile" : ""}`.trim(),
+    });
   }
-  if (summary.date_mode !== false) {
-    columns.push({ key: "date", label: t("summary.col_date"), className: "col-score text-right" });
+  if (hasDate) {
+    columns.push({
+      key: "date",
+      label: t("summary.col_date"),
+      className: `col-score text-right ${isDateDuplicate ? "hide-on-mobile" : ""}`.trim(),
+    });
   }
   columns.push(
-    { key: "total", label: t("summary.col_total"), className: "col-score text-right" },
+    { key: "total", label: t("summary.col_total"), className: "col-score col-total-score text-right font-bold" },
     { key: "accuracy", label: t("summary.col_accuracy"), className: "col-acc text-right hide-on-mobile" }
   );
 
@@ -112,7 +125,7 @@ export function renderSummaryTable(summary, perfectCounts = {}, { currentSession
       // 4. Location Score
       if (summary.location_mode !== false) {
         const locCell = document.createElement("td");
-        locCell.className = "col-score text-right";
+        locCell.className = `col-score text-right ${isLocDuplicate ? "hide-on-mobile" : ""}`.trim();
         if (player.location_score != null) {
           animateScoreRollup(locCell, player.location_score ?? 0, maxGoalScore);
         } else {
@@ -124,7 +137,7 @@ export function renderSummaryTable(summary, perfectCounts = {}, { currentSession
       // 5. Date Score
       if (summary.date_mode !== false) {
         const dateCell = document.createElement("td");
-        dateCell.className = "col-score text-right";
+        dateCell.className = `col-score text-right ${isDateDuplicate ? "hide-on-mobile" : ""}`.trim();
         if (player.date_score != null) {
           animateScoreRollup(dateCell, player.date_score ?? 0, maxGoalScore);
         } else {

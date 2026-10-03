@@ -18,12 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Optimized Vertical View for Phones & Foldable Devices**: Expanded photo visibility and card dimensions across mobile phones and portrait foldable screens to eliminate empty whitespace and provide comfortable touch interaction.
 - **Compact Vertical Card Controls**: In vertical card stacking, sorting buttons (▲ over ▼) and ABC pin buttons are now stacked vertically, saving significant horizontal space and maximizing photo preview width on phone and tablet screens.
 - **Full-Width Wide Screen Layout**: Date-only Unshuffle cards now expand to utilize all available horizontal space on wide screens, eliminating empty side margins and displaying photos at their full breadth.
+- **Responsive Leaderboard & Match Summary Tables on Mobile**: Standings tables now fit cleanly on phone screens down to 360px width with compact rank and rounds badges, elegant player name truncation, and clear total scores. Single-goal game summaries automatically streamline duplicate breakdown columns to keep the final score front-and-center.
 - **Uniform Sorting Button Dimensions**: Sorting buttons now maintain the exact same clean square dimensions (38px) whether stacked vertically or placed side-by-side horizontally.
 - **Updated Unshuffle Help Guide**: In-game help instructions now clearly explain how to drag and drop photo cards directly (or press and hold on touchscreens) alongside using the sorting arrow buttons.
 
 ### Fixed
 
 - **Smooth Mobile Scrolling in Unshuffle Mode**: Swiping and scrolling across photo cards now smoothly scrolls the page without accidental card grabs or gesture locks, reserving drag-and-drop strictly for intentional press-and-hold gestures.
+- **Summary Table Right-Edge Truncation on Phones**: Match review and challenge standings tables now enable smooth horizontal touch scrolling instead of clipping the Total Score column on narrow mobile displays.
 
 ## [3.3.1] - 2026-09-30
 
