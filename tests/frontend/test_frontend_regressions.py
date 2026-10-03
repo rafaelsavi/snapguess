@@ -412,27 +412,21 @@ def test_preflight_warning_disables_start_button_and_guards_submission() -> None
     assert 'startingMatch' in state_js, 'startingMatch must be initialized in state.js'
 
 
-def test_pinpoint_quiz_image_fullscreen_button_handling() -> None:
+def test_pinpoint_photo_lightbox_handling() -> None:
     index_html = INDEX_HTML.read_text(encoding='utf-8')
     state_js = (JS_DIR / 'modules' / 'state.js').read_text(encoding='utf-8')
     pinpoint_js = (JS_DIR / 'modules' / 'modes' / 'pinpoint.js').read_text(encoding='utf-8')
-    app_js = (JS_DIR / 'app.js').read_text(encoding='utf-8')
 
-    assert 'id="quiz-image-fullscreen"' in index_html, 'quiz-image-fullscreen ID missing from index.html'
-    assert 'quizImageFullscreen' in state_js, 'quizImageFullscreen getter missing from state.js'
+    # Verify quiz-image-fullscreen button is removed in favor of direct-photo-click Lightbox
+    assert 'id="quiz-image-fullscreen"' not in index_html, 'quiz-image-fullscreen ID must not be in index.html'
+    assert 'quizImageFullscreen' not in state_js, 'quizImageFullscreen getter must be removed from state.js'
 
-    # pinpoint.js onReady must unhide quizImageFullscreen
-    assert 'el.quizImageFullscreen.classList.remove("hidden")' in pinpoint_js, (
-        'pinpoint.js must unhide quizImageFullscreen on onReady / reveal'
+    # pinpoint.js wires direct photo click to openPhotoLightbox
+    assert 'openPhotoLightbox(el.quizImage.src)' in pinpoint_js, (
+        'pinpoint.js must open photo lightbox on clicking quiz image'
     )
-    # pinpoint.js unmount / renderQuestion must hide quizImageFullscreen
-    assert 'el.quizImageFullscreen.classList.add("hidden")' in pinpoint_js, (
-        'pinpoint.js must hide quizImageFullscreen on renderQuestion / unmount'
-    )
-    # app.js must not call removeAttribute('src') on quizImageFullscreen
-    assert 'el.quizImageFullscreen.removeAttribute("src")' not in app_js, (
-        'app.js must not call removeAttribute("src") on quizImageFullscreen'
-    )
+    # pinpoint.js togglePhotoFullscreen delegates to lightbox
+    assert 'isPhotoLightboxOpen()' in pinpoint_js, 'pinpoint.js togglePhotoFullscreen must check isPhotoLightboxOpen'
 
 
 def test_leaderboard_enhancements_markup_and_modules() -> None:

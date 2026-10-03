@@ -194,9 +194,6 @@ export const el = {
   get quizImage() {
     return document.getElementById("quiz-image");
   },
-  get quizImageFullscreen() {
-    return document.getElementById("quiz-image-fullscreen");
-  },
   get mediaPlaceholder() {
     return document.getElementById("media-placeholder");
   },

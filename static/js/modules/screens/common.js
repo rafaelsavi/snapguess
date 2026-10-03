@@ -94,9 +94,6 @@ export function resetGameUi() {
     el.quizImage.removeAttribute("src");
     el.quizImage.onerror = null;
   }
-  if (el.quizImageFullscreen) {
-    el.quizImageFullscreen.classList.add("hidden");
-  }
   if (el.mediaPlaceholder) el.mediaPlaceholder.classList.remove("hidden");
   if (el.mediaFrame) el.mediaFrame.classList.add("hidden");
 

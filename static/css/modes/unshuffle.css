@@ -246,29 +246,6 @@
     display: block;
   }
 
-  /* Fullscreen button on photo top-right */
-  .no-map .shuffle-card-fullscreen-btn {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
-    min-height: 36px !important;
-    background: rgba(15, 23, 42, 0.65) !important;
-    color: #ffffff !important;
-    border: 1px solid rgba(255, 255, 255, 0.25) !important;
-    backdrop-filter: blur(4px) !important;
-    border-radius: 8px !important;
-    cursor: pointer;
-    transition: transform 0.15s ease, background 0.15s ease;
-  }
-
-  .no-map .shuffle-card-fullscreen-btn:hover {
-    background: rgba(15, 23, 42, 0.85) !important;
-    transform: scale(1.06) !important;
-  }
-
   /* Controls column below photo: ABC row and rank buttons row stacked above each other */
   .no-map .shuffle-card-actions {
     width: 100%;
@@ -542,21 +519,6 @@
 
 .shuffle-card-thumb-lg:hover {
   transform: scale(1.02);
-}
-
-.shuffle-card-fullscreen-btn {
-  top: 6px;
-  right: 6px;
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  min-height: 32px !important;
-  padding: 0 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  border-radius: 8px !important;
 }
 
 .shuffle-card-actions {

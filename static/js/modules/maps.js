@@ -1073,12 +1073,6 @@ export function initMapFullscreenControls() {
       toggleMapFullscreen(el.guessMapShell);
     };
   }
-  if (el.quizImageFullscreen && el.mediaFrame) {
-    el.quizImageFullscreen.onclick = (e) => {
-      if (e && e.stopPropagation) e.stopPropagation();
-      toggleMapFullscreen(el.mediaFrame);
-    };
-  }
   syncFullscreenButtons();
 }
 

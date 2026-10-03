@@ -196,7 +196,6 @@ function attachTouchDragHandlers(card, photoId, index, containerEl, questionData
     // Disallow initiating card dragging when touching interactive controls or action panels
     if (
       e.target.closest("button") ||
-      e.target.closest(".shuffle-card-fullscreen-btn") ||
       e.target.closest(".shuffle-card-actions")
     ) {
       return;
@@ -989,25 +988,7 @@ function renderPhotoCardsList(containerEl, questionData, focusOptions = null) {
       openPhotoLightbox(photo.media_url);
     });
 
-    const fsBtn = document.createElement("button");
-    fsBtn.type = "button";
-    fsBtn.className = "shuffle-card-fullscreen-btn";
-    fsBtn.innerHTML = `<svg class="fs-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="15 3 21 3 21 9"></polyline>
-      <polyline points="9 21 3 21 3 15"></polyline>
-      <line x1="21" y1="3" x2="14" y2="10"></line>
-      <line x1="3" y1="21" x2="10" y2="14"></line>
-    </svg>`;
-    fsBtn.title = t("game.view_fullscreen_photo");
-    fsBtn.setAttribute("data-i18n-title", "game.view_fullscreen_photo");
-    fsBtn.setAttribute("aria-label", t("game.view_fullscreen_photo"));
-    fsBtn.setAttribute("data-i18n-aria-label", "game.view_fullscreen_photo");
-    fsBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openPhotoLightbox(photo.media_url);
-    });
-
-    thumbWrap.append(img, fsBtn);
+    thumbWrap.append(img);
 
     // Right Action Panel: Pin Chips + Rank Controls stacked vertically
     const rightActions = document.createElement("div");

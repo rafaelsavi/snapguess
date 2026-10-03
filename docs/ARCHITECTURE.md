@@ -82,7 +82,7 @@ immich-quiz/
         │   ├── focus_trap.js Accessible modal focus trap utility (Tab / Shift+Tab) restoring focus.
         │   ├── hub_search.js Standardized hub search component managing search inputs, clear button visibility, debouncing, and Escape/Enter triggers.
         │   ├── hub_toolbar.js Standardized hub toolbar controller orchestrating search, segmented tabs, dropdown selects, and counter badges.
-        │   ├── lightbox.js  Zero-dependency modal photo lightbox with click-outside and Escape dismissal.
+        │   ├── lightbox.js  Zero-dependency modal photo lightbox with mobile pinch-to-zoom, double-tap quick-zoom, drag-to-pan, desktop wheel zooming, click-outside, and Escape dismissal.
         │   ├── match_meta.js Match configuration rendering, game setup & library filter summary badges.
         │   ├── match_replay.js Standardized multi-round replay canvas, round stepper, Leaflet map with spider lines, and reveal table.
         │   ├── multi_select.js Searchable tag-based multi-select with select-all/clear and optional compact city subtitles.

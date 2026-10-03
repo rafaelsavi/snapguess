@@ -161,9 +161,6 @@ export async function loadQuestion() {
     el.quizImage.removeAttribute("src");
     el.quizImage.onerror = null;
   }
-  if (el.quizImageFullscreen) {
-    el.quizImageFullscreen.classList.add("hidden");
-  }
   if (el.mediaPlaceholder) el.mediaPlaceholder.classList.remove("hidden");
 
   el.submitAnswer.textContent = t("game.submit_btn");

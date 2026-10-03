@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Drag-and-Drop Card Reordering**: Drag photo cards to quickly arrange them chronologically on desktop, tablet, and mobile touch screens in Unshuffle mode.
+- **Mobile Photo Zoom & Pan in Fullscreen Preview**: Inspect photo clues on mobile and desktop screens with smooth two-finger pinch-to-zoom, double-tap to quick-zoom to 2.5x centered at your touch point, drag-to-pan, mouse wheel zooming, and a one-tap zoom reset button.
 - **Horizontal Unshuffle Layout on Wide Screens**: Date-only Unshuffle rounds automatically display photos side-by-side in a single row on wide displays and landscape foldable phones, with adapted left and right navigation arrows.
 
 - **Expanded Header Identity Badge Space on Mobile**: The player identity badge in the header now has expanded flexible room (up to 220px) on mobile phone screens, displaying player names and roles in full without premature clipping, while long names gracefully truncate without pushing other header controls off-screen.
@@ -20,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Responsive Leaderboard & Match Summary Tables on Mobile**: Standings tables now fit cleanly on phone screens down to 360px width with compact rank and rounds badges, elegant player name truncation, and clear total scores. Single-goal game summaries automatically streamline duplicate breakdown columns to keep the final score front-and-center.
 - **Uniform Sorting Button Dimensions**: Sorting buttons now maintain the exact same clean square dimensions (38px) whether stacked vertically or placed side-by-side horizontally.
 - **Updated Unshuffle Help Guide**: In-game help instructions now clearly explain how to drag and drop photo cards directly (or press and hold on touchscreens) alongside using the sorting arrow buttons.
+
+### Changed
+
+- **Direct Tap-to-Zoom Photo Previews**: Tap or click any quiz photo or thumbnail directly to open the full zoomable photo preview across Pinpoint, Unshuffle, and match replays, replacing redundant corner buttons and ensuring full pinch-to-zoom support across all mobile devices.
 
 ### Fixed
 

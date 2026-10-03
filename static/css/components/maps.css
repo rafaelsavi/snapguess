@@ -100,8 +100,7 @@
 }
 
 .map-fullscreen-btn,
-.map-reset-zoom-btn,
-.shuffle-card-fullscreen-btn {
+.map-reset-zoom-btn {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -127,16 +126,14 @@
 }
 
 .map-fullscreen-btn:hover,
-.map-reset-zoom-btn:hover,
-.shuffle-card-fullscreen-btn:hover {
+.map-reset-zoom-btn:hover {
   background: #f8fafc !important;
   border-color: #98a2b3 !important;
   color: var(--accent, #0f7c7f) !important;
 }
 
 .map-fullscreen-btn:hover .fs-icon,
-.map-reset-zoom-btn:hover .reset-zoom-icon,
-.shuffle-card-fullscreen-btn:hover .fs-icon {
+.map-reset-zoom-btn:hover .reset-zoom-icon {
   transform: scale(1.12);
   stroke: var(--accent, #0f7c7f);
 }
@@ -549,8 +546,7 @@
 
 /* Map fullscreen & reset-zoom buttons */
 [data-theme="dark"] .map-fullscreen-btn,
-[data-theme="dark"] .map-reset-zoom-btn,
-[data-theme="dark"] .shuffle-card-fullscreen-btn {
+[data-theme="dark"] .map-reset-zoom-btn {
   background: rgba(23, 32, 51, 0.92) !important;
   border-color: #283750 !important;
   color: #f1f5f9 !important;
@@ -558,16 +554,14 @@
 }
 
 [data-theme="dark"] .map-fullscreen-btn:hover,
-[data-theme="dark"] .map-reset-zoom-btn:hover,
-[data-theme="dark"] .shuffle-card-fullscreen-btn:hover {
+[data-theme="dark"] .map-reset-zoom-btn:hover {
   background: #202c46 !important;
   border-color: #3b4d70 !important;
   color: #2dd4bf !important;
 }
 
 [data-theme="dark"] .map-fullscreen-btn:hover .fs-icon,
-[data-theme="dark"] .map-reset-zoom-btn:hover .reset-zoom-icon,
-[data-theme="dark"] .shuffle-card-fullscreen-btn:hover .fs-icon {
+[data-theme="dark"] .map-reset-zoom-btn:hover .reset-zoom-icon {
   stroke: #2dd4bf;
 }
 
