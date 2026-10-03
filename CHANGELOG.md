@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Smooth Mobile Scrolling in Unshuffle Mode**: Swiping and scrolling across photo cards now smoothly scrolls the page without accidental card grabs or gesture locks, reserving drag-and-drop strictly for intentional press-and-hold gestures.
 - **Summary Table Right-Edge Truncation on Phones**: Match review and challenge standings tables now enable smooth horizontal touch scrolling instead of clipping the Total Score column on narrow mobile displays.
+- **Pinpoint Challenge Date Scoring**: Guessing the exact capture month in Pinpoint challenge matches now correctly awards the full 100 points and 0 days difference instead of penalizing points.
 
 ## [3.3.1] - 2026-09-30
 
