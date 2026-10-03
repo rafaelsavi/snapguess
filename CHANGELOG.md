@@ -5,33 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [3.3.2] - 2026-10-03
 
 ### Added
 
-- **Drag-and-Drop Card Reordering**: Drag photo cards to quickly arrange them chronologically on desktop, tablet, and mobile touch screens in Unshuffle mode.
-- **Mobile Photo Zoom & Pan in Fullscreen Preview**: Inspect photo clues on mobile and desktop screens with smooth two-finger pinch-to-zoom, double-tap to quick-zoom to 2.5x centered at your touch point, drag-to-pan, mouse wheel zooming, and a one-tap zoom reset button.
-- **Horizontal Unshuffle Layout on Wide Screens**: Date-only Unshuffle rounds automatically display photos side-by-side in a single row on wide displays and landscape foldable phones, with adapted left and right navigation arrows.
-
-- **Expanded Header Identity Badge Space on Mobile**: The player identity badge in the header now has expanded flexible room (up to 220px) on mobile phone screens, displaying player names and roles in full without premature clipping, while long names gracefully truncate without pushing other header controls off-screen.
-- **Enhanced Unshuffle Date-Only Experience**: Photos now fill the full width in a balanced 3-column layout on wide screens with high-resolution 4:3 previews, large touch buttons, and a sleek connecting timeline track showing chronological progression from oldest to newest.
-- **Optimized Vertical View for Phones & Foldable Devices**: Expanded photo visibility and card dimensions across mobile phones and portrait foldable screens to eliminate empty whitespace and provide comfortable touch interaction.
-- **Compact Vertical Card Controls**: In vertical card stacking, sorting buttons (▲ over ▼) and ABC pin buttons are now stacked vertically, saving significant horizontal space and maximizing photo preview width on phone and tablet screens.
-- **Full-Width Wide Screen Layout**: Date-only Unshuffle cards now expand to utilize all available horizontal space on wide screens, eliminating empty side margins and displaying photos at their full breadth.
-- **Responsive Leaderboard & Match Summary Tables on Mobile**: Standings tables now fit cleanly on phone screens down to 360px width with compact rank and rounds badges, elegant player name truncation, and clear total scores. Single-goal game summaries automatically streamline duplicate breakdown columns to keep the final score front-and-center.
-- **Uniform Sorting Button Dimensions**: Sorting buttons now maintain the exact same clean square dimensions (38px) whether stacked vertically or placed side-by-side horizontally.
-- **Updated Unshuffle Help Guide**: In-game help instructions now clearly explain how to drag and drop photo cards directly (or press and hold on touchscreens) alongside using the sorting arrow buttons.
+- **Drag-and-drop card reordering**: Drag photo cards (or press and hold on touchscreens) to quickly arrange them chronologically in Unshuffle mode.
+- **Fullscreen photo zoom and pan**: Inspect photo clues with pinch-to-zoom, double-tap zoom, mouse wheel controls, and drag-to-pan in fullscreen preview.
+- **Adaptive Unshuffle layout**: Responsive multi-column and horizontal timelines on wide screens, and optimized vertical stacking for phones and foldable devices.
 
 ### Changed
 
-- **Direct Tap-to-Zoom Photo Previews**: Tap or click any quiz photo or thumbnail directly to open the full zoomable photo preview across Pinpoint, Unshuffle, and match replays, replacing redundant corner buttons and ensuring full pinch-to-zoom support across all mobile devices.
+- **Direct tap-to-zoom previews**: Tap or click any photo thumbnail across Pinpoint, Unshuffle, and Replays to instantly open the interactive fullscreen preview.
+- **Mobile UI & standings polish**: Improved header identity badge sizing and responsive summary tables for small phone viewports down to 360px.
 
 ### Fixed
 
-- **Photo Switching & Round Transition Image Flicker**: Eliminated momentary flashes of previous rounds' photos when starting new rounds in Unshuffle mode, and resolved delay flicker when switching between photo tabs in match replays and reveal views.
-- **Smooth Mobile Scrolling in Unshuffle Mode**: Swiping and scrolling across photo cards now smoothly scrolls the page without accidental card grabs or gesture locks, reserving drag-and-drop strictly for intentional press-and-hold gestures.
-- **Summary Table Right-Edge Truncation on Phones**: Match review and challenge standings tables now enable smooth horizontal touch scrolling instead of clipping the Total Score column on narrow mobile displays.
-- **Pinpoint Challenge Date Scoring**: Guessing the exact capture month in Pinpoint challenge matches now correctly awards the full 100 points and 0 days difference instead of penalizing points.
+- **Round transition image flicker**: Eliminated momentary flashes of previous rounds' photos when transitioning between rounds in Unshuffle mode and replays.
+- **Unshuffle touch gesture handling**: Swiping across cards scrolls smoothly without triggering accidental card dragging.
+- **Pinpoint exact date scoring**: Correctly awards full points (100) and 0 days delta when matching the exact month in Pinpoint challenge matches.
 
 ## [3.3.1] - 2026-09-30
 
