@@ -398,7 +398,7 @@ Player names in match and challenge result standings link to `/players/{playerNa
   4. `order: 4`: PWA install button (`#pwa-install-btn`)
   5. `order: 5`: Settings menu (`#settings-dropdown`)
 - **Mobile (`<= 760px`)**: Structured 2-row layout:
-  - **Row 1**: Brand title (`.header-main`) on the left and utility controls (`.header-utility-actions`) on the right.
+  - **Row 1**: Brand title (`.header-main`) on the left and utility controls (`.header-utility-actions`: `#identity-badge` with responsive flexible max-width up to 220px and graceful name truncation, `#pwa-install-btn`, `#settings-dropdown`) on the right.
   - **Row 2**: Full-width dedicated navigation bar (`.header-nav-bar`) with 4 equal-width touch tabs (Home, Challenges, Players, Replays) meeting $\ge 40$px touch target standards with active state pills.
 
 ### Hub & Sub-Page Header (`.hub-page-header`)

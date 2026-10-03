@@ -12,8 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Drag-and-Drop Card Reordering**: Drag photo cards to quickly arrange them chronologically on desktop, tablet, and mobile touch screens in Unshuffle mode.
 - **Horizontal Unshuffle Layout on Wide Screens**: Date-only Unshuffle rounds automatically display photos side-by-side in a single row on wide displays and landscape foldable phones, with adapted left and right navigation arrows.
 
-### Changed
-
+- **Expanded Header Identity Badge Space on Mobile**: The player identity badge in the header now has expanded flexible room (up to 220px) on mobile phone screens, displaying player names and roles in full without premature clipping, while long names gracefully truncate without pushing other header controls off-screen.
 - **Enhanced Unshuffle Date-Only Experience**: Photos now fill the full width in a balanced 3-column layout on wide screens with high-resolution 4:3 previews, large touch buttons, and a sleek connecting timeline track showing chronological progression from oldest to newest.
 - **Optimized Vertical View for Phones & Foldable Devices**: Expanded photo visibility and card dimensions across mobile phones and portrait foldable screens to eliminate empty whitespace and provide comfortable touch interaction.
 - **Compact Vertical Card Controls**: In vertical card stacking, sorting buttons (▲ over ▼) and ABC pin buttons are now stacked vertically, saving significant horizontal space and maximizing photo preview width on phone and tablet screens.

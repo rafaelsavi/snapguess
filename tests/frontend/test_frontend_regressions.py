@@ -2686,3 +2686,42 @@ def test_summary_table_mobile_overflow_and_responsive_fit() -> None:
     assert 'isDateDuplicate ? "hide-on-mobile" : ""' in table_js
     assert 'isLocDuplicate ? "hide-on-mobile" : ""' in challenge_summary_js
     assert 'isDateDuplicate ? "hide-on-mobile" : ""' in challenge_summary_js
+
+
+def test_mobile_header_identity_badge_flex_and_truncation() -> None:
+    """Verify that on mobile viewports (<= 760px), the identity badge has expanded space
+    to display fully, header-main does not monopolize width, and long player names truncate
+    gracefully via .identity-name rather than clipping the entire badge.
+    """
+    layout_css = (STATIC_DIR / 'css' / 'base' / 'layout.css').read_text(encoding='utf-8')
+    auth_css = (STATIC_DIR / 'css' / 'components' / 'auth.css').read_text(encoding='utf-8')
+
+    # 1. layout.css header mobile flex layout
+    assert '.header-main {\n    flex: 0 0 auto;\n    min-width: 0;\n  }' in layout_css
+    expected_utility_actions = (
+        '.header-utility-actions,\n'
+        '  .header-controls {\n'
+        '    display: flex;\n'
+        '    align-items: center;\n'
+        '    gap: 0.35rem;\n'
+        '    flex: 1 1 0%;\n'
+        '    justify-content: flex-end;\n'
+        '    min-width: 0;\n'
+        '    max-width: 100%;\n'
+        '  }'
+    )
+    assert expected_utility_actions in layout_css
+
+    # 2. auth.css allows identity badge to expand up to 220px and truncates on identity-name
+    expected_name_ellipsis = (
+        '.identity-badge .identity-name {\n'
+        '  overflow: hidden;\n'
+        '  text-overflow: ellipsis;\n'
+        '  white-space: nowrap;\n'
+        '  min-width: 0;\n'
+        '  flex: 0 1 auto;\n'
+        '}'
+    )
+    assert expected_name_ellipsis in auth_css
+    assert '.identity-badge .identity-sep,\n.identity-badge .identity-role {\n  flex-shrink: 0;\n}' in auth_css
+    assert '@media (max-width: 760px) {\n  .identity-badge {\n    max-width: 220px;' in auth_css
