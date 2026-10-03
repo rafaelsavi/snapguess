@@ -82,7 +82,8 @@ immich-quiz/
         │   ├── focus_trap.js Accessible modal focus trap utility (Tab / Shift+Tab) restoring focus.
         │   ├── hub_search.js Standardized hub search component managing search inputs, clear button visibility, debouncing, and Escape/Enter triggers.
         │   ├── hub_toolbar.js Standardized hub toolbar controller orchestrating search, segmented tabs, dropdown selects, and counter badges.
-        │   ├── lightbox.js  Zero-dependency modal photo lightbox with click-outside and Escape dismissal.
+        │   ├── image_swap.js Image swapping utility preloading off-screen images to prevent stale image flicker during gameplay and replay transitions.
+        │   ├── lightbox.js  Zero-dependency modal photo lightbox with mobile pinch-to-zoom, double-tap quick-zoom, drag-to-pan, desktop wheel zooming, click-outside, and Escape dismissal.
         │   ├── match_meta.js Match configuration rendering, game setup & library filter summary badges.
         │   ├── match_replay.js Standardized multi-round replay canvas, round stepper, Leaflet map with spider lines, and reveal table.
         │   ├── multi_select.js Searchable tag-based multi-select with select-all/clear and optional compact city subtitles.
@@ -398,7 +399,7 @@ Player names in match and challenge result standings link to `/players/{playerNa
   4. `order: 4`: PWA install button (`#pwa-install-btn`)
   5. `order: 5`: Settings menu (`#settings-dropdown`)
 - **Mobile (`<= 760px`)**: Structured 2-row layout:
-  - **Row 1**: Brand title (`.header-main`) on the left and utility controls (`.header-utility-actions`) on the right.
+  - **Row 1**: Brand title (`.header-main`) on the left and utility controls (`.header-utility-actions`: `#identity-badge` with responsive flexible max-width up to 220px and graceful name truncation, `#pwa-install-btn`, `#settings-dropdown`) on the right.
   - **Row 2**: Full-width dedicated navigation bar (`.header-nav-bar`) with 4 equal-width touch tabs (Home, Challenges, Players, Replays) meeting $\ge 40$px touch target standards with active state pills.
 
 ### Hub & Sub-Page Header (`.hub-page-header`)

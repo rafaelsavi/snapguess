@@ -129,6 +129,11 @@ export const challengeSummary = {
    * @returns {string}
    */
   renderStandingsTableHtml(leaderboard, totalRoundsCount, isSettled) {
+    const hasLocation = challengeSession.challengeData?.location_mode !== false;
+    const hasDate = challengeSession.challengeData?.date_mode !== false;
+    const isLocDuplicate = hasLocation && !hasDate;
+    const isDateDuplicate = hasDate && !hasLocation;
+
     return `
       <div class="table-scroll">
         <table id="grand-reveal-table" class="summary-table standings-table">
@@ -137,14 +142,14 @@ export const challengeSummary = {
               <th class="col-rank">${t("summary.col_rank")}</th>
               <th class="col-player">${t("summary.col_player")}</th>
               <th class="col-rounds text-center">${t("summary.col_rounds")}</th>
-              ${challengeSession.challengeData?.location_mode !== false ? `<th class="col-score text-right">${t("summary.col_location")}</th>` : ""}
-              ${challengeSession.challengeData?.date_mode !== false ? `<th class="col-score text-right">${t("summary.col_date")}</th>` : ""}
-              <th class="col-score text-right">${t("summary.col_total")}</th>
+              ${hasLocation ? `<th class="col-score text-right ${isLocDuplicate ? "hide-on-mobile" : ""}">${t("summary.col_location")}</th>` : ""}
+              ${hasDate ? `<th class="col-score text-right ${isDateDuplicate ? "hide-on-mobile" : ""}">${t("summary.col_date")}</th>` : ""}
+              <th class="col-score col-total-score text-right font-bold">${t("summary.col_total")}</th>
               <th class="col-acc text-right hide-on-mobile">${t("summary.col_accuracy")}</th>
             </tr>
           </thead>
           <tbody>
-            ${this.renderStandingsRows(leaderboard, totalRoundsCount, isSettled)}
+            ${this.renderStandingsRows(leaderboard, totalRoundsCount, isSettled, isLocDuplicate, isDateDuplicate)}
           </tbody>
         </table>
       </div>
@@ -156,9 +161,14 @@ export const challengeSummary = {
    * @param {Array<object>} leaderboard
    * @param {number} totalRoundsCount
    * @param {boolean} isSettled
+   * @param {boolean} isLocDuplicate
+   * @param {boolean} isDateDuplicate
    * @returns {string}
    */
-  renderStandingsRows(leaderboard, totalRoundsCount, isSettled) {
+  renderStandingsRows(leaderboard, totalRoundsCount, isSettled, isLocDuplicate = false, isDateDuplicate = false) {
+    const hasLocation = challengeSession.challengeData?.location_mode !== false;
+    const hasDate = challengeSession.challengeData?.date_mode !== false;
+
     return (leaderboard || [])
       .map((p) => {
         const isFin = p.is_finished || p.completed_rounds >= totalRoundsCount;
@@ -174,8 +184,8 @@ export const challengeSummary = {
             <td class="col-rounds text-center">
               ${roundsBadge}
             </td>
-            ${challengeSession.challengeData?.location_mode !== false ? `<td class="col-score text-right">${p.location_score !== null && p.location_score !== undefined ? `${p.location_score}` : "—"}</td>` : ""}
-            ${challengeSession.challengeData?.date_mode !== false ? `<td class="col-score text-right">${p.date_score !== null && p.date_score !== undefined ? `${p.date_score}` : "—"}</td>` : ""}
+            ${hasLocation ? `<td class="col-score text-right ${isLocDuplicate ? "hide-on-mobile" : ""}">${p.location_score !== null && p.location_score !== undefined ? `${p.location_score}` : "—"}</td>` : ""}
+            ${hasDate ? `<td class="col-score text-right ${isDateDuplicate ? "hide-on-mobile" : ""}">${p.date_score !== null && p.date_score !== undefined ? `${p.date_score}` : "—"}</td>` : ""}
             <td class="col-score col-total-score text-right font-bold">${p.total_score}</td>
             <td class="col-acc text-right hide-on-mobile">${p.accuracy_pct}%</td>
           </tr>

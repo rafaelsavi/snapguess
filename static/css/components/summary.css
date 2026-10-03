@@ -34,8 +34,24 @@
   border: 1px solid var(--border-light, #e0e5f2);
   border-radius: var(--radius-md, 12px);
   background: var(--card, #ffffff);
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.04));
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-light, #cbd5e1) transparent;
+}
+
+.review-content > .table-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.review-content > .table-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.review-content > .table-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-light, #cbd5e1);
+  border-radius: 999px;
 }
 
 [data-theme="dark"] .review-content > .table-scroll {
@@ -373,12 +389,80 @@
   .standings-table td,
   #summary-table td,
   #grand-reveal-table td {
-    padding: 0.45rem 0.5rem;
+    padding: 0.45rem 0.35rem;
     font-size: 0.82rem;
   }
 
   .col-rank {
-    width: 38px;
+    width: 30px;
+    min-width: 30px;
+    padding-left: 0.35rem !important;
+    padding-right: 0.2rem !important;
+  }
+
+  .summary-table .col-player,
+  .standings-table .col-player,
+  #summary-table .col-player,
+  #grand-reveal-table .col-player {
+    min-width: 120px;
+  }
+
+  .summary-table .player-cell,
+  .standings-table .player-cell,
+  #summary-table .player-cell,
+  #grand-reveal-table .player-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .summary-table .player-name-text,
+  .standings-table .player-name-text,
+  #summary-table .player-name-text,
+  #grand-reveal-table .player-name-text {
+    max-width: clamp(80px, 26vw, 130px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: middle;
+    min-width: 0;
+  }
+
+  .summary-table .legend-badge,
+  .standings-table .legend-badge,
+  #summary-table .legend-badge,
+  #grand-reveal-table .legend-badge {
+    width: 22px;
+    height: 22px;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .col-rounds {
+    width: auto;
+    min-width: 44px;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+  }
+
+  .challenge-rounds-pill {
+    padding: 0.15rem 0.35rem;
+    font-size: 0.72rem;
+    letter-spacing: 0;
+    gap: 0.2rem;
+  }
+
+  .col-score {
+    font-size: 0.82rem;
+    padding: 0.45rem 0.25rem !important;
+    white-space: nowrap;
+  }
+
+  .col-total-score {
+    font-weight: 700;
   }
 
   .summary-actions {

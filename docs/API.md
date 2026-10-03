@@ -904,7 +904,10 @@ Response (`200 OK`):
   "pinpoint_deviation": {
     "distance_km": 1.25,
     "date_diff_days": 15,
-    "date_diff_months": 0
+    "date_diff_months": 0,
+    "date_diff_years_part": 0,
+    "date_diff_months_part": 0,
+    "date_diff_days_part": 15
   },
   "batch_reveal": null
 }
@@ -984,7 +987,10 @@ Response (`200 OK`):
         "actual_country": "Brazil",
         "distance_km": 1.25,
         "date_diff_days": 15,
-        "date_diff_months": 0
+        "date_diff_months": 0,
+        "date_diff_years_part": 0,
+        "date_diff_months_part": 0,
+        "date_diff_days_part": 15
       },
       "unshuffle": null
     }

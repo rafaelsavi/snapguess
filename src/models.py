@@ -663,6 +663,9 @@ class PinpointDeviation(BaseModel):
     distance_km: float | None = Field(default=None, ge=0.0)
     date_diff_days: int | None = Field(default=None, ge=0)
     date_diff_months: int | None = Field(default=None, ge=0)
+    date_diff_years_part: int | None = Field(default=None, ge=0)
+    date_diff_months_part: int | None = Field(default=None, ge=0, le=11)
+    date_diff_days_part: int | None = Field(default=None, ge=0, le=31)
 
 
 class PinpointRoundResult(PinpointGuessFields, PinpointDeviation):

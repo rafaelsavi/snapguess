@@ -41,7 +41,7 @@ from src.models import (
     RoundLength,
     SupportedLanguage,
 )
-from src.scoring import accuracy_pct, max_possible_score
+from src.scoring import accuracy_pct, date_diff_months, date_diff_parts, max_possible_score
 from src.storage.challenge import deterministic_player_color
 from src.storage.db import DatabaseManager
 
@@ -1912,6 +1912,14 @@ class LeaderboardStore:
                             g_year = int(parts[0])
                             g_month = int(parts[1])
 
+                m_diff: int | None = None
+                y_part: int | None = None
+                m_part: int | None = None
+                d_part: int | None = None
+                if act_date and g_year is not None and g_month is not None:
+                    m_diff = date_diff_months(g_year, g_month, act_date)
+                    y_part, m_part, d_part = date_diff_parts(g_year, g_month, act_date)
+
                 pinpoint_data = ChallengePinpointGuessData(
                     guessed_latitude=row.get('guess_latitude'),
                     guessed_longitude=row.get('guess_longitude'),
@@ -1924,6 +1932,10 @@ class LeaderboardStore:
                     guessed_month=g_month,
                     actual_date=act_date,
                     date_diff_days=row.get('date_diff_days'),
+                    date_diff_months=m_diff,
+                    date_diff_years_part=y_part,
+                    date_diff_months_part=m_part,
+                    date_diff_days_part=d_part,
                 )
 
             guesses.append(

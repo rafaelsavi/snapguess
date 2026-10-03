@@ -172,6 +172,9 @@ html.route-non-lobby #leaderboard-card {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .photo-lightbox-overlay.active {
@@ -186,6 +189,7 @@ html.route-non-lobby #leaderboard-card {
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: none;
 }
 
 .photo-lightbox-content img {
@@ -196,19 +200,83 @@ html.route-non-lobby #leaderboard-card {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   image-rendering: smooth;
   image-rendering: auto;
+  touch-action: none;
+  transform-origin: center center;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  cursor: zoom-in;
+}
+
+.photo-lightbox-overlay.is-zoomed .photo-lightbox-content img {
+  cursor: grab;
+}
+
+.photo-lightbox-overlay.is-zoomed .photo-lightbox-content img.is-dragging {
+  cursor: grabbing;
+}
+
+.photo-lightbox-overlay.is-zoomed .photo-lightbox-nav,
+.photo-lightbox-overlay.is-zoomed .photo-lightbox-counter {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.photo-lightbox-zoom-reset {
+  position: absolute;
+  top: -42px;
+  left: 0;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  padding: 4px 12px;
+  min-height: 38px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 25;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  transition: background-color 0.15s ease, transform 0.15s ease, opacity 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.photo-lightbox-zoom-reset:hover {
+  background: rgba(15, 23, 42, 0.98);
+  transform: scale(1.04);
+}
+
+.photo-lightbox-zoom-reset:active {
+  transform: scale(0.96);
+}
+
+.photo-lightbox-zoom-reset.hidden {
+  display: none !important;
 }
 
 .photo-lightbox-close {
   position: absolute;
-  top: -40px;
+  top: -42px;
   right: -10px;
+  width: 44px;
+  height: 44px;
   background: transparent;
   border: none;
   color: #ffffff;
   font-size: 2rem;
+  line-height: 1;
   font-weight: 700;
   cursor: pointer;
-  z-index: 20;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .photo-lightbox-nav {
@@ -267,6 +335,7 @@ html.route-non-lobby #leaderboard-card {
   letter-spacing: 0.04em;
   pointer-events: none;
   white-space: nowrap;
+  transition: opacity 0.2s ease;
 }
 
 @media (max-width: 640px) {
@@ -279,8 +348,17 @@ html.route-non-lobby #leaderboard-card {
     background: rgba(0, 0, 0, 0.6);
   }
   .photo-lightbox-close {
-    top: -36px;
+    top: -38px;
     right: 0;
+    width: 38px;
+    height: 38px;
+  }
+  .photo-lightbox-zoom-reset {
+    top: -38px;
+    left: 0;
+    padding: 3px 10px;
+    font-size: 0.78rem;
+    min-height: 38px;
   }
 }
 

@@ -211,6 +211,13 @@ export function t(key, ...args) {
   }
   if (typeof entry === "string" && args.length > 0) {
     let res = entry;
+    if (args.length === 1 && typeof args[0] === "object" && args[0] !== null && !Array.isArray(args[0])) {
+      Object.entries(args[0]).forEach(([k, v]) => {
+        const formatted = typeof v === "number" ? formatNumber(v) : String(v);
+        res = res.replace(new RegExp(`\\{${k}\\}`, "g"), formatted);
+      });
+      return res;
+    }
     args.forEach((arg, idx) => {
       const formattedArg = typeof arg === "number" ? formatNumber(arg) : String(arg);
       res = res.replace(new RegExp(`\\{${idx}\\}`, "g"), formattedArg);

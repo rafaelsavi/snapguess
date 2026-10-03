@@ -3,7 +3,8 @@ import { el, state } from "../state.js";
 import { ensureGuessMap, ensureRevealMap, createPinIcon, createPopPinIcon, toggleMapFullscreen, fitMapToBounds, spawnPinPulseEffect, unregisterActiveMap } from "../maps.js";
 import { renderGuessingModeSettings } from "./common.js";
 import { readGameSettings } from "../game_settings.js";
-import { openPhotoLightbox } from "../components/lightbox.js";
+import { openPhotoLightbox, isPhotoLightboxOpen, closePhotoLightbox } from "../components/lightbox.js";
+import { swapImageSrc } from "../components/image_swap.js";
 import {
   ACTUAL_COLOR,
   playerColor,
@@ -569,12 +570,6 @@ export const pinpointMode = {
       };
     }
 
-    if (el.quizImageFullscreen) {
-      el.quizImageFullscreen.onclick = (e) => {
-        e.stopPropagation();
-        toggleMapFullscreen(el.mediaFrame);
-      };
-    }
     if (el.guessMapFullscreen) {
       if (window.L && L.DomEvent) {
         L.DomEvent.disableClickPropagation(el.guessMapFullscreen);
@@ -602,15 +597,19 @@ export const pinpointMode = {
   },
 
   togglePhotoFullscreen() {
+    if (isPhotoLightboxOpen()) {
+      closePhotoLightbox();
+      return;
+    }
     if (state.currentScreen === "reveal") {
-      const stageMediaFrame = document.getElementById("pinpoint-reveal-media-frame");
-      if (stageMediaFrame) {
-        toggleMapFullscreen(stageMediaFrame);
+      const revealImg = document.getElementById("pinpoint-reveal-img");
+      if (revealImg && revealImg.src) {
+        revealImg.click();
         return;
       }
     }
-    if (el.mediaFrame) {
-      toggleMapFullscreen(el.mediaFrame);
+    if (el.quizImage && el.quizImage.src) {
+      openPhotoLightbox(el.quizImage.src);
     }
   },
 
@@ -626,9 +625,6 @@ export const pinpointMode = {
     }
     if (el.quizImage) {
       el.quizImage.onclick = null;
-    }
-    if (el.quizImageFullscreen) {
-      el.quizImageFullscreen.classList.add("hidden");
     }
     if (state.guessMap) {
       try { unregisterActiveMap(state.guessMap); state.guessMap.remove(); } catch (_) { }
@@ -679,9 +675,6 @@ export const pinpointMode = {
       el.quizImage.removeAttribute("src");
       el.quizImage.onerror = null;
     }
-    if (el.quizImageFullscreen) {
-      el.quizImageFullscreen.classList.add("hidden");
-    }
     if (el.mediaPlaceholder) el.mediaPlaceholder.classList.remove("hidden");
 
     resetDateGuess();
@@ -713,10 +706,12 @@ export const pinpointMode = {
 
   onReady(questionData) {
     if (el.quizImage && questionData && questionData.media_url) {
-      el.quizImage.src = questionData.media_url;
-      el.quizImage.classList.remove("hidden");
-      if (el.quizImageFullscreen) el.quizImageFullscreen.classList.remove("hidden");
-      if (el.mediaPlaceholder) el.mediaPlaceholder.classList.add("hidden");
+      swapImageSrc(el.quizImage, questionData.media_url, {
+        placeholderEl: el.mediaPlaceholder,
+        onLoad: () => {
+          if (el.quizImageFullscreen) el.quizImageFullscreen.classList.remove("hidden");
+        },
+      });
     }
     if (questionData && questionData.location_mode) {
       ensureGuessMap();
