@@ -259,11 +259,16 @@ def test_challenge_answer_pinpoint_and_personal_reveal(tmp_path: Path) -> None:
     ans0 = ans0_res.json()
 
     assert ans0['round_index'] == 0
-    assert ans0['round_score'] >= 180
+    assert ans0['round_score'] == 200
     assert ans0['location_score'] == 100
-    assert ans0['date_score'] >= 80
+    assert ans0['date_score'] == 100
     assert ans0['pinpoint_deviation'] is not None
     assert ans0['pinpoint_deviation']['distance_km'] == 0.0
+    assert ans0['pinpoint_deviation']['date_diff_days'] == 0
+    assert ans0['pinpoint_deviation']['date_diff_months'] == 0
+    assert ans0['pinpoint_deviation']['date_diff_years_part'] == 0
+    assert ans0['pinpoint_deviation']['date_diff_months_part'] == 0
+    assert ans0['pinpoint_deviation']['date_diff_days_part'] == 0
 
     # Personal reveal returns true coordinates/dates
     assert ans0['pinpoint_reveal'] is not None
@@ -1112,3 +1117,86 @@ def test_challenge_start_locks_player_name_when_configured(tmp_path: Path) -> No
         assert start_res.status_code == 200
         # Overridden to verified name
         assert start_res.json()['player_name'] == 'Verified Hero'
+
+
+def test_challenge_pinpoint_date_scoring_precision(tmp_path: Path) -> None:
+    """Verify that exact-month guesses yield 100 points (0 days error) and adjacent months measure from boundaries."""
+    assets = [
+        make_asset('photo-1', latitude=10.0, longitude=20.0, captured='2024-05-15T12:00:00Z'),
+        make_asset('photo-2', latitude=12.0, longitude=22.0, captured='2024-08-10T12:00:00Z'),
+        make_asset('photo-3', latitude=14.0, longitude=24.0, captured='2024-11-20T12:00:00Z'),
+    ]
+    immich = FakeImmichClient(assets)
+    client = build_client(tmp_path, immich)
+
+    create_res = client.post(
+        '/api/challenge/create',
+        json={
+            'creator_name': 'Host',
+            'game_mode': 'pinpoint',
+            'round_count': 3,
+            'date_mode': True,
+            'location_mode': True,
+        },
+    )
+    token = create_res.json()['capability_token']
+    start_res = client.post(f'/play/api/{token}/start', json={'player_name': 'Player1'})
+    p_token = start_res.json()['session_token']
+
+    # Round 0: Look up actual asset and guess exact month
+    q0 = client.get(f'/play/api/{token}/question/0', headers={'X-Player-Token': p_token}).json()
+    asset0 = client.app.state.metadata_store.get_asset_answer(q0['asset_id'])
+    assert asset0 is not None and asset0.capture_date is not None
+    d0 = asset0.capture_date
+
+    ans0 = client.post(
+        f'/play/api/{token}/answer',
+        headers={'X-Player-Token': p_token},
+        json={
+            'round_index': 0,
+            'pinpoint': {
+                'guessed_latitude': asset0.latitude or 10.0,
+                'guessed_longitude': asset0.longitude or 20.0,
+                'guessed_year': d0.year,
+                'guessed_month': d0.month,
+            },
+            'time_taken_seconds': 5.0,
+        },
+    ).json()
+
+    assert ans0['date_score'] == 100
+    assert ans0['pinpoint_deviation']['date_diff_days'] == 0
+    assert ans0['pinpoint_deviation']['date_diff_months'] == 0
+    assert ans0['pinpoint_deviation']['date_diff_years_part'] == 0
+    assert ans0['pinpoint_deviation']['date_diff_months_part'] == 0
+    assert ans0['pinpoint_deviation']['date_diff_days_part'] == 0
+
+    # Round 1: Guess exactly one month earlier than actual capture date
+    q1 = client.get(f'/play/api/{token}/question/1', headers={'X-Player-Token': p_token}).json()
+    asset1 = client.app.state.metadata_store.get_asset_answer(q1['asset_id'])
+    assert asset1 is not None and asset1.capture_date is not None
+    d1 = asset1.capture_date
+    guessed_year = d1.year if d1.month > 1 else d1.year - 1
+    guessed_month = d1.month - 1 if d1.month > 1 else 12
+
+    ans1 = client.post(
+        f'/play/api/{token}/answer',
+        headers={'X-Player-Token': p_token},
+        json={
+            'round_index': 1,
+            'pinpoint': {
+                'guessed_latitude': asset1.latitude or 12.0,
+                'guessed_longitude': asset1.longitude or 22.0,
+                'guessed_year': guessed_year,
+                'guessed_month': guessed_month,
+            },
+            'time_taken_seconds': 5.0,
+        },
+    ).json()
+
+    assert ans1['pinpoint_deviation']['date_diff_days'] == d1.day
+    assert ans1['pinpoint_deviation']['date_diff_months'] == 1
+    assert ans1['pinpoint_deviation']['date_diff_years_part'] == 0
+    assert ans1['pinpoint_deviation']['date_diff_months_part'] == 0
+    assert ans1['pinpoint_deviation']['date_diff_days_part'] == d1.day
+    assert ans1['date_score'] < 100

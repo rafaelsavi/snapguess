@@ -53,6 +53,9 @@ export const challengeReveal = {
       distance_km: pd?.distance_km ?? null,
       date_diff_days: pd?.date_diff_days ?? null,
       date_diff_months: pd?.date_diff_months ?? null,
+      date_diff_years_part: pd?.date_diff_years_part ?? null,
+      date_diff_months_part: pd?.date_diff_months_part ?? null,
+      date_diff_days_part: pd?.date_diff_days_part ?? null,
     } : null;
 
     const formattedReveal = {
@@ -264,6 +267,9 @@ export const challengeReveal = {
             distance_km: pp.distance_km,
             date_diff_days: pp.date_diff_days,
             date_diff_months: pp.date_diff_months,
+            date_diff_years_part: pp.date_diff_years_part ?? null,
+            date_diff_months_part: pp.date_diff_months_part ?? null,
+            date_diff_days_part: pp.date_diff_days_part ?? null,
             location_score: guess.location_points,
             date_score: guess.date_points,
           } : null,

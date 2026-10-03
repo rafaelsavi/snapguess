@@ -134,11 +134,6 @@ async def test_replay_reuses_media_frame_and_map_shell(page: Page) -> None:
     await expect(photo_img).to_have_class('quiz-image replay-photo-img')
     await expect(photo_img).to_have_attribute('src', '/api/media/asset-reuse-1')
 
-    # Verify fullscreen button on media-frame
-    photo_fs_btn = page.locator('#replay-photo-fullscreen')
-    await expect(photo_fs_btn).to_be_visible()
-    await expect(photo_fs_btn).to_have_class('map-fullscreen-btn')
-
     # 3. Verify Lightbox Integration on clicking photo
     await photo_img.click()
     lightbox = page.locator('#photo-lightbox')

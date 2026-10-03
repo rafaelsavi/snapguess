@@ -34,6 +34,9 @@ from src.scoring import (
     batch_exponential_location_score,
     calculate_date_decay,
     calculate_location_decay,
+    date_diff_days,
+    date_diff_months,
+    date_diff_parts,
     haversine_km,
     pinpoint_date_score,
     pinpoint_location_score,
@@ -387,8 +390,11 @@ class ChallengeService:
             location_points = pinpoint_location_score(distance_km, decay_km=location_decay_km)
 
         # Date scoring: 100 * e^(-date_diff_days / decay_days)
-        date_diff: int | None = None
-        date_diff_months: int | None = None
+        delta_days: int | None = None
+        delta_months: int | None = None
+        years_part: int | None = None
+        months_part: int | None = None
+        days_part: int | None = None
         date_points: int = 0
         if (
             date_mode
@@ -398,13 +404,10 @@ class ChallengeService:
             and g.guessed_month is not None
             and asset.capture_date is not None
         ):
-            guess_date = date(g.guessed_year, g.guessed_month, 1)
-            actual_mid = date(asset.capture_date.year, asset.capture_date.month, 15)
-            date_diff = abs((guess_date - actual_mid).days)
-            date_diff_months = abs(
-                (g.guessed_year - asset.capture_date.year) * 12 + (g.guessed_month - asset.capture_date.month)
-            )
-            date_points = pinpoint_date_score(date_diff, decay_days=date_decay_days)
+            delta_days = date_diff_days(g.guessed_year, g.guessed_month, asset.capture_date)
+            delta_months = date_diff_months(g.guessed_year, g.guessed_month, asset.capture_date)
+            years_part, months_part, days_part = date_diff_parts(g.guessed_year, g.guessed_month, asset.capture_date)
+            date_points = pinpoint_date_score(delta_days, decay_days=date_decay_days)
 
         round_score = location_points + date_points
         total_rounds = get_challenge_total_rounds(challenge)
@@ -434,7 +437,7 @@ class ChallengeService:
             location_points=location_points if location_mode else None,
             guess_date=guess_date_str,
             actual_date=asset.capture_date.isoformat() if asset.capture_date else None,
-            date_diff_days=date_diff,
+            date_diff_days=delta_days,
             date_points=date_points if date_mode else None,
             round_score=round_score,
             time_taken_seconds=body.time_taken_seconds,
@@ -479,8 +482,11 @@ class ChallengeService:
         )
         pinpoint_deviation = PinpointDeviation(
             distance_km=distance_km,
-            date_diff_days=date_diff,
-            date_diff_months=date_diff_months,
+            date_diff_days=delta_days,
+            date_diff_months=delta_months,
+            date_diff_years_part=years_part,
+            date_diff_months_part=months_part,
+            date_diff_days_part=days_part,
         )
 
         return ChallengeAnswerResponse(

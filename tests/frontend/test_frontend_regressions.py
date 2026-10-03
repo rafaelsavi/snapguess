@@ -412,27 +412,21 @@ def test_preflight_warning_disables_start_button_and_guards_submission() -> None
     assert 'startingMatch' in state_js, 'startingMatch must be initialized in state.js'
 
 
-def test_pinpoint_quiz_image_fullscreen_button_handling() -> None:
+def test_pinpoint_photo_lightbox_handling() -> None:
     index_html = INDEX_HTML.read_text(encoding='utf-8')
     state_js = (JS_DIR / 'modules' / 'state.js').read_text(encoding='utf-8')
     pinpoint_js = (JS_DIR / 'modules' / 'modes' / 'pinpoint.js').read_text(encoding='utf-8')
-    app_js = (JS_DIR / 'app.js').read_text(encoding='utf-8')
 
-    assert 'id="quiz-image-fullscreen"' in index_html, 'quiz-image-fullscreen ID missing from index.html'
-    assert 'quizImageFullscreen' in state_js, 'quizImageFullscreen getter missing from state.js'
+    # Verify quiz-image-fullscreen button is removed in favor of direct-photo-click Lightbox
+    assert 'id="quiz-image-fullscreen"' not in index_html, 'quiz-image-fullscreen ID must not be in index.html'
+    assert 'quizImageFullscreen' not in state_js, 'quizImageFullscreen getter must be removed from state.js'
 
-    # pinpoint.js onReady must unhide quizImageFullscreen
-    assert 'el.quizImageFullscreen.classList.remove("hidden")' in pinpoint_js, (
-        'pinpoint.js must unhide quizImageFullscreen on onReady / reveal'
+    # pinpoint.js wires direct photo click to openPhotoLightbox
+    assert 'openPhotoLightbox(el.quizImage.src)' in pinpoint_js, (
+        'pinpoint.js must open photo lightbox on clicking quiz image'
     )
-    # pinpoint.js unmount / renderQuestion must hide quizImageFullscreen
-    assert 'el.quizImageFullscreen.classList.add("hidden")' in pinpoint_js, (
-        'pinpoint.js must hide quizImageFullscreen on renderQuestion / unmount'
-    )
-    # app.js must not call removeAttribute('src') on quizImageFullscreen
-    assert 'el.quizImageFullscreen.removeAttribute("src")' not in app_js, (
-        'app.js must not call removeAttribute("src") on quizImageFullscreen'
-    )
+    # pinpoint.js togglePhotoFullscreen delegates to lightbox
+    assert 'isPhotoLightboxOpen()' in pinpoint_js, 'pinpoint.js togglePhotoFullscreen must check isPhotoLightboxOpen'
 
 
 def test_leaderboard_enhancements_markup_and_modules() -> None:
@@ -2660,3 +2654,105 @@ def test_replay_round_stepper_button_sizing() -> None:
     # 3. Mobile touch-target compliance: at least 38px
     assert 'width: 38px;' in replay_css
     assert 'height: 38px;' in replay_css
+
+
+def test_summary_table_mobile_overflow_and_responsive_fit() -> None:
+    """Verify that match summary and challenge standings tables use container-level horizontal touch scrolling
+    and compact responsive styling on mobile screens to prevent right-edge total score truncation.
+    """
+    summary_css = (STATIC_DIR / 'css' / 'components' / 'summary.css').read_text(encoding='utf-8')
+    table_js = (JS_DIR / 'modules' / 'summary' / 'table.js').read_text(encoding='utf-8')
+    challenge_summary_js = (JS_DIR / 'modules' / 'challenge' / 'summary.js').read_text(encoding='utf-8')
+
+    # 1. summary.css allows container-level horizontal touch scrolling instead of clipping with overflow: hidden
+    assert '.review-content > .table-scroll {' in summary_css
+    assert 'overflow-x: auto;' in summary_css.split('.review-content > .table-scroll')[1].split('}')[0]
+    assert '-webkit-overflow-scrolling: touch;' in summary_css.split('.review-content > .table-scroll')[1].split('}')[0]
+    assert 'overflow: hidden;' not in summary_css.split('.review-content > .table-scroll')[1].split('}')[0]
+
+    # 2. Compact mobile sizing and player name ellipsis in summary.css
+    assert '.col-rank {\n    width: 30px;' in summary_css
+    assert '.player-name-text' in summary_css
+    assert '.challenge-rounds-pill' in summary_css
+
+    # 3. table.js and challenge/summary.js mark duplicate single-goal scores with hide-on-mobile
+    assert 'isLocDuplicate ? "hide-on-mobile" : ""' in table_js
+    assert 'isDateDuplicate ? "hide-on-mobile" : ""' in table_js
+    assert 'isLocDuplicate ? "hide-on-mobile" : ""' in challenge_summary_js
+    assert 'isDateDuplicate ? "hide-on-mobile" : ""' in challenge_summary_js
+
+
+def test_mobile_header_identity_badge_flex_and_truncation() -> None:
+    """Verify that on mobile viewports (<= 760px), the identity badge has expanded space
+    to display fully, header-main does not monopolize width, and long player names truncate
+    gracefully via .identity-name rather than clipping the entire badge.
+    """
+    layout_css = (STATIC_DIR / 'css' / 'base' / 'layout.css').read_text(encoding='utf-8')
+    auth_css = (STATIC_DIR / 'css' / 'components' / 'auth.css').read_text(encoding='utf-8')
+
+    # 1. layout.css header mobile flex layout
+    assert '.header-main {\n    flex: 0 0 auto;\n    min-width: 0;\n  }' in layout_css
+    expected_utility_actions = (
+        '.header-utility-actions,\n'
+        '  .header-controls {\n'
+        '    display: flex;\n'
+        '    align-items: center;\n'
+        '    gap: 0.35rem;\n'
+        '    flex: 1 1 0%;\n'
+        '    justify-content: flex-end;\n'
+        '    min-width: 0;\n'
+        '    max-width: 100%;\n'
+        '  }'
+    )
+    assert expected_utility_actions in layout_css
+
+    # 2. auth.css allows identity badge to expand up to 220px and truncates on identity-name
+    expected_name_ellipsis = (
+        '.identity-badge .identity-name {\n'
+        '  overflow: hidden;\n'
+        '  text-overflow: ellipsis;\n'
+        '  white-space: nowrap;\n'
+        '  min-width: 0;\n'
+        '  flex: 0 1 auto;\n'
+        '}'
+    )
+    assert expected_name_ellipsis in auth_css
+    assert '.identity-badge .identity-sep,\n.identity-badge .identity-role {\n  flex-shrink: 0;\n}' in auth_css
+    assert '@media (max-width: 760px) {\n  .identity-badge {\n    max-width: 220px;' in auth_css
+
+
+def test_image_swap_and_stale_thumbnail_lifecycle() -> None:
+    """Verify that image swapping uses the off-screen preload pattern to eliminate
+    stale decoded bitmap flicker and that unshuffle cards are cleared early on round start.
+    """
+    image_swap_file = JS_DIR / 'modules' / 'components' / 'image_swap.js'
+    round_stage_file = JS_DIR / 'modules' / 'components' / 'round_stage.js'
+    pinpoint_file = JS_DIR / 'modules' / 'modes' / 'pinpoint.js'
+    unshuffle_file = JS_DIR / 'modules' / 'modes' / 'unshuffle.js'
+    game_file = JS_DIR / 'modules' / 'screens' / 'game.js'
+
+    assert image_swap_file.is_file(), 'image_swap.js must exist'
+    image_swap_content = image_swap_file.read_text(encoding='utf-8')
+    assert 'export function swapImageSrc(' in image_swap_content
+    assert 'new Image()' in image_swap_content
+    assert 'loader.onload =' in image_swap_content
+
+    # RoundStage uses swapImageSrc to avoid replay photo flicker
+    round_stage_content = round_stage_file.read_text(encoding='utf-8')
+    assert 'import { swapImageSrc } from "./image_swap.js";' in round_stage_content
+    assert 'swapImageSrc(this.photoImg, mediaUrl)' in round_stage_content
+
+    # Pinpoint mode onReady preloads off-screen before displaying
+    pinpoint_content = pinpoint_file.read_text(encoding='utf-8')
+    assert 'import { swapImageSrc } from "../components/image_swap.js";' in pinpoint_content
+    assert 'swapImageSrc(el.quizImage, questionData.media_url' in pinpoint_content
+
+    # game.js loadQuestion blanks unshuffle cards before async fetch
+    game_content = game_file.read_text(encoding='utf-8')
+    assert 'document.getElementById("shuffle-cards-list")' in game_content
+    assert 'shuffleCards.replaceChildren()' in game_content
+
+    # unshuffle.js starts thumbnails hidden and reveals on load
+    unshuffle_content = unshuffle_file.read_text(encoding='utf-8')
+    assert 'img.style.opacity = "0";' in unshuffle_content
+    assert 'img.onload = () => { img.style.opacity = ""; };' in unshuffle_content

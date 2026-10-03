@@ -126,8 +126,37 @@ def test_locale_parity_for_lightbox_navigation_keys() -> None:
     en_js_keys = set(re.findall(r'["\']([a-zA-Z0-9_.]+)["\']\s*:', en_js_text))
     pt_js_keys = set(re.findall(r'["\']([a-zA-Z0-9_.]+)["\']\s*:', pt_js_text))
 
-    for key in ('game.prev_photo', 'game.next_photo'):
+    for key in ('game.prev_photo', 'game.next_photo', 'game.reset_zoom'):
         assert key in en_json
         assert key in pt_json
         assert key in en_js_keys
         assert key in pt_js_keys
+
+
+def test_lightbox_zoom_and_pan() -> None:
+    assert LIGHTBOX_JS.exists(), f'{LIGHTBOX_JS} does not exist'
+    content = LIGHTBOX_JS.read_text(encoding='utf-8')
+
+    # Zoom functions and exports
+    assert 'export function resetLightboxZoom(' in content
+    assert 'export function getLightboxScale(' in content
+    assert 'photo-lightbox-zoom-reset' in content
+    assert 'photo-lightbox-zoom-label' in content
+
+    # Multi-touch pinch & pan gestures
+    assert 'isPinching' in content
+    assert 'pinchStartDist' in content
+    assert '_clampTranslations' in content
+    assert '_zoomToPoint' in content
+
+    # Double-tap and wheel support
+    assert 'distFromLastTap' in content
+    assert 'wheel' in content
+    assert 'is-zoomed' in content
+
+    # CSS verification
+    cards_css = CARDS_CSS.read_text(encoding='utf-8')
+    assert '.photo-lightbox-zoom-reset' in cards_css
+    assert '.photo-lightbox-overlay.is-zoomed' in cards_css
+    assert 'cursor: zoom-in' in cards_css
+    assert 'touch-action: none' in cards_css

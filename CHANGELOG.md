@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.2] - 2026-10-03
+
+### Added
+
+- **Drag-and-drop card reordering**: Drag photo cards (or press and hold on touchscreens) to quickly arrange them chronologically in Unshuffle mode.
+- **Fullscreen photo zoom and pan**: Inspect photo clues with pinch-to-zoom, double-tap zoom, mouse wheel controls, and drag-to-pan in fullscreen preview.
+- **Adaptive Unshuffle layout**: Responsive multi-column and horizontal timelines on wide screens, and optimized vertical stacking for phones and foldable devices.
+
+### Changed
+
+- **Direct tap-to-zoom previews**: Tap or click any photo thumbnail across Pinpoint, Unshuffle, and Replays to instantly open the interactive fullscreen preview.
+- **Mobile UI & standings polish**: Improved header identity badge sizing and responsive summary tables for small phone viewports down to 360px.
+
+### Fixed
+
+- **Round transition image flicker**: Eliminated momentary flashes of previous rounds' photos when transitioning between rounds in Unshuffle mode and replays.
+- **Unshuffle touch gesture handling**: Swiping across cards scrolls smoothly without triggering accidental card dragging.
+- **Pinpoint exact date scoring**: Correctly awards full points (100) and 0 days delta when matching the exact month in Pinpoint challenge matches.
+
 ## [3.3.1] - 2026-09-30
 
 ### Changed

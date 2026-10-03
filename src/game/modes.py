@@ -217,6 +217,9 @@ class PinpointEngine(BaseGameModeEngine):
                 decay_km=state.location_decay_km,
             )
 
+        years_part: int | None = None
+        months_part: int | None = None
+        days_part: int | None = None
         if (
             state.setup.date_mode
             and guess.guessed_year is not None
@@ -225,6 +228,9 @@ class PinpointEngine(BaseGameModeEngine):
         ):
             delta_days = date_diff_days(guess.guessed_year, guess.guessed_month, actual_asset.capture_date)
             delta_months = date_diff_months(guess.guessed_year, guess.guessed_month, actual_asset.capture_date)
+            years_part, months_part, days_part = date_diff_parts(
+                guess.guessed_year, guess.guessed_month, actual_asset.capture_date
+            )
             date_points = pinpoint_date_score(
                 delta_days,
                 decay_days=state.date_decay_days,
@@ -234,6 +240,9 @@ class PinpointEngine(BaseGameModeEngine):
             distance_km=distance,
             date_diff_days=delta_days,
             date_diff_months=delta_months,
+            date_diff_years_part=years_part,
+            date_diff_months_part=months_part,
+            date_diff_days_part=days_part,
         )
 
         loc_desc = (
@@ -286,8 +295,10 @@ class PinpointEngine(BaseGameModeEngine):
             g = question.pinpoint_guess or PinpointAnswerItem()
             dev = question.pinpoint_deviation or PinpointDeviation()
 
-            years_part, months_part, days_part = None, None, None
-            if dev.date_diff_months is not None and dev.date_diff_days is not None:
+            years_part = dev.date_diff_years_part
+            months_part = dev.date_diff_months_part
+            days_part = dev.date_diff_days_part
+            if dev.date_diff_months is not None and dev.date_diff_days is not None and years_part is None:
                 if actual_date and g.guessed_year and g.guessed_month:
                     years_part, months_part, days_part = date_diff_parts(g.guessed_year, g.guessed_month, actual_date)
                 else:

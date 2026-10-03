@@ -13,6 +13,7 @@ import { t, formatDate } from "../i18n.js";
 import { escapeHtml } from "../formatters.js";
 import { openPhotoLightbox } from "./lightbox.js";
 import { toggleMapFullscreen } from "../maps.js";
+import { swapImageSrc } from "./image_swap.js";
 
 export class RoundStage {
   /**
@@ -64,16 +65,6 @@ export class RoundStage {
             <div class="round-photo-tabs-container replay-photo-tabs-container"></div>
             <div class="media-frame round-media-frame replay-media-frame">
               <img class="quiz-image round-photo-img replay-photo-img" src="" alt="Round photo" />
-              <button type="button" class="map-fullscreen-btn round-photo-fullscreen replay-photo-fullscreen" aria-pressed="false"
-                title="${escapeHtml(t("game.fullscreen_image_title"))}" data-i18n-title="game.fullscreen_image_title">
-                <svg class="fs-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
-                  stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="15 3 21 3 21 9"></polyline>
-                  <polyline points="9 21 3 21 3 15"></polyline>
-                  <line x1="21" y1="3" x2="14" y2="10"></line>
-                  <line x1="3" y1="21" x2="10" y2="14"></line>
-                </svg>
-              </button>
             </div>
             <div class="round-photo-caption replay-photo-caption">
               <div class="reveal-actual-row">
@@ -117,7 +108,6 @@ export class RoundStage {
     this.tabsContainer = this.containerEl.querySelector(".round-photo-tabs-container, .replay-photo-tabs-container");
     this.mediaFrame = this.containerEl.querySelector(".round-media-frame, .replay-media-frame, .media-frame");
     this.photoImg = this.containerEl.querySelector(".round-photo-img, .replay-photo-img, .quiz-image");
-    this.fullscreenBtn = this.containerEl.querySelector(".round-photo-fullscreen, .replay-photo-fullscreen, .media-frame .map-fullscreen-btn");
     this.revealActualRow = this.containerEl.querySelector(".reveal-actual-row");
     this.revealActual = this.containerEl.querySelector(".reveal-actual");
     this.locEl = this.containerEl.querySelector(".round-photo-loc, .replay-photo-loc");
@@ -157,12 +147,6 @@ export class RoundStage {
             onIndexChange: (idx) => this.setActivePhoto(idx),
           });
         }
-      });
-    }
-
-    if (this.fullscreenBtn && this.mediaFrame) {
-      this.fullscreenBtn.addEventListener("click", () => {
-        toggleMapFullscreen(this.mediaFrame);
       });
     }
 
@@ -208,10 +192,6 @@ export class RoundStage {
         this.photoImg.id = "replay-photo-img";
         this.photoImg.className = "quiz-image replay-photo-img";
       }
-      if (this.fullscreenBtn) {
-        this.fullscreenBtn.id = "replay-photo-fullscreen";
-        this.fullscreenBtn.className = "map-fullscreen-btn";
-      }
       if (this.revealActual) this.revealActual.id = "replay-reveal-actual";
       if (this.dateEl) this.dateEl.id = "replay-photo-date";
       if (this.locEl) this.locEl.id = "replay-photo-loc";
@@ -227,7 +207,6 @@ export class RoundStage {
       if (this.tabsContainer) this.tabsContainer.id = "pinpoint-photo-tabs-container";
       if (this.mediaFrame) this.mediaFrame.id = "pinpoint-reveal-media-frame";
       if (this.photoImg) this.photoImg.id = "pinpoint-reveal-img";
-      if (this.fullscreenBtn) this.fullscreenBtn.id = "pinpoint-photo-fullscreen";
       if (this.revealActual) this.revealActual.id = "reveal-actual";
       if (this.reportBtn) this.reportBtn.id = "reveal-report-btn";
       if (this.mapShell) this.mapShell.id = "reveal-map-shell";
@@ -239,7 +218,6 @@ export class RoundStage {
       if (this.tabsContainer) this.tabsContainer.id = "shuffle-photo-tabs-container";
       if (this.mediaFrame) this.mediaFrame.id = "shuffle-reveal-media-frame";
       if (this.photoImg) this.photoImg.id = "shuffle-reveal-img";
-      if (this.fullscreenBtn) this.fullscreenBtn.id = "shuffle-photo-fullscreen";
       if (this.revealActual) this.revealActual.id = "shuffle-reveal-actual";
       if (this.dateEl) this.dateEl.id = "shuffle-photo-date";
       if (this.locEl) this.locEl.id = "shuffle-photo-loc";
@@ -259,7 +237,6 @@ export class RoundStage {
         this.photoImg.id = `${prefix}photo-img`;
         this.photoImg.className = `quiz-image ${prefix}photo-img round-photo-img`;
       }
-      if (this.fullscreenBtn) this.fullscreenBtn.id = `${prefix}photo-fullscreen`;
       if (this.revealActual) this.revealActual.id = `${prefix}reveal-actual`;
       if (this.dateEl) this.dateEl.id = `${prefix}photo-date`;
       if (this.locEl) this.locEl.id = `${prefix}photo-loc`;
@@ -507,7 +484,8 @@ export class RoundStage {
 
     const mediaUrl = curPhoto.media_url || (curPhoto.photo_id ? `/api/media/${curPhoto.photo_id}` : (curPhoto.asset_id ? `/api/media/${encodeURIComponent(curPhoto.asset_id)}` : ""));
     if (this.photoImg && mediaUrl) {
-      this.photoImg.src = mediaUrl;
+      if (this._cancelSwap) this._cancelSwap();
+      this._cancelSwap = swapImageSrc(this.photoImg, mediaUrl);
     }
 
     const locParts = [curPhoto.actual_city, curPhoto.actual_country].filter(Boolean);
@@ -649,6 +627,10 @@ export class RoundStage {
   }
 
   destroy() {
+    if (this._cancelSwap) {
+      this._cancelSwap();
+      this._cancelSwap = null;
+    }
     if (this._cleanupSwipe) {
       this._cleanupSwipe();
       this._cleanupSwipe = null;

@@ -115,13 +115,213 @@
   }
 
   .shuffle-board.no-map {
-    justify-content: center;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .shuffle-photo-column.no-map {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 699px) {
+  .shuffle-board.no-map {
+    display: block;
+    width: 100%;
+    max-width: 100%;
   }
 
   .shuffle-photo-column.no-map {
     width: 100%;
-    max-width: 360px;
+    max-width: 560px;
     margin: 0 auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .shuffle-board.no-map {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .shuffle-photo-column.no-map {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto 1fr;
+    column-gap: 1.5rem;
+    row-gap: 1rem;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0.5rem 0;
+    position: relative;
+    box-sizing: border-box;
+  }
+
+  /* Connecting gradient timeline track line behind the badges */
+  .shuffle-photo-column.no-map::before {
+    content: "";
+    grid-column: 1 / -1;
+    grid-row: 1;
+    align-self: center;
+    height: 3px;
+    background: linear-gradient(90deg, #38bdf8 0%, #cbd5e1 100%);
+    border-radius: 999px;
+    margin: 0 1.5rem;
+    z-index: 1;
+  }
+
+  /* Timeline header Oldest */
+  .no-map .shuffle-timeline-header.oldest {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    writing-mode: horizontal-tb;
+    text-orientation: initial;
+    position: relative;
+    z-index: 2;
+    padding: 0.45rem 1.15rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.15);
+  }
+
+  /* Timeline header Newest */
+  .no-map .shuffle-timeline-header.newest {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    writing-mode: horizontal-tb;
+    text-orientation: initial;
+    position: relative;
+    z-index: 2;
+    padding: 0.45rem 1.15rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(71, 85, 105, 0.15);
+  }
+
+  /* Card becomes a vertical tile: photo on top, controls below */
+  .no-map .shuffle-card-row {
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 0.85rem;
+    padding: 0.85rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+    border: 2px solid #cbd5e1;
+    background: var(--card);
+    min-height: 280px;
+    box-sizing: border-box;
+  }
+
+  /* Thumbnail fills card width with 4:3 ratio */
+  .no-map .shuffle-card-thumb-wrap {
+    width: 100%;
+    max-width: none;
+    aspect-ratio: 4 / 3;
+    min-height: 180px;
+    max-height: min(400px, 46vh);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    background: rgba(15, 23, 42, 0.04);
+  }
+
+  .no-map .shuffle-card-thumb-lg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    display: block;
+  }
+
+  /* Controls column below photo: ABC row and rank buttons row stacked above each other */
+  .no-map .shuffle-card-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    touch-action: manipulation;
+  }
+
+  .no-map .shuffle-card-details {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ABC pins stacked horizontally in a row */
+  .no-map .shuffle-pin-selector {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 220px;
+  }
+
+  .no-map .shuffle-pin-chip {
+    flex: 1 1 0;
+    width: auto;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    font-size: 0.95rem;
+    border-radius: 8px;
+  }
+
+  /* Rank buttons: ◀ ▶ stacked horizontally in a row */
+  .no-map .shuffle-rank-controls {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    width: auto;
+  }
+
+  .no-map .shuffle-rank-btn {
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    max-width: 38px;
+    max-height: 38px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 8px;
+    border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .no-map .shuffle-rank-btn:hover:not(:disabled) {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
   }
 }
 
@@ -164,6 +364,7 @@
 }
 
 .shuffle-card-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -172,6 +373,100 @@
   border: 2px solid #cbd5e1;
   background: var(--card);
   transition: all 0.2s ease;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.shuffle-card-row[draggable="true"] {
+  cursor: grab;
+}
+
+.shuffle-card-row[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* Card being dragged */
+.shuffle-card-row.dragging {
+  opacity: 0.3;
+  transform: scale(0.97);
+}
+
+/* Drop indicator — vertical mode (horizontal lines above or below) */
+.shuffle-card-row.drag-over-before::before,
+.shuffle-card-row.drag-over-after::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent, #3b82f6);
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.45);
+}
+
+.shuffle-card-row.drag-over-before::before {
+  top: -3px;
+}
+
+.shuffle-card-row.drag-over-after::after {
+  bottom: -3px;
+}
+
+/* Drop indicator — horizontal mode (vertical lines to left or right) */
+@media (min-width: 1024px) {
+  .no-map .shuffle-card-row {
+    touch-action: pan-x;
+  }
+
+  .no-map .shuffle-card-row.drag-over-before::before {
+    top: 6px;
+    bottom: 6px;
+    left: -4px;
+    right: auto;
+    width: 3px;
+    height: auto;
+  }
+
+  .no-map .shuffle-card-row.drag-over-after::after {
+    top: 6px;
+    bottom: 6px;
+    right: -4px;
+    left: auto;
+    width: 3px;
+    height: auto;
+  }
+}
+
+/* Floating ghost for touch DnD */
+.drag-ghost {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.9;
+  transform: scale(1.03) rotate(1.5deg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  border-radius: 12px;
+  transition: transform 0.1s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: transform, left, top;
+}
+
+/* Accessibility live region & sr-only */
+#shuffle-live,
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 #unshuffle-ui.shuffle-disabled .shuffle-photo-column,
@@ -218,64 +513,55 @@
   transition: transform 0.2s ease;
   image-rendering: smooth;
   image-rendering: auto;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .shuffle-card-thumb-lg:hover {
   transform: scale(1.02);
 }
 
-.shuffle-card-fullscreen-btn {
-  top: 6px;
-  right: 6px;
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  min-height: 32px !important;
-  padding: 0 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  border-radius: 8px !important;
-}
-
 .shuffle-card-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
   flex-shrink: 0;
-  width: 92px;
+  width: auto;
+  touch-action: manipulation;
 }
 
 .shuffle-card-details {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  width: auto;
 }
 
+/* In vertical card stacking: ABC buttons stacked vertically */
 .shuffle-pin-selector {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-  width: 100%;
+  gap: 0.35rem;
+  width: auto;
 }
 
 .shuffle-pin-chip {
-  flex: 1 1 0;
-  height: 28px;
-  min-width: 26px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
+  border-radius: 8px;
   border: 1.5px solid #cbd5e1;
   background: #ffffff;
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -298,25 +584,29 @@
   cursor: not-allowed;
 }
 
+/* In vertical card stacking: sorting buttons (▲ over ▼) stacked vertically */
 .shuffle-rank-controls {
   display: flex;
-  flex-direction: row;
-  gap: 0.25rem;
-  width: 100%;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: auto;
   align-items: center;
+  justify-content: center;
 }
 
 .shuffle-rank-btn {
-  flex: 1 1 0;
-  height: 26px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
   background: #ffffff;
-  font-size: 0.82rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--ink);
   cursor: pointer;
@@ -389,7 +679,79 @@
   background: #1e2a44;
 }
 
+[data-theme="dark"] .shuffle-photo-column.no-map::before {
+  background: linear-gradient(90deg, #0284c7 0%, #475569 100%);
+}
+
+[data-theme="dark"] .no-map .shuffle-timeline-header.oldest {
+  background: #0f2b48 !important;
+  border-color: #0284c7 !important;
+  color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .no-map .shuffle-timeline-header.newest {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .no-map .shuffle-card-row {
+  background: #131b2e !important;
+  border-color: #283750 !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .no-map .shuffle-rank-btn {
+  background: #1c273e !important;
+  border-color: #2d3b59 !important;
+  color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .no-map .shuffle-rank-btn:hover:not(:disabled) {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .drag-ghost {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
 @media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .shuffle-photo-column.no-map::before {
+    background: linear-gradient(90deg, #0284c7 0%, #475569 100%);
+  }
+
+  :root:not([data-theme="light"]) .no-map .shuffle-timeline-header.oldest {
+    background: #0f2b48 !important;
+    border-color: #0284c7 !important;
+    color: #38bdf8 !important;
+  }
+
+  :root:not([data-theme="light"]) .no-map .shuffle-timeline-header.newest {
+    background: #1e293b !important;
+    border-color: #475569 !important;
+    color: #e2e8f0 !important;
+  }
+
+  :root:not([data-theme="light"]) .no-map .shuffle-card-row {
+    background: #131b2e !important;
+    border-color: #283750 !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  :root:not([data-theme="light"]) .no-map .shuffle-rank-btn {
+    background: #1c273e !important;
+    border-color: #2d3b59 !important;
+    color: #f1f5f9 !important;
+  }
+
+  :root:not([data-theme="light"]) .no-map .shuffle-rank-btn:hover:not(:disabled) {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: #ffffff !important;
+  }
+
   :root:not([data-theme="light"]) .shuffle-card-row {
     background: #131b2e;
     border-color: #283750;
@@ -440,6 +802,10 @@
 
   :root:not([data-theme="light"]) .shuffle-help-btn:hover {
     background: #1e2a44;
+  }
+
+  :root:not([data-theme="light"]) .drag-ghost {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.12);
   }
 }
 
