@@ -155,7 +155,7 @@ export function renderSyncStatus(status) {
     } else if (neverSynced) {
       el.syncBtnLabel.textContent = t("setup.sync_label_never_synced");
     } else {
-      el.syncBtnLabel.textContent = t("setup.sync_label");
+      el.syncBtnLabel.textContent = "";
     }
   }
 }

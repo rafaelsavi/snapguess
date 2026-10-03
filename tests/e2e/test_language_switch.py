@@ -37,8 +37,8 @@ async def test_lobby_setup_dynamic_language_switch(page: Page) -> None:
     await expect(prepare_btn.locator('.btn-icon')).to_have_text('🎮')
     await expect(prepare_btn.locator("span[data-i18n='setup.prepare_game_label']")).to_have_text('Prepare Game')
 
-    sync_btn_label = page.locator('#sync-btn-label')
-    await expect(sync_btn_label).to_have_text(re.compile(r'Sync( library)?'))
+    sync_btn = page.locator('#sync-library-btn')
+    await expect(sync_btn).to_have_attribute('title', re.compile(r'Sync( metadata)?'))
 
     # Open filters accordion to inspect multi-select search input placeholders
     await page.locator('#filters-toggle-btn').click()
@@ -70,7 +70,7 @@ async def test_lobby_setup_dynamic_language_switch(page: Page) -> None:
     await expect(prepare_btn.locator('.btn-icon')).to_have_text('🎮')
     await expect(prepare_btn.locator("span[data-i18n='setup.prepare_game_label']")).to_have_text('Preparar Jogo')
 
-    await expect(sync_btn_label).to_have_text(re.compile(r'Sincronizar( biblioteca)?'))
+    await expect(sync_btn).to_have_attribute('title', re.compile(r'Sincronizar( metadados)?'))
     await expect(library_search).to_have_attribute('placeholder', 'Pesquisar bibliotecas...')
     await expect(country_search).to_have_attribute('placeholder', 'Pesquisar países...')
     await expect(audio_btn).to_have_attribute('title', 'Efeitos de Som: Ativados')
@@ -83,7 +83,7 @@ async def test_lobby_setup_dynamic_language_switch(page: Page) -> None:
     await expect(setup_heading).to_have_text('Game Setup')
     await expect(prepare_btn.locator('.btn-icon')).to_have_text('🎮')
     await expect(prepare_btn.locator("span[data-i18n='setup.prepare_game_label']")).to_have_text('Prepare Game')
-    await expect(sync_btn_label).to_have_text(re.compile(r'Sync( library)?'))
+    await expect(sync_btn).to_have_attribute('title', re.compile(r'Sync( metadata)?'))
     await expect(library_search).to_have_attribute('placeholder', 'Search libraries...')
     await expect(audio_btn).to_have_attribute('title', 'Sound Effects: Enabled')
     await expect(scope_pill).to_contain_text('Full Library')
