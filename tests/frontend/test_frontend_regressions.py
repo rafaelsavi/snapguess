@@ -2719,3 +2719,40 @@ def test_mobile_header_identity_badge_flex_and_truncation() -> None:
     assert expected_name_ellipsis in auth_css
     assert '.identity-badge .identity-sep,\n.identity-badge .identity-role {\n  flex-shrink: 0;\n}' in auth_css
     assert '@media (max-width: 760px) {\n  .identity-badge {\n    max-width: 220px;' in auth_css
+
+
+def test_image_swap_and_stale_thumbnail_lifecycle() -> None:
+    """Verify that image swapping uses the off-screen preload pattern to eliminate
+    stale decoded bitmap flicker and that unshuffle cards are cleared early on round start.
+    """
+    image_swap_file = JS_DIR / 'modules' / 'components' / 'image_swap.js'
+    round_stage_file = JS_DIR / 'modules' / 'components' / 'round_stage.js'
+    pinpoint_file = JS_DIR / 'modules' / 'modes' / 'pinpoint.js'
+    unshuffle_file = JS_DIR / 'modules' / 'modes' / 'unshuffle.js'
+    game_file = JS_DIR / 'modules' / 'screens' / 'game.js'
+
+    assert image_swap_file.is_file(), 'image_swap.js must exist'
+    image_swap_content = image_swap_file.read_text(encoding='utf-8')
+    assert 'export function swapImageSrc(' in image_swap_content
+    assert 'new Image()' in image_swap_content
+    assert 'loader.onload =' in image_swap_content
+
+    # RoundStage uses swapImageSrc to avoid replay photo flicker
+    round_stage_content = round_stage_file.read_text(encoding='utf-8')
+    assert 'import { swapImageSrc } from "./image_swap.js";' in round_stage_content
+    assert 'swapImageSrc(this.photoImg, mediaUrl)' in round_stage_content
+
+    # Pinpoint mode onReady preloads off-screen before displaying
+    pinpoint_content = pinpoint_file.read_text(encoding='utf-8')
+    assert 'import { swapImageSrc } from "../components/image_swap.js";' in pinpoint_content
+    assert 'swapImageSrc(el.quizImage, questionData.media_url' in pinpoint_content
+
+    # game.js loadQuestion blanks unshuffle cards before async fetch
+    game_content = game_file.read_text(encoding='utf-8')
+    assert 'document.getElementById("shuffle-cards-list")' in game_content
+    assert 'shuffleCards.replaceChildren()' in game_content
+
+    # unshuffle.js starts thumbnails hidden and reveals on load
+    unshuffle_content = unshuffle_file.read_text(encoding='utf-8')
+    assert 'img.style.opacity = "0";' in unshuffle_content
+    assert 'img.onload = () => { img.style.opacity = ""; };' in unshuffle_content

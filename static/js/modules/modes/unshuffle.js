@@ -981,8 +981,10 @@ function renderPhotoCardsList(containerEl, questionData, focusOptions = null) {
 
     const img = document.createElement("img");
     img.className = "shuffle-card-thumb-lg";
-    img.src = photo.media_url;
     img.alt = `Photo ${index + 1}`;
+    img.style.opacity = "0";
+    img.src = photo.media_url;
+    img.onload = () => { img.style.opacity = ""; };
     img.addEventListener("click", () => {
       if (dragState.justDragged) return;
       openPhotoLightbox(photo.media_url);

@@ -163,6 +163,10 @@ export async function loadQuestion() {
   }
   if (el.mediaPlaceholder) el.mediaPlaceholder.classList.remove("hidden");
 
+  // Clear any lingering unshuffle card thumbnails before async fetch
+  const shuffleCards = document.getElementById("shuffle-cards-list");
+  if (shuffleCards) shuffleCards.replaceChildren();
+
   el.submitAnswer.textContent = t("game.submit_btn");
   getActiveMode()?.setDisabled?.(false);
   updateSubmitState();

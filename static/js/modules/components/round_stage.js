@@ -13,6 +13,7 @@ import { t, formatDate } from "../i18n.js";
 import { escapeHtml } from "../formatters.js";
 import { openPhotoLightbox } from "./lightbox.js";
 import { toggleMapFullscreen } from "../maps.js";
+import { swapImageSrc } from "./image_swap.js";
 
 export class RoundStage {
   /**
@@ -483,7 +484,8 @@ export class RoundStage {
 
     const mediaUrl = curPhoto.media_url || (curPhoto.photo_id ? `/api/media/${curPhoto.photo_id}` : (curPhoto.asset_id ? `/api/media/${encodeURIComponent(curPhoto.asset_id)}` : ""));
     if (this.photoImg && mediaUrl) {
-      this.photoImg.src = mediaUrl;
+      if (this._cancelSwap) this._cancelSwap();
+      this._cancelSwap = swapImageSrc(this.photoImg, mediaUrl);
     }
 
     const locParts = [curPhoto.actual_city, curPhoto.actual_country].filter(Boolean);
@@ -625,6 +627,10 @@ export class RoundStage {
   }
 
   destroy() {
+    if (this._cancelSwap) {
+      this._cancelSwap();
+      this._cancelSwap = null;
+    }
     if (this._cleanupSwipe) {
       this._cleanupSwipe();
       this._cleanupSwipe = null;
