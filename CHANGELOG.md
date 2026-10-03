@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Drag-and-Drop Card Reordering**: Drag photo cards to quickly arrange them chronologically on desktop, tablet, and mobile touch screens in Unshuffle mode.
+- **Horizontal Unshuffle Layout on Wide Screens**: Date-only Unshuffle rounds automatically display photos side-by-side in a single row on wide displays and landscape foldable phones, with adapted left and right navigation arrows.
+
+### Changed
+
+- **Enhanced Unshuffle Date-Only Experience**: Photos now fill the full width in a balanced 3-column layout on wide screens with high-resolution 4:3 previews, large touch buttons, and a sleek connecting timeline track showing chronological progression from oldest to newest.
+- **Optimized Vertical View for Phones & Foldable Devices**: Expanded photo visibility and card dimensions across mobile phones and portrait foldable screens to eliminate empty whitespace and provide comfortable touch interaction.
+- **Compact Vertical Card Controls**: In vertical card stacking, sorting buttons (▲ over ▼) and ABC pin buttons are now stacked vertically, saving significant horizontal space and maximizing photo preview width on phone and tablet screens.
+- **Full-Width Wide Screen Layout**: Date-only Unshuffle cards now expand to utilize all available horizontal space on wide screens, eliminating empty side margins and displaying photos at their full breadth.
+- **Uniform Sorting Button Dimensions**: Sorting buttons now maintain the exact same clean square dimensions (38px) whether stacked vertically or placed side-by-side horizontally.
+- **Updated Unshuffle Help Guide**: In-game help instructions now clearly explain how to drag and drop photo cards directly (or press and hold on touchscreens) alongside using the sorting arrow buttons.
+
+### Fixed
+
+- **Smooth Mobile Scrolling in Unshuffle Mode**: Swiping and scrolling across photo cards now smoothly scrolls the page without accidental card grabs or gesture locks, reserving drag-and-drop strictly for intentional press-and-hold gestures.
+
 ## [3.3.1] - 2026-09-30
 
 ### Changed
