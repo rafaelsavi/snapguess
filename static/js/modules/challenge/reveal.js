@@ -224,11 +224,24 @@ export const challengeReveal = {
         state.gameMode === "unshuffle" ||
         playerGuesses.some((g) => g.game_mode === "unshuffle");
 
+      const roundSummary = (leaderboardData.rounds || []).find(
+        (r) => r.player_name === playerName && r.round_index === roundIndex
+      );
+
       let opponentResult;
       if (isUnshuffle) {
-        const totalRoundScore = playerGuesses.reduce((sum, g) => sum + (g.round_score || 0), 0);
-        const totalLocationScore = playerGuesses.reduce((sum, g) => sum + (g.location_points || 0), 0);
-        const totalDateScore = playerGuesses.reduce((sum, g) => sum + (g.date_points || 0), 0);
+        const totalRoundScore = roundSummary
+          ? roundSummary.round_score
+          : playerGuesses.reduce((sum, g) => sum + (g.round_score || 0), 0);
+        const totalLocationScore = roundSummary
+          ? roundSummary.location_score
+          : playerGuesses.reduce((sum, g) => sum + (g.location_points || 0), 0);
+        const totalDateScore = roundSummary
+          ? roundSummary.date_score
+          : playerGuesses.reduce((sum, g) => sum + (g.date_points || 0), 0);
+        const isTimedOut = roundSummary
+          ? roundSummary.timed_out
+          : playerGuesses.some((g) => g.timed_out);
         const unshuffleGuesses = playerGuesses
           .filter((g) => g.unshuffle?.asset_id || g.asset_id)
           .map((g) => ({
@@ -245,20 +258,24 @@ export const challengeReveal = {
           round_score: totalRoundScore,
           total_score:
             leaderboardData.leaderboard?.find((p) => p.player_name === playerName)?.total_score ?? totalRoundScore,
-          timed_out: playerGuesses.some((g) => g.timed_out),
+          timed_out: isTimedOut,
           unshuffle_guesses: unshuffleGuesses.length > 0 ? unshuffleGuesses : null,
         };
       } else {
         const guess = playerGuesses[0];
         const pp = guess.pinpoint;
+        const totalRoundScore = roundSummary ? roundSummary.round_score : guess.round_score;
+        const totalLocationScore = roundSummary ? roundSummary.location_score : guess.location_points;
+        const totalDateScore = roundSummary ? roundSummary.date_score : guess.date_points;
+        const isTimedOut = roundSummary ? roundSummary.timed_out : (guess.timed_out || false);
         opponentResult = {
           player_name: playerName,
-          location_score: guess.location_points,
-          date_score: guess.date_points,
-          round_score: guess.round_score,
+          location_score: totalLocationScore,
+          date_score: totalDateScore,
+          round_score: totalRoundScore,
           total_score:
-            leaderboardData.leaderboard?.find((p) => p.player_name === playerName)?.total_score ?? guess.round_score,
-          timed_out: guess.timed_out || false,
+            leaderboardData.leaderboard?.find((p) => p.player_name === playerName)?.total_score ?? totalRoundScore,
+          timed_out: isTimedOut,
           pinpoint: pp ? {
             guessed_latitude: pp.guessed_latitude,
             guessed_longitude: pp.guessed_longitude,
@@ -270,8 +287,8 @@ export const challengeReveal = {
             date_diff_years_part: pp.date_diff_years_part ?? null,
             date_diff_months_part: pp.date_diff_months_part ?? null,
             date_diff_days_part: pp.date_diff_days_part ?? null,
-            location_score: guess.location_points,
-            date_score: guess.date_points,
+            location_score: totalLocationScore,
+            date_score: totalDateScore,
           } : null,
           unshuffle_guesses: null,
         };

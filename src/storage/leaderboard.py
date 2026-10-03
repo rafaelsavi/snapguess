@@ -17,6 +17,7 @@ from src.models import (
     ChallengeLeaderboardEntry,
     ChallengePinpointGuessData,
     ChallengeRoundGuessData,
+    ChallengeRoundSummary,
     ChallengeUnshuffleGuessData,
     GameMode,
     GameModeStats,
@@ -156,6 +157,23 @@ CREATE TABLE IF NOT EXISTS challenge_sessions (
     FOREIGN KEY(challenge_id) REFERENCES challenges(challenge_id) ON DELETE CASCADE
 );
 
+-- 6. Match Rounds (Authoritative round-level scores and times)
+CREATE TABLE IF NOT EXISTS match_rounds (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_id           TEXT NOT NULL,
+    player_name        TEXT NOT NULL COLLATE NOCASE,
+    round_index        INTEGER NOT NULL,
+    game_mode          TEXT NOT NULL,
+    location_score     INTEGER,
+    date_score         INTEGER,
+    round_score        INTEGER NOT NULL,
+    time_taken_seconds REAL NOT NULL DEFAULT 0.0,
+    timed_out          INTEGER NOT NULL DEFAULT 0,
+    submitted_at       TEXT NOT NULL,
+    FOREIGN KEY(match_id) REFERENCES matches(match_id) ON DELETE CASCADE,
+    UNIQUE(match_id, player_name, round_index)
+);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_challenge_sessions_unique_player
     ON challenge_sessions(challenge_id, player_name COLLATE NOCASE);
 
@@ -173,6 +191,9 @@ CREATE INDEX IF NOT EXISTS idx_match_entries_accuracy ON match_entries(accuracy_
 CREATE INDEX IF NOT EXISTS idx_match_round_guesses_match ON match_round_guesses(match_id);
 CREATE INDEX IF NOT EXISTS idx_match_round_guesses_match_round ON match_round_guesses(match_id, round_index);
 CREATE INDEX IF NOT EXISTS idx_match_round_guesses_player ON match_round_guesses(player_name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_match_rounds_match ON match_rounds(match_id);
+CREATE INDEX IF NOT EXISTS idx_match_rounds_match_round ON match_rounds(match_id, round_index);
+CREATE INDEX IF NOT EXISTS idx_match_rounds_player ON match_rounds(player_name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_challenges_capability ON challenges(capability_token);
 """
 
@@ -627,6 +648,109 @@ class LeaderboardStore:
             except Exception as exc:
                 logger.warning('Failed to backfill unshuffle true_pin_id: %s', exc)
 
+            # Ensure match_rounds table and its indices exist
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS match_rounds (
+                    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+                    match_id           TEXT NOT NULL,
+                    player_name        TEXT NOT NULL COLLATE NOCASE,
+                    round_index        INTEGER NOT NULL,
+                    game_mode          TEXT NOT NULL,
+                    location_score     INTEGER,
+                    date_score         INTEGER,
+                    round_score        INTEGER NOT NULL,
+                    time_taken_seconds REAL NOT NULL DEFAULT 0.0,
+                    timed_out          INTEGER NOT NULL DEFAULT 0,
+                    submitted_at       TEXT NOT NULL,
+                    FOREIGN KEY(match_id) REFERENCES matches(match_id) ON DELETE CASCADE,
+                    UNIQUE(match_id, player_name, round_index)
+                )
+                """
+            )
+            conn.execute('CREATE INDEX IF NOT EXISTS idx_match_rounds_match ON match_rounds(match_id)')
+            conn.execute(
+                'CREATE INDEX IF NOT EXISTS idx_match_rounds_match_round ON match_rounds(match_id, round_index)'
+            )
+            conn.execute(
+                'CREATE INDEX IF NOT EXISTS idx_match_rounds_player ON match_rounds(player_name COLLATE NOCASE)'
+            )
+
+            # Fix historical unshuffle 99 scores in match_round_guesses
+            try:
+                unshuffle_99s = conn.execute(
+                    """
+                    SELECT match_id, player_name, round_index
+                    FROM match_round_guesses
+                    WHERE game_mode = 'unshuffle'
+                    GROUP BY match_id, player_name, round_index
+                    HAVING SUM(round_score) = 99
+                    """
+                ).fetchall()
+                for row in unshuffle_99s:
+                    m_id_99, p_name_99, r_idx_99 = row[0], row[1], row[2]
+                    target_row = conn.execute(
+                        """
+                        SELECT id, location_points, date_points
+                        FROM match_round_guesses
+                        WHERE match_id = ? AND player_name = ? AND round_index = ?
+                        ORDER BY photo_index ASC LIMIT 1
+                        """,
+                        (m_id_99, p_name_99, r_idx_99),
+                    ).fetchone()
+                    if target_row:
+                        r_id, loc_p, dt_p = target_row[0], target_row[1], target_row[2]
+                        if loc_p is not None:
+                            conn.execute(
+                                """
+                                UPDATE match_round_guesses
+                                SET location_points = location_points + 1, round_score = round_score + 1
+                                WHERE id = ?
+                                """,
+                                (r_id,),
+                            )
+                        elif dt_p is not None:
+                            conn.execute(
+                                """
+                                UPDATE match_round_guesses
+                                SET date_points = date_points + 1, round_score = round_score + 1
+                                WHERE id = ?
+                                """,
+                                (r_id,),
+                            )
+            except Exception as exc:
+                logger.warning('Failed to fix unshuffle 99s in match_round_guesses: %s', exc)
+
+            # Backfill match_rounds from existing match_round_guesses
+            try:
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO match_rounds (
+                        match_id, player_name, round_index, game_mode,
+                        location_score, date_score, round_score,
+                        time_taken_seconds, timed_out, submitted_at
+                    )
+                    SELECT
+                        mrg.match_id,
+                        mrg.player_name,
+                        mrg.round_index,
+                        mrg.game_mode,
+                        SUM(mrg.location_points),
+                        SUM(mrg.date_points),
+                        CASE
+                            WHEN mrg.game_mode = 'unshuffle' AND SUM(mrg.round_score) = 99 THEN 100
+                            ELSE SUM(mrg.round_score)
+                        END,
+                        MAX(mrg.time_taken_seconds),
+                        MAX(mrg.timed_out),
+                        MIN(mrg.submitted_at)
+                    FROM match_round_guesses mrg
+                    GROUP BY mrg.match_id, mrg.player_name, mrg.round_index
+                    """
+                )
+            except Exception as exc:
+                logger.warning('Failed to backfill match_rounds: %s', exc)
+
     def append_match(
         self,
         match_id: str,
@@ -638,6 +762,7 @@ class LeaderboardStore:
         duration_seconds: float | None = None,
         player_times: dict[str, float] | None = None,
         round_guesses: list[dict[str, Any]] | None = None,
+        match_rounds: list[dict[str, Any]] | None = None,
     ) -> None:
         """Persist a completed match with match metadata, player entries, and detailed guesses."""
         played_at = datetime.now(UTC).isoformat()
@@ -741,6 +866,90 @@ class LeaderboardStore:
                         total_time,
                     ),
                 )
+
+            # Insert authoritative round outcomes
+            if match_rounds:
+                for mr in match_rounds:
+                    mr_player = re.sub(
+                        r'\s+',
+                        ' ',
+                        mr.get('player_name', ordered_players[0] if ordered_players else 'Player').strip(),
+                    )
+                    conn.execute(
+                        """
+                        INSERT OR REPLACE INTO match_rounds (
+                            match_id, player_name, round_index, game_mode,
+                            location_score, date_score, round_score,
+                            time_taken_seconds, timed_out, submitted_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            mr.get('match_id', match_id),
+                            mr_player,
+                            mr.get('round_index', 0),
+                            mr.get('game_mode', config.game_mode.value),
+                            mr.get('location_score'),
+                            mr.get('date_score'),
+                            mr.get('round_score', 0),
+                            float(mr.get('time_taken_seconds') or 0.0),
+                            1 if mr.get('timed_out') else 0,
+                            mr.get('submitted_at', played_at),
+                        ),
+                    )
+            elif round_guesses:
+                grouped_rounds: dict[tuple[str, int], dict[str, Any]] = {}
+                for rg in round_guesses:
+                    p_name = re.sub(
+                        r'\s+',
+                        ' ',
+                        rg.get('player_name', ordered_players[0] if ordered_players else 'Player').strip(),
+                    )
+                    r_idx = int(rg.get('round_index', 0))
+                    key = (p_name, r_idx)
+                    if key not in grouped_rounds:
+                        grouped_rounds[key] = {
+                            'match_id': rg.get('match_id', match_id),
+                            'player_name': p_name,
+                            'round_index': r_idx,
+                            'game_mode': rg.get('game_mode', config.game_mode.value),
+                            'location_score': 0 if config.location_mode else None,
+                            'date_score': 0 if config.date_mode else None,
+                            'round_score': 0,
+                            'time_taken_seconds': float(rg.get('time_taken_seconds') or 0.0),
+                            'timed_out': 1 if rg.get('timed_out') else 0,
+                            'submitted_at': rg.get('submitted_at', played_at),
+                        }
+                    curr = grouped_rounds[key]
+                    if config.location_mode and rg.get('location_points') is not None:
+                        curr['location_score'] = (curr['location_score'] or 0) + int(rg['location_points'])
+                    if config.date_mode and rg.get('date_points') is not None:
+                        curr['date_score'] = (curr['date_score'] or 0) + int(rg['date_points'])
+                    curr['round_score'] += int(rg.get('round_score') or 0)
+                    if rg.get('timed_out'):
+                        curr['timed_out'] = 1
+
+                for curr in grouped_rounds.values():
+                    conn.execute(
+                        """
+                        INSERT OR REPLACE INTO match_rounds (
+                            match_id, player_name, round_index, game_mode,
+                            location_score, date_score, round_score,
+                            time_taken_seconds, timed_out, submitted_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            curr['match_id'],
+                            curr['player_name'],
+                            curr['round_index'],
+                            curr['game_mode'],
+                            curr['location_score'],
+                            curr['date_score'],
+                            curr['round_score'],
+                            curr['time_taken_seconds'],
+                            curr['timed_out'],
+                            curr['submitted_at'],
+                        ),
+                    )
 
             # Insert round guesses if provided
             if round_guesses:
@@ -1499,6 +1708,77 @@ class LeaderboardStore:
                 ),
             )
 
+    def record_match_round(
+        self,
+        *,
+        match_id: str,
+        player_name: str,
+        round_index: int,
+        game_mode: str,
+        location_score: int | None = None,
+        date_score: int | None = None,
+        round_score: int,
+        time_taken_seconds: float = 0.0,
+        timed_out: bool = False,
+        submitted_at: str | None = None,
+    ) -> None:
+        """Persist an authoritative single round outcome for a player."""
+        clean_player_name = re.sub(r'\s+', ' ', player_name.strip())
+        now_iso = submitted_at or datetime.now(UTC).isoformat()
+        with self._db.connection() as conn:
+            # Ensure parent match row exists in matches table for foreign key integrity
+            exists = conn.execute(
+                'SELECT 1 FROM matches WHERE match_id = ? LIMIT 1',
+                (match_id,),
+            ).fetchone()
+            if not exists:
+                cs = conn.execute(
+                    'SELECT challenge_id FROM challenge_sessions WHERE match_id = ? LIMIT 1',
+                    (match_id,),
+                ).fetchone()
+                ch_id = cs[0] if cs else None
+                play_m = 'challenge' if ch_id else 'local'
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO matches (
+                        match_id, challenge_id, play_mode, played_at,
+                        game_mode, rounds, round_length, player_count, location_mode, date_mode,
+                        include_shared, is_custom_filtered
+                    ) VALUES (?, ?, ?, ?, ?, 1, '1m', 1, 1, 1, 0, 0)
+                    """,
+                    (match_id, ch_id, play_m, now_iso, game_mode),
+                )
+
+            conn.execute(
+                """
+                INSERT INTO match_rounds (
+                    match_id, player_name, round_index, game_mode,
+                    location_score, date_score, round_score,
+                    time_taken_seconds, timed_out, submitted_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(match_id, player_name, round_index) DO UPDATE SET
+                    game_mode = excluded.game_mode,
+                    location_score = excluded.location_score,
+                    date_score = excluded.date_score,
+                    round_score = excluded.round_score,
+                    time_taken_seconds = excluded.time_taken_seconds,
+                    timed_out = excluded.timed_out,
+                    submitted_at = excluded.submitted_at
+                """,
+                (
+                    match_id,
+                    clean_player_name,
+                    round_index,
+                    game_mode,
+                    location_score,
+                    date_score,
+                    round_score,
+                    time_taken_seconds,
+                    1 if timed_out else 0,
+                    now_iso,
+                ),
+            )
+
     def finalize_challenge_player_match(
         self,
         *,
@@ -1677,9 +1957,13 @@ class LeaderboardStore:
         asset_ids = json.loads(ch_row['asset_ids_json']) if ch_row['asset_ids_json'] else []
         mode = ch_config.get('game_mode', 'pinpoint')
         if str(mode).lower() in ('unshuffle', 'gamemode.unshuffle'):
-            total_rounds = len(ch_config.get('round_batches', [])) or int(ch_config.get('round_count', 5))
+            total_rounds = len(ch_config.get('round_batches', [])) or int(
+                ch_config.get('round_count') or ch_config.get('rounds') or 5
+            )
         else:
-            total_rounds = len(asset_ids) if asset_ids else int(ch_config.get('round_count', 10))
+            total_rounds = (
+                len(asset_ids) if asset_ids else int(ch_config.get('round_count') or ch_config.get('rounds') or 10)
+            )
 
         location_mode = bool(ch_config.get('location_mode', True))
         date_mode = bool(ch_config.get('date_mode', True))
@@ -1691,11 +1975,11 @@ class LeaderboardStore:
         if not sessions:
             return []
 
-        # Aggregate completed round counts per session using SQL GROUP BY
+        # Aggregate completed round counts per session using match_rounds with fallback to match_round_guesses
         completed_rounds_rows = self._db.fetch_all(
             """
-            SELECT match_id, player_name, COUNT(DISTINCT round_index) as completed_count
-            FROM match_round_guesses
+            SELECT match_id, player_name, COUNT(round_index) as completed_count
+            FROM match_rounds
             WHERE match_id IN (SELECT match_id FROM challenge_sessions WHERE challenge_id = ?)
             GROUP BY match_id, player_name
             """,
@@ -1704,14 +1988,44 @@ class LeaderboardStore:
         completed_rounds_by_session = {
             (r['match_id'], r['player_name']): int(r['completed_count']) for r in completed_rounds_rows
         }
+        fallback_rounds_rows = self._db.fetch_all(
+            """
+            SELECT match_id, player_name, COUNT(DISTINCT round_index) as completed_count
+            FROM match_round_guesses
+            WHERE match_id IN (SELECT match_id FROM challenge_sessions WHERE challenge_id = ?)
+            GROUP BY match_id, player_name
+            """,
+            (challenge_id,),
+        )
+        for r in fallback_rounds_rows:
+            key = (r['match_id'], r['player_name'])
+            completed_rounds_by_session[key] = max(
+                completed_rounds_by_session.get(key, 0),
+                int(r['completed_count']),
+            )
 
-        # Batch-prefetch guess rows across all challenge participants in a single query (avoids N+1 query loop)
+        # Batch-prefetch round summary rows across all challenge participants
+        rounds_by_session: dict[tuple[str, str], list[dict[str, Any]]] = {}
         guesses_by_session: dict[tuple[str, str], list[dict[str, Any]]] = {}
 
         if max_round is not None and max_round >= 0:
+            all_round_rows = self._db.fetch_all(
+                """
+                SELECT match_id, player_name, round_index, location_score, date_score, round_score, time_taken_seconds
+                FROM match_rounds
+                WHERE match_id IN (SELECT match_id FROM challenge_sessions WHERE challenge_id = ?)
+                  AND round_index <= ?
+                ORDER BY round_index ASC
+                """,
+                (challenge_id, max_round),
+            )
+            for r in all_round_rows:
+                rounds_by_session.setdefault((r['match_id'], r['player_name']), []).append(r)
+
             all_guess_rows = self._db.fetch_all(
                 """
-                SELECT match_id, player_name, round_index, location_points, date_points, round_score, time_taken_seconds
+                SELECT match_id, player_name, round_index, photo_index, location_points,
+                       date_points, round_score, time_taken_seconds
                 FROM match_round_guesses
                 WHERE match_id IN (SELECT match_id FROM challenge_sessions WHERE challenge_id = ?)
                   AND round_index <= ?
@@ -1753,17 +2067,23 @@ class LeaderboardStore:
                     )
                     continue
 
-                guess_rows = guesses_by_session.get((m_id, p_name), [])
-
-                loc_pts = sum(r['location_points'] or 0 for r in guess_rows) if location_mode else None
-                dt_pts = sum(r['date_points'] or 0 for r in guess_rows) if date_mode else None
-                tot_score = sum(r['round_score'] for r in guess_rows)
-                round_times: dict[int, float] = {}
-                for r in guess_rows:
-                    r_idx = r['round_index']
-                    if r_idx not in round_times:
-                        round_times[r_idx] = r['time_taken_seconds'] or 0.0
-                tot_time = sum(round_times.values())
+                if (m_id, p_name) in rounds_by_session:
+                    round_rows = rounds_by_session[(m_id, p_name)]
+                    loc_pts = sum(r['location_score'] or 0 for r in round_rows) if location_mode else None
+                    dt_pts = sum(r['date_score'] or 0 for r in round_rows) if date_mode else None
+                    tot_score = sum(r['round_score'] for r in round_rows)
+                    tot_time = sum(float(r['time_taken_seconds'] or 0.0) for r in round_rows)
+                else:
+                    guess_rows = guesses_by_session.get((m_id, p_name), [])
+                    loc_pts = sum(r['location_points'] or 0 for r in guess_rows) if location_mode else None
+                    dt_pts = sum(r['date_points'] or 0 for r in guess_rows) if date_mode else None
+                    tot_score = sum(r['round_score'] for r in guess_rows)
+                    round_times: dict[int, float] = {}
+                    for r in guess_rows:
+                        r_idx = r['round_index']
+                        if r_idx not in round_times:
+                            round_times[r_idx] = float(r['time_taken_seconds'] or 0.0)
+                    tot_time = sum(round_times.values())
 
                 acc = accuracy_pct(tot_score, max_score)
 
@@ -1955,6 +2275,44 @@ class LeaderboardStore:
 
         return guesses
 
+    def get_challenge_rounds(
+        self,
+        challenge_id: str,
+        max_round: int | None = None,
+    ) -> list[ChallengeRoundSummary]:
+        """Fetch authoritative round summary records for players in a challenge up to max_round."""
+        params: list[Any] = [challenge_id]
+        where_clause = 'WHERE match_id IN (SELECT match_id FROM challenge_sessions WHERE challenge_id = ?)'
+        if max_round is not None:
+            if max_round < 0:
+                return []
+            where_clause += ' AND round_index <= ?'
+            params.append(max_round)
+
+        rows = self._db.fetch_all(
+            f"""
+            SELECT player_name, round_index, game_mode, location_score, date_score,
+                   round_score, time_taken_seconds, timed_out
+            FROM match_rounds
+            {where_clause}
+            ORDER BY round_index ASC, player_name ASC
+            """,
+            params,
+        )
+        return [
+            ChallengeRoundSummary(
+                player_name=r['player_name'],
+                round_index=int(r['round_index']),
+                game_mode=GameMode(r['game_mode']),
+                location_score=r['location_score'],
+                date_score=r['date_score'],
+                round_score=int(r['round_score']),
+                time_taken_seconds=float(r['time_taken_seconds'] or 0.0),
+                timed_out=bool(r['timed_out']),
+            )
+            for r in rows
+        ]
+
     def get_challenge_round_history(
         self,
         challenge_id: str,
@@ -2127,10 +2485,20 @@ class LeaderboardStore:
         avg_acc = min(100.0, max(0.0, float(overall_row['avg_accuracy_pct'] or 0.0)))
 
         rounds_row = self._db.fetch_one(
-            'SELECT COUNT(id) as cnt FROM match_round_guesses WHERE player_name = ? COLLATE NOCASE',
+            'SELECT COUNT(id) as cnt FROM match_rounds WHERE player_name = ? COLLATE NOCASE',
             (player_name,),
         )
         total_rounds = int(rounds_row['cnt'] or 0) if rounds_row else 0
+        if total_rounds == 0:
+            fallback_rounds = self._db.fetch_one(
+                """
+                SELECT COUNT(DISTINCT round_index) as cnt
+                FROM match_round_guesses
+                WHERE player_name = ? COLLATE NOCASE
+                """,
+                (player_name,),
+            )
+            total_rounds = int(fallback_rounds['cnt'] or 0) if fallback_rounds else 0
 
         if win_rate >= 60.0 and m_played >= 10:
             legacy_title = 'Grandmaster'
@@ -2636,6 +3004,13 @@ class LeaderboardStore:
                 """,
                 (challenge_id,),
             )
+            round_rows = self._db.fetch_all(
+                """
+                SELECT * FROM match_rounds
+                WHERE match_id IN (SELECT match_id FROM challenge_sessions WHERE challenge_id = ?)
+                """,
+                (challenge_id,),
+            )
         else:
             entry_rows = self._db.fetch_all(
                 'SELECT * FROM match_entries WHERE match_id = ? ORDER BY rank ASC, player_name ASC',
@@ -2650,6 +3025,17 @@ class LeaderboardStore:
                 """,
                 (match_id,),
             )
+            round_rows = self._db.fetch_all(
+                """
+                SELECT * FROM match_rounds
+                WHERE match_id = ?
+                """,
+                (match_id,),
+            )
+
+        rounds_by_player_and_idx: dict[tuple[str, int], dict[str, Any]] = {
+            (r['player_name'], int(r['round_index'])): r for r in round_rows
+        }
 
         players = [
             MatchSummaryPlayer(
@@ -2709,15 +3095,29 @@ class LeaderboardStore:
             player_guesses: list[MatchReplayPlayerGuess] = []
             for p_name, p_g_list in guesses_by_player.items():
                 first_pg = p_g_list[0]
-                round_loc_score = sum(
-                    int(x.get('location_points') or 0) for x in p_g_list if x.get('location_points') is not None
-                )
-                round_date_score = sum(
-                    int(x.get('date_points') or 0) for x in p_g_list if x.get('date_points') is not None
-                )
-                r_score = sum(int(x.get('round_score') or 0) for x in p_g_list)
-                total_time = sum(float(x.get('time_taken_seconds') or 0.0) for x in p_g_list)
-                is_timed_out = any(bool(x.get('timed_out')) for x in p_g_list)
+                auth_round = rounds_by_player_and_idx.get((p_name, r_idx))
+                if auth_round:
+                    round_loc_score = auth_round['location_score'] if match_row.get('location_mode') else None
+                    round_date_score = auth_round['date_score'] if match_row.get('date_mode') else None
+                    r_score = int(auth_round['round_score'])
+                    total_time = float(auth_round['time_taken_seconds'] or 0.0)
+                    is_timed_out = bool(auth_round['timed_out'])
+                else:
+                    round_loc_score = (
+                        sum(
+                            int(x.get('location_points') or 0) for x in p_g_list if x.get('location_points') is not None
+                        )
+                        if match_row.get('location_mode')
+                        else None
+                    )
+                    round_date_score = (
+                        sum(int(x.get('date_points') or 0) for x in p_g_list if x.get('date_points') is not None)
+                        if match_row.get('date_mode')
+                        else None
+                    )
+                    r_score = sum(int(x.get('round_score') or 0) for x in p_g_list)
+                    total_time = sum(float(x.get('time_taken_seconds') or 0.0) for x in p_g_list)
+                    is_timed_out = any(bool(x.get('timed_out')) for x in p_g_list)
 
                 cumulative_scores[p_name] = cumulative_scores.get(p_name, 0) + r_score
 

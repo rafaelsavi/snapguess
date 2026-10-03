@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -27,6 +28,7 @@ def test_leaderboard_schema_initialization(tmp_path: Path) -> None:
     assert 'matches' in table_names
     assert 'match_entries' in table_names
     assert 'match_round_guesses' in table_names
+    assert 'match_rounds' in table_names
 
     match_cols = [c['name'] for c in db.fetch_all('PRAGMA table_info(matches)')]
     assert 'libraries_json' in match_cols
@@ -1601,3 +1603,411 @@ def test_get_match_replay_unshuffle_timeout_variations(tmp_path: Path) -> None:
     g1 = r1.player_guesses[0]
     assert g1.timed_out is True
     assert g1.round_score == 50
+
+
+def test_record_match_round_and_get_challenge_rounds(tmp_path: Path) -> None:
+    db_path = tmp_path / 'leaderboard.db'
+    store = LeaderboardStore(db_path)
+
+    # Create challenge
+    with store.db.connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO challenges (
+                challenge_id, capability_token, creator_name,
+                config_json, asset_ids_json, created_at, is_active
+            ) VALUES (
+                'ch-test', 'tok-123', 'Alice',
+                '{"game_mode": "unshuffle", "location_mode": true, "date_mode": false, "rounds": 3}',
+                '["a1","a2","a3"]', '2026-01-01T00:00:00Z', 1
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO challenge_sessions (
+                session_token, match_id, challenge_id, player_name,
+                current_round, location_score, date_score, total_score, total_time_seconds, started_at
+            ) VALUES ('s-alice', 'm-alice', 'ch-test', 'Alice', 2, 200, 0, 200, 10.0, '2026-01-01T00:00:00Z')
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO challenge_sessions (
+                session_token, match_id, challenge_id, player_name,
+                current_round, location_score, date_score, total_score, total_time_seconds, started_at
+            ) VALUES ('s-bob', 'm-bob', 'ch-test', 'Bob', 1, 100, 0, 100, 5.0, '2026-01-01T00:00:00Z')
+            """
+        )
+
+    store.record_match_round(
+        match_id='m-alice',
+        player_name='Alice',
+        round_index=0,
+        game_mode='unshuffle',
+        location_score=100,
+        date_score=None,
+        round_score=100,
+        time_taken_seconds=4.5,
+    )
+    store.record_match_round(
+        match_id='m-alice',
+        player_name='Alice',
+        round_index=1,
+        game_mode='unshuffle',
+        location_score=100,
+        date_score=None,
+        round_score=100,
+        time_taken_seconds=5.5,
+    )
+    store.record_match_round(
+        match_id='m-bob',
+        player_name='Bob',
+        round_index=0,
+        game_mode='unshuffle',
+        location_score=100,
+        date_score=None,
+        round_score=100,
+        time_taken_seconds=5.0,
+    )
+
+    # Query all rounds
+    rounds = store.get_challenge_rounds('ch-test')
+    assert len(rounds) == 3
+    alice_r0 = [r for r in rounds if r.player_name == 'Alice' and r.round_index == 0][0]
+    assert alice_r0.round_score == 100
+    assert alice_r0.location_score == 100
+    assert alice_r0.game_mode == GameMode.unshuffle
+
+    # Query with max_round = 0
+    rounds_r0 = store.get_challenge_rounds('ch-test', max_round=0)
+    assert len(rounds_r0) == 2
+    assert all(r.round_index == 0 for r in rounds_r0)
+
+
+def test_unshuffle_perfect_score_authoritative_in_standings_and_replay(tmp_path: Path) -> None:
+    db_path = tmp_path / 'leaderboard.db'
+    store = LeaderboardStore(db_path)
+
+    # Challenge config: unshuffle, 1 round of 3 photos, location only
+    cfg_json = json.dumps({'game_mode': 'unshuffle', 'location_mode': True, 'date_mode': False, 'rounds': 1})
+    with store.db.connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO challenges (
+                challenge_id, capability_token, creator_name,
+                config_json, asset_ids_json, created_at, is_active
+            ) VALUES ('ch-unshuffle', 'tok-unshuffle', 'Alice', ?, '["a1","a2","a3"]', '2026-01-01T00:00:00Z', 1)
+            """,
+            (cfg_json,),
+        )
+        conn.execute(
+            """
+            INSERT INTO challenge_sessions (
+                session_token, match_id, challenge_id, player_name,
+                current_round, location_score, date_score, total_score, total_time_seconds, started_at
+            ) VALUES ('s-alice', 'm-alice', 'ch-unshuffle', 'Alice', 1, 100, 0, 100, 5.0, '2026-01-01T00:00:00Z')
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO challenge_sessions (
+                session_token, match_id, challenge_id, player_name,
+                current_round, location_score, date_score, total_score, total_time_seconds, started_at
+            ) VALUES ('s-bob', 'm-bob', 'ch-unshuffle', 'Bob', 1, 100, 0, 100, 6.0, '2026-01-01T00:00:00Z')
+            """
+        )
+
+    # Record match_rounds authoritative outcomes
+    store.record_match_round(
+        match_id='m-alice',
+        player_name='Alice',
+        round_index=0,
+        game_mode='unshuffle',
+        location_score=100,
+        date_score=None,
+        round_score=100,
+        time_taken_seconds=5.0,
+    )
+    store.record_match_round(
+        match_id='m-bob',
+        player_name='Bob',
+        round_index=0,
+        game_mode='unshuffle',
+        location_score=100,
+        date_score=None,
+        round_score=100,
+        time_taken_seconds=6.0,
+    )
+
+    # Record apportioned photo guesses (34, 33, 33)
+    for p_name, m_id in [('Alice', 'm-alice'), ('Bob', 'm-bob')]:
+        for idx, pts in enumerate([34, 33, 33]):
+            store.record_challenge_round_guess(
+                match_id=m_id,
+                challenge_id='ch-unshuffle',
+                player_name=p_name,
+                round_index=0,
+                photo_index=idx,
+                game_mode='unshuffle',
+                asset_id=f'a{idx + 1}',
+                guess_latitude=48.85,
+                guess_longitude=2.35,
+                actual_latitude=48.85,
+                actual_longitude=2.35,
+                distance_km=0.0,
+                location_points=pts,
+                round_score=pts,
+                is_correct_location=1,
+                time_taken_seconds=1.5,
+            )
+
+    # Check standings under Fog of War at max_round = 0
+    standings = store.get_challenge_standings('ch-unshuffle', max_round=0)
+    assert len(standings) == 2
+    alice_st = [s for s in standings if s.player_name == 'Alice'][0]
+    bob_st = [s for s in standings if s.player_name == 'Bob'][0]
+    assert alice_st.total_score == 100
+    assert alice_st.location_score == 100
+    assert alice_st.accuracy_pct == 100.0
+    assert bob_st.total_score == 100
+    assert bob_st.location_score == 100
+    assert bob_st.accuracy_pct == 100.0
+
+    # Check replay round scores
+    replay = store.get_match_replay('ch-unshuffle')
+    assert replay is not None
+    assert len(replay.rounds_data) == 1
+    r0 = replay.rounds_data[0]
+    alice_replay = [pg for pg in r0.player_guesses if pg.player_name == 'Alice'][0]
+    bob_replay = [pg for pg in r0.player_guesses if pg.player_name == 'Bob'][0]
+    assert alice_replay.round_score == 100
+    assert alice_replay.cumulative_score == 100
+    assert bob_replay.round_score == 100
+    assert bob_replay.cumulative_score == 100
+
+
+def test_migrate_db_fixes_historical_99_unshuffle_scores(tmp_path: Path) -> None:
+    db_path = tmp_path / 'legacy_leaderboard.db'
+    store = LeaderboardStore(db_path)
+
+    # Insert legacy unshuffle rows that summed to 99 (33, 33, 33)
+    with store.db.connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO matches (
+                match_id, play_mode, played_at, game_mode, rounds, round_length,
+                player_count, location_mode, date_mode, include_shared, is_custom_filtered
+            ) VALUES ('m-legacy', 'local', '2026-01-01T00:00:00Z', 'unshuffle', 1, '1m', 1, 1, 0, 0, 0)
+            """
+        )
+        for idx in range(3):
+            conn.execute(
+                """
+                INSERT INTO match_round_guesses (
+                    match_id, player_name, round_index, photo_index, game_mode, asset_id,
+                    location_points, round_score, time_taken_seconds, timed_out, submitted_at
+                ) VALUES ('m-legacy', 'Alice', 0, ?, 'unshuffle', ?, 33, 33, 2.0, 0, '2026-01-01T00:00:00Z')
+                """,
+                (idx, f'p{idx}'),
+            )
+
+    # Re-run migration
+    store._migrate_db()
+
+    # Verify match_round_guesses was bumped to 100
+    with store.db.connection() as conn:
+        sum_row = conn.execute(
+            "SELECT SUM(round_score) FROM match_round_guesses WHERE match_id = 'm-legacy'"
+        ).fetchone()
+        assert sum_row[0] == 100
+
+        # Verify match_rounds was populated with 100
+        mr_row = conn.execute(
+            "SELECT round_score, location_score FROM match_rounds WHERE match_id = 'm-legacy' AND player_name = 'Alice'"
+        ).fetchone()
+        assert mr_row is not None
+        assert mr_row[0] == 100
+
+
+def test_append_match_persists_explicit_match_rounds(tmp_path: Path) -> None:
+    db_path = tmp_path / 'leaderboard.db'
+    store = LeaderboardStore(db_path)
+    cfg = BaseGameConfig(
+        round_count=3,
+        round_length=RoundLength.minute_1,
+        location_mode=True,
+        date_mode=False,
+        game_mode=GameMode.unshuffle,
+        players=['Alice'],
+    )
+
+    round_guesses = [
+        {
+            'match_id': 'm-explicit',
+            'player_name': 'Alice',
+            'round_index': 0,
+            'photo_index': i,
+            'game_mode': 'unshuffle',
+            'asset_id': f'photo_{i}',
+            'round_score': 33 if i < 2 else 34,
+            'location_points': 33 if i < 2 else 34,
+            'time_taken_seconds': 5.0,
+            'timed_out': 0,
+        }
+        for i in range(3)
+    ]
+    match_rounds = [
+        {
+            'match_id': 'm-explicit',
+            'player_name': 'Alice',
+            'round_index': 0,
+            'game_mode': 'unshuffle',
+            'location_score': 100,
+            'date_score': None,
+            'round_score': 100,
+            'time_taken_seconds': 5.0,
+            'timed_out': False,
+        }
+    ]
+
+    store.append_match(
+        match_id='m-explicit',
+        config=cfg,
+        player_scores={'Alice': {'location': 100, 'date': 0, 'total': 100}},
+        play_mode=PlayMode.local,
+        duration_seconds=5.0,
+        player_times={'Alice': 5.0},
+        round_guesses=round_guesses,
+        match_rounds=match_rounds,
+    )
+
+    # Check match_rounds table directly
+    with store.db.connection() as conn:
+        row = conn.execute(
+            "SELECT round_score, location_score, date_score FROM match_rounds WHERE match_id = 'm-explicit'"
+        ).fetchone()
+        assert row is not None
+        assert row[0] == 100
+        assert row[1] == 100
+        assert row[2] is None
+
+    # Check match replay reflects authoritative match_rounds
+    replay = store.get_match_replay('m-explicit')
+    assert replay is not None
+    assert len(replay.rounds_data) == 1
+    assert replay.rounds_data[0].player_guesses[0].round_score == 100
+    assert replay.rounds_data[0].player_guesses[0].location_score == 100
+
+
+def test_append_match_synthesizes_match_rounds_when_omitted(tmp_path: Path) -> None:
+    db_path = tmp_path / 'leaderboard.db'
+    store = LeaderboardStore(db_path)
+    cfg = BaseGameConfig(
+        round_count=3,
+        round_length=RoundLength.minute_1,
+        location_mode=True,
+        date_mode=True,
+        game_mode=GameMode.pinpoint,
+        players=['Bob'],
+    )
+
+    round_guesses = [
+        {
+            'match_id': 'm-synth',
+            'player_name': 'Bob',
+            'round_index': 0,
+            'photo_index': 0,
+            'game_mode': 'pinpoint',
+            'asset_id': 'photo_0',
+            'round_score': 180,
+            'location_points': 90,
+            'date_points': 90,
+            'time_taken_seconds': 4.0,
+            'timed_out': 0,
+        }
+    ]
+
+    # Call append_match without match_rounds (e.g. legacy caller)
+    store.append_match(
+        match_id='m-synth',
+        config=cfg,
+        player_scores={'Bob': {'location': 90, 'date': 90, 'total': 180}},
+        play_mode=PlayMode.local,
+        duration_seconds=4.0,
+        player_times={'Bob': 4.0},
+        round_guesses=round_guesses,
+        match_rounds=None,
+    )
+
+    # Verify match_rounds row was automatically synthesized
+    with store.db.connection() as conn:
+        row = conn.execute(
+            "SELECT round_score, location_score, date_score FROM match_rounds WHERE match_id = 'm-synth'"
+        ).fetchone()
+        assert row is not None
+        assert row[0] == 180
+        assert row[1] == 90
+        assert row[2] == 90
+
+
+def test_unshuffle_dual_mode_50_50_apportionment_and_replay(tmp_path: Path) -> None:
+    db_path = tmp_path / 'leaderboard.db'
+    store = LeaderboardStore(db_path)
+    cfg = BaseGameConfig(
+        round_count=3,
+        round_length=RoundLength.minute_1,
+        location_mode=True,
+        date_mode=True,
+        game_mode=GameMode.unshuffle,
+        players=['Charlie'],
+    )
+
+    # 3 photos: 50 location points apportioned as [17, 17, 16], 50 date points as [17, 17, 16]
+    round_guesses = [
+        {
+            'match_id': 'm-dual',
+            'player_name': 'Charlie',
+            'round_index': 0,
+            'photo_index': i,
+            'game_mode': 'unshuffle',
+            'asset_id': f'photo_{i}',
+            'round_score': (17 if i < 2 else 16) * 2,
+            'location_points': 17 if i < 2 else 16,
+            'date_points': 17 if i < 2 else 16,
+            'time_taken_seconds': 6.0,
+            'timed_out': 0,
+        }
+        for i in range(3)
+    ]
+    match_rounds = [
+        {
+            'match_id': 'm-dual',
+            'player_name': 'Charlie',
+            'round_index': 0,
+            'game_mode': 'unshuffle',
+            'location_score': 50,
+            'date_score': 50,
+            'round_score': 100,
+            'time_taken_seconds': 6.0,
+            'timed_out': False,
+        }
+    ]
+
+    store.append_match(
+        match_id='m-dual',
+        config=cfg,
+        player_scores={'Charlie': {'location': 50, 'date': 50, 'total': 100}},
+        play_mode=PlayMode.local,
+        duration_seconds=6.0,
+        player_times={'Charlie': 6.0},
+        round_guesses=round_guesses,
+        match_rounds=match_rounds,
+    )
+
+    replay = store.get_match_replay('m-dual')
+    assert replay is not None
+    r0_guess = replay.rounds_data[0].player_guesses[0]
+    assert r0_guess.round_score == 100
+    assert r0_guess.location_score == 50
+    assert r0_guess.date_score == 50
