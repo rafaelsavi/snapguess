@@ -458,6 +458,11 @@ async def get_challenge_leaderboard(
         location_mode=location_mode,
         capability_token=capability_token,
     )
+    challenge_rounds = await asyncio.to_thread(
+        leaderboard_store.get_challenge_rounds,
+        challenge_id=challenge['challenge_id'],
+        max_round=history_max_round,
+    )
 
     replay_match_id = challenge['challenge_id']
 
@@ -472,6 +477,7 @@ async def get_challenge_leaderboard(
         is_concluded=is_concluded,
         leaderboard=standings,
         round_guesses=guesses,
+        rounds=challenge_rounds,
         location_mode=location_mode,
         date_mode=date_mode,
         round_history=round_history,

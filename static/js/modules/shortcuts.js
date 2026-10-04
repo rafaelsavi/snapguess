@@ -1,4 +1,5 @@
 import { state, el } from "./state.js";
+import { isPhotoLightboxOpen } from "./components/lightbox.js";
 
 let cooldownUntil = 0;
 const DEFAULT_COOLDOWN_MS = 20;
@@ -8,7 +9,7 @@ export function markShortcutCooldown(durationMs = DEFAULT_COOLDOWN_MS) {
 }
 
 export function activeActionButton() {
-  if (state.submitting || state.startingMatch || Date.now() < cooldownUntil) {
+  if (state.submitting || state.startingMatch || Date.now() < cooldownUntil || isPhotoLightboxOpen()) {
     return null;
   }
   if (el.passOverlay && !el.passOverlay.classList.contains("hidden")) {
@@ -46,7 +47,10 @@ export function bindGlobalShortcuts(actions = {}) {
     if (target instanceof HTMLElement && target.closest("#setup-card")) {
       return;
     }
-    if (document.querySelector(".modal-overlay:not(.hidden)")) {
+    if (
+      document.querySelector(".modal-overlay:not(.hidden), .photo-lightbox-overlay.active") ||
+      isPhotoLightboxOpen()
+    ) {
       return;
     }
 

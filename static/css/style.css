@@ -26,6 +26,7 @@
 @import "./components/review_deck.css";
 @import "./components/summary.css";
 @import "./components/auth.css";
+@import "./components/pwa.css";
 
 /* Game Mode specific styles */
 @import "./modes/pinpoint.css";

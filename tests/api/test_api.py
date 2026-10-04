@@ -1805,3 +1805,62 @@ def test_flag_asset_endpoints(client: TestClient) -> None:
     # 5. Delete non-existent asset -> 404
     del_404 = client.delete('/api/assets/flagged/asset-xyz')
     assert del_404.status_code == 404
+
+
+def test_unshuffle_local_game_persists_match_rounds(tmp_path: Path) -> None:
+    """Verify that finishing a local unshuffle game persists authoritative match_rounds."""
+    assets = [
+        make_asset(
+            f'asset-{i}',
+            latitude=-27.5969 + i * 0.05,
+            longitude=-48.5495 + i * 0.05,
+            captured=f'2024-01-{i + 1:02d}T10:00:00Z',
+        )
+        for i in range(15)
+    ]
+    immich = FakeImmichClient(assets)
+    client = build_client(tmp_path, immich)
+
+    payload = setup_payload(game_mode='unshuffle', round_count=3, players=['Alice'])
+    setup_res = client.post('/api/game/setup', json=payload)
+    assert setup_res.status_code == 200
+    match_id = setup_res.json()['match_id']
+
+    played: list[str] = []
+    for r in range(1, 4):
+        q_res = client.post('/api/question', json={'match_id': match_id, 'played_asset_ids': played})
+        assert q_res.status_code == 200
+        q_data = q_res.json()
+
+        a_res = client.post(
+            '/api/answer',
+            json={
+                'match_id': match_id,
+                'question_id': q_data['question_id'],
+                'unshuffle': [
+                    {'photo_id': p['photo_id'], 'assigned_pin_id': 'A', 'assigned_timeline_index': idx}
+                    for idx, p in enumerate(q_data['batch_photos'])
+                ],
+            },
+        )
+        assert a_res.status_code == 200
+        a_data = a_res.json()
+        assert a_data['round_number'] == r
+        assert a_data['match_finished'] is (r == 3)
+        played.extend([p['photo_id'] for p in q_data['batch_photos']])
+
+    # Verify match_rounds table was populated upon match completion
+    lb_store = client.app.state.leaderboard_store
+    with lb_store.db.connection() as conn:
+        round_rows = conn.execute(
+            'SELECT round_index, round_score FROM match_rounds WHERE match_id = ? ORDER BY round_index ASC',
+            (match_id,),
+        ).fetchall()
+        assert len(round_rows) == 3
+        assert [r[0] for r in round_rows] == [0, 1, 2]
+
+    # Verify match replay retrieves the authoritative match_rounds
+    replay = lb_store.get_match_replay(match_id)
+    assert replay is not None
+    assert len(replay.rounds_data) == 3
+    assert all(len(rd.player_guesses) == 1 for rd in replay.rounds_data)

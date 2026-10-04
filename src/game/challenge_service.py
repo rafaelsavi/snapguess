@@ -30,6 +30,7 @@ from src.models import (
 )
 from src.scoring import (
     SCORE_MAX_POINTS,
+    apportion_batch_scores,
     batch_exponential_date_score,
     batch_exponential_location_score,
     calculate_date_decay,
@@ -444,6 +445,18 @@ class ChallengeService:
             timed_out=body.timed_out,
         )
 
+        self.leaderboard_store.record_match_round(
+            match_id=session['match_id'],
+            player_name=session['player_name'],
+            round_index=body.round_index,
+            game_mode='pinpoint',
+            location_score=location_points if location_mode else None,
+            date_score=date_points if date_mode else None,
+            round_score=round_score,
+            time_taken_seconds=body.time_taken_seconds,
+            timed_out=body.timed_out,
+        )
+
         # Advance session state
         advanced = self.challenge_store.advance_session(
             session['session_token'],
@@ -581,7 +594,16 @@ class ChallengeService:
         per_photo_pts = (SCORE_MAX_POINTS / total_photos) if total_photos > 0 else 0.0
         pin_by_id = {str(bp['pin_id']): bp for bp in raw_pins}
 
-        for idx, ba in enumerate(batch_assets):
+        # Calculate raw photo scores for largest-remainder apportionment
+        raw_loc_scores: list[float] = []
+        raw_dt_scores: list[float] = []
+        photo_distances: list[float | None] = []
+        photo_diff_days: list[int | None] = []
+        photo_coords_guess: list[tuple[float | None, float | None]] = []
+        loc_correct_flags: list[int | None] = []
+        dt_correct_flags: list[int | None] = []
+
+        for ba in batch_assets:
             assigned_pin_id = assigned_pins.get(ba.asset_id)
             assigned_timeline_index = assigned_timeline.get(ba.asset_id)
             assigned_pin = pin_by_id.get(assigned_pin_id) if assigned_pin_id else None
@@ -592,6 +614,7 @@ class ChallengeService:
             guess_lng = (
                 float(assigned_pin['longitude']) if assigned_pin and assigned_pin.get('longitude') is not None else None
             )
+            photo_coords_guess.append((guess_lat, guess_lng))
 
             dist_km: float | None = None
             if (
@@ -604,41 +627,67 @@ class ChallengeService:
                     dist_km = 0.0
                 else:
                     dist_km = haversine_km(ba.answer.latitude, ba.answer.longitude, guess_lat, guess_lng)
+            photo_distances.append(dist_km)
 
             if location_mode:
-                is_correct_loc: int | None = (
+                is_correct_loc = (
                     1 if (ba.asset_id in true_pin_map and assigned_pin_id == true_pin_map[ba.asset_id]) else 0
                 )
-                if dist_km is not None and location_decay_km is not None and location_decay_km > 0:
-                    loc_photo_pts: int | None = round(per_photo_pts * math.exp(-dist_km / location_decay_km))
-                else:
-                    loc_photo_pts = 0
+                raw_loc = (
+                    per_photo_pts * math.exp(-dist_km / location_decay_km)
+                    if dist_km is not None and location_decay_km and location_decay_km > 0
+                    else 0.0
+                )
             else:
                 is_correct_loc = None
-                loc_photo_pts = None
+                raw_loc = 0.0
+            loc_correct_flags.append(is_correct_loc)
+            raw_loc_scores.append(raw_loc)
 
-            diff_days: int | None = None
             if date_mode:
                 p_date = ba.answer.capture_date or date.min
                 if assigned_timeline_index is not None and 0 <= assigned_timeline_index < total_photos:
                     target_date = slot_target_dates[assigned_timeline_index]
                     d_days = abs((p_date - target_date).days)
-                    diff_days = d_days
-                    is_correct_date: int | None = (
+                    is_correct_date = (
                         1 if (assigned_timeline_index == true_rank_map.get(ba.asset_id) or p_date == target_date) else 0
                     )
-                    dt_photo_pts: int | None = (
-                        round(per_photo_pts * math.exp(-d_days / date_decay_days))
-                        if (date_decay_days is not None and date_decay_days > 0)
-                        else 0
+                    raw_dt = (
+                        per_photo_pts * math.exp(-d_days / date_decay_days)
+                        if date_decay_days and date_decay_days > 0
+                        else 0.0
                     )
                 else:
+                    d_days = None
                     is_correct_date = 0
-                    dt_photo_pts = 0
+                    raw_dt = 0.0
             else:
+                d_days = None
                 is_correct_date = None
-                dt_photo_pts = None
+                raw_dt = 0.0
+            photo_diff_days.append(d_days)
+            dt_correct_flags.append(is_correct_date)
+            raw_dt_scores.append(raw_dt)
 
+        apportioned_loc: list[int | None] = (
+            [int(x) for x in apportion_batch_scores(raw_loc_scores, location_points)]
+            if location_mode
+            else [None] * total_photos
+        )
+        apportioned_dt: list[int | None] = (
+            [int(x) for x in apportion_batch_scores(raw_dt_scores, date_points)] if date_mode else [None] * total_photos
+        )
+
+        for idx, ba in enumerate(batch_assets):
+            assigned_pin_id = assigned_pins.get(ba.asset_id)
+            assigned_timeline_index = assigned_timeline.get(ba.asset_id)
+            guess_lat, guess_lng = photo_coords_guess[idx]
+            dist_km = photo_distances[idx]
+            diff_days = photo_diff_days[idx]
+            is_correct_loc = loc_correct_flags[idx]
+            is_correct_date = dt_correct_flags[idx]
+            loc_photo_pts = apportioned_loc[idx]
+            dt_photo_pts = apportioned_dt[idx]
             photo_score = (loc_photo_pts or 0) + (dt_photo_pts or 0)
 
             self.leaderboard_store.record_challenge_round_guess(
@@ -670,6 +719,18 @@ class ChallengeService:
                 assigned_timeline_index=assigned_timeline_index,
                 true_pin_id=true_pin_map.get(ba.asset_id),
             )
+
+        self.leaderboard_store.record_match_round(
+            match_id=session['match_id'],
+            player_name=session['player_name'],
+            round_index=body.round_index,
+            game_mode='unshuffle',
+            location_score=location_points if location_mode else None,
+            date_score=date_points if date_mode else None,
+            round_score=round_score,
+            time_taken_seconds=body.time_taken_seconds,
+            timed_out=body.timed_out,
+        )
 
         # Advance session state
         advanced = self.challenge_store.advance_session(

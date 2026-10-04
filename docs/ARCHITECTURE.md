@@ -5,7 +5,7 @@
 - Backend: FastAPI with async endpoints, served by Uvicorn.
 - Frontend: static HTML/CSS/JS with Leaflet (no build step).
 - Session persistence: in-memory for active games.
-- Historical persistence: SQLite databases (`data/metadata.db` for metadata cache, `data/leaderboard.db` for the 5-table relational match & challenge schema: `challenges`, `challenge_sessions`, `matches`, `match_entries`, `match_round_guesses`) operating in WAL mode with `synchronous=NORMAL`, automated post-sync checkpoints, periodic 6-hour journal truncation, and shutdown maintenance.
+- Historical persistence: SQLite databases (`data/metadata.db` for metadata cache, `data/leaderboard.db` for the 6-table relational match & challenge schema: `challenges`, `challenge_sessions`, `matches`, `match_entries`, `match_rounds`, `match_round_guesses`) operating in WAL mode with `synchronous=NORMAL`, automated post-sync checkpoints, periodic 6-hour journal truncation, and shutdown maintenance.
 - Metadata synchronization: Background asynchronous full & delta indexing from Immich (see [`docs/SYNC.md`](SYNC.md) for full architecture).
 
 ---
@@ -63,8 +63,8 @@ immich-quiz/
 │       ├── session.py   In-memory state. SessionStore holds MatchState objects and tracks
 │       │                active response times per turn.
 │       ├── challenge.py ChallengeStore managing challenges and challenge_sessions SQLite tables.
-│       └── leaderboard.py LeaderboardStore managing the 5-table relational match & challenge
-│                        schema (`challenges`, `challenge_sessions`, `matches`, `match_entries`, `match_round_guesses`),
+│       └── leaderboard.py LeaderboardStore managing the 6-table relational match & challenge
+│                        schema (`challenges`, `challenge_sessions`, `matches`, `match_entries`, `match_rounds`, `match_round_guesses`),
 │                        career player performance analytics, and interactive match replay datasets.
 └── static/              Vanilla HTML/CSS/JS frontend.
     ├── index.html       Main quiz application HTML.
@@ -228,7 +228,7 @@ POST /api/answer
   └── Stores guess, scores, active response time (time_taken_seconds), and timestamp in QuestionState
   └── If match is completed, aggregates total match duration, player active response times,
       assembles per-photo round guesses, and writes full match records to SQLite leaderboard
-      (matches, match_entries, match_round_guesses)
+      (matches, match_entries, match_rounds, match_round_guesses)
   └── Returns acknowledgement only (no answer data)
 
 POST /api/round/result
@@ -267,7 +267,7 @@ GET /api/media/{asset_id}
 POST /api/challenge/{capability_token}/answer
   └── Validates X-Player-Token header and checks submission against server timer grace window
   └── Evaluates guess using frozen decay parameters stored in challenge config
-  └── Records guess in match_round_guesses
+  └── Records guess in match_round_guesses and authoritative round total in match_rounds
   └── Returns immediate personal reveal scores and true coordinates/dates for that round
 
 GET /api/challenge/{capability_token}/leaderboard
@@ -401,6 +401,7 @@ Player names in match and challenge result standings link to `/players/{playerNa
 - **Mobile (`<= 760px`)**: Structured 2-row layout:
   - **Row 1**: Brand title (`.header-main`) on the left and utility controls (`.header-utility-actions`: `#identity-badge` with responsive flexible max-width up to 220px and graceful name truncation, `#pwa-install-btn`, `#settings-dropdown`) on the right.
   - **Row 2**: Full-width dedicated navigation bar (`.header-nav-bar`) with 4 equal-width touch tabs (Home, Challenges, Players, Replays) meeting $\ge 40$px touch target standards with active state pills.
+- **Active Gameplay Focus Mode (`html.game-mode-active`)**: During active gameplay rounds and reveals, `.header-nav-bar`, `#pwa-install-btn`, and `#pwa-install-banner` are cleanly hidden via CSS (`display: none !important`), maximizing vertical screen space on mobile viewports and preventing accidental interruptions during timed guessing. They are automatically restored upon match summary or return to lobby.
 
 ### Hub & Sub-Page Header (`.hub-page-header`)
 

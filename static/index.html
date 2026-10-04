@@ -33,6 +33,9 @@
       if (p !== "/") {
         document.documentElement.classList.add("route-non-lobby");
       }
+      if (/^\/game\/[^/]+$/.test(p)) {
+        document.documentElement.classList.add("game-mode-active");
+      }
       try {
         var s = localStorage.getItem("immich_quiz_theme") === "dark" ? "dark" : "light";
         document.documentElement.setAttribute("data-theme", s);
@@ -57,7 +60,7 @@
           <button type="button" id="pwa-install-btn" class="header-icon-btn pwa-install-btn hidden"
             data-i18n-title="pwa.install_title" data-i18n-aria-label="pwa.install_title" title="Install App"
             aria-label="Install App">
-            <span id="pwa-install-icon">📲</span>
+            <span id="pwa-install-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="pwa-install-svg" aria-hidden="true"><path d="M12 3v13M7 11l5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
           </button>
           <div class="settings-dropdown" id="settings-dropdown">
             <button type="button" id="settings-toggle-btn" class="header-icon-btn settings-toggle-btn"
@@ -1200,6 +1203,73 @@
             data-i18n-title="modal.close" data-i18n-aria-label="modal.close">&times;</button>
         </div>
         <div class="modal-body mode-help-body pinpoint-help-body"></div>
+      </div>
+    </div>
+
+    <!-- iOS PWA Install Instructions Modal -->
+    <div id="pwa-ios-modal" class="modal-overlay hidden" role="dialog" aria-modal="true"
+      aria-labelledby="pwa-ios-modal-title" aria-hidden="true">
+      <div class="modal-card pwa-ios-card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span class="modal-title-icon" aria-hidden="true">📲</span>
+            <h3 id="pwa-ios-modal-title" data-i18n="pwa.ios_title">Install on iOS</h3>
+          </div>
+          <button type="button" id="pwa-ios-modal-close-btn" class="modal-close-btn" aria-label="Close" title="Close"
+            data-i18n-title="modal.close" data-i18n-aria-label="modal.close">&times;</button>
+        </div>
+        <div class="modal-body pwa-ios-body">
+          <p class="pwa-ios-intro" data-i18n="pwa.ios_intro">Install on your iPhone or iPad for a full-screen, app-like experience:</p>
+          <ol class="pwa-ios-steps">
+            <li class="pwa-ios-step">
+              <span class="pwa-step-num">1</span>
+              <div class="pwa-step-content">
+                <span data-i18n="pwa.ios_step1">Tap the Share button in Safari's bottom toolbar</span>
+                <span class="pwa-step-badge">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                </span>
+              </div>
+            </li>
+            <li class="pwa-ios-step">
+              <span class="pwa-step-num">2</span>
+              <div class="pwa-step-content">
+                <span data-i18n="pwa.ios_step2">Scroll down and tap Add to Home Screen</span>
+                <span class="pwa-step-badge">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                </span>
+              </div>
+            </li>
+            <li class="pwa-ios-step">
+              <span class="pwa-step-num">3</span>
+              <div class="pwa-step-content">
+                <span data-i18n="pwa.ios_step3">Tap Add in the top-right corner</span>
+              </div>
+            </li>
+          </ol>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="pwa-ios-gotit-btn" class="btn-primary" data-i18n="pwa.ios_close">Got it</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PWA Mobile Install Banner -->
+    <div id="pwa-install-banner" class="pwa-install-banner hidden" role="region" aria-label="Install Immich Quiz">
+      <div class="pwa-banner-content">
+        <img src="/static/favicons/android-chrome-192x192.png" alt="Immich Quiz" class="pwa-banner-icon" width="42" height="42" />
+        <div class="pwa-banner-info">
+          <strong class="pwa-banner-title" data-i18n="pwa.banner_title">Install Immich Quiz</strong>
+          <p class="pwa-banner-desc" data-i18n="pwa.banner_desc">Add to home screen for fullscreen play and offline access.</p>
+        </div>
+      </div>
+      <div class="pwa-banner-actions">
+        <button type="button" id="pwa-banner-install-btn" class="btn-primary pwa-banner-install-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13M7 11l5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          <span data-i18n="pwa.install_btn">Install</span>
+        </button>
+        <button type="button" id="pwa-banner-dismiss-btn" class="pwa-banner-dismiss-btn" aria-label="Dismiss" data-i18n-aria-label="pwa.dismiss_btn">
+          &times;
+        </button>
       </div>
     </div>
 

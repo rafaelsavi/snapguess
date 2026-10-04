@@ -5,6 +5,7 @@ import pytest
 from src.scoring import (
     SCORE_MAX_POINTS,
     accuracy_pct,
+    apportion_batch_scores,
     batch_exponential_date_score,
     batch_exponential_location_score,
     date_diff_days,
@@ -253,3 +254,34 @@ def test_batch_exponential_scoring_handles_zero_decay_gracefully() -> None:
     assert dt_score == 50
     assert dt_exact == 1
     assert dt_total == 2
+
+
+def test_apportion_batch_scores_perfect_3_photos() -> None:
+    raw = [100.0 / 3.0, 100.0 / 3.0, 100.0 / 3.0]
+    result = apportion_batch_scores(raw, 100)
+    assert sum(result) == 100
+    assert result == [34, 33, 33]
+
+
+def test_apportion_batch_scores_exact_sum_matches_target() -> None:
+    # 4 photos
+    raw_4 = [25.0, 25.0, 25.0, 25.0]
+    assert apportion_batch_scores(raw_4, 100) == [25, 25, 25, 25]
+
+    # 3 photos with 50 target points
+    raw_3_half = [50.0 / 3.0, 50.0 / 3.0, 50.0 / 3.0]
+    result_50 = apportion_batch_scores(raw_3_half, 50)
+    assert sum(result_50) == 50
+    assert result_50 == [17, 17, 16]
+
+    # Arbitrary fractional scores
+    raw_arb = [12.7, 34.8, 18.2]
+    res_arb = apportion_batch_scores(raw_arb, 66)
+    assert sum(res_arb) == 66
+
+
+def test_apportion_batch_scores_edge_cases() -> None:
+    assert apportion_batch_scores([], 100) == []
+    assert apportion_batch_scores([10.0, 20.0], 0) == [0, 0]
+    assert apportion_batch_scores([10.0, 20.0], -5) == [0, 0]
+    assert apportion_batch_scores([100.0], 100) == [100]

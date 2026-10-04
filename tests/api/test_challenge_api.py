@@ -1200,3 +1200,119 @@ def test_challenge_pinpoint_date_scoring_precision(tmp_path: Path) -> None:
     assert ans1['pinpoint_deviation']['date_diff_months_part'] == 0
     assert ans1['pinpoint_deviation']['date_diff_days_part'] == d1.day
     assert ans1['date_score'] < 100
+
+
+def test_challenge_unshuffle_multiplayer_perfect_score_round_and_standings(tmp_path: Path) -> None:
+    """Verify that when 2 players get perfect unshuffle scores, both see 100 for themselves and opponents."""
+    immich = FakeImmichClient(_create_mock_assets(25))
+    client = build_client(tmp_path, immich)
+
+    # Create unshuffle challenge with 1 round (3 photos), location only
+    create_res = client.post(
+        '/api/challenge/create',
+        json={
+            'creator_name': 'Alice',
+            'title': 'Perfect Unshuffle Match',
+            'game_mode': 'unshuffle',
+            'round_count': 3,
+            'round_length': '1m',
+            'location_mode': True,
+            'date_mode': False,
+        },
+    )
+    assert create_res.status_code == 200
+    token = create_res.json()['capability_token']
+
+    # Alice and Bob join
+    alice_session = client.post(f'/play/api/{token}/start', json={'player_name': 'Alice'}).json()
+    bob_session = client.post(f'/play/api/{token}/start', json={'player_name': 'Bob'}).json()
+
+    alice_token = alice_session['session_token']
+    bob_token = bob_session['session_token']
+
+    # Fetch round 0 question
+    q0 = client.get(f'/play/api/{token}/question/0', headers={'X-Player-Token': alice_token}).json()
+    batch_photos = q0['batch_photos']
+    batch_pins = q0['batch_pins']
+    assert len(batch_photos) == 3
+    assert len(batch_pins) == 3
+
+    # Match each photo to its exact coordinate pin
+    perfect_answers = []
+    for photo in batch_photos:
+        p_asset = client.app.state.metadata_store.get_asset_answer(photo['photo_id'])
+        assert p_asset is not None
+        matched_pin = None
+        for pin in batch_pins:
+            if (
+                abs(pin['latitude'] - (p_asset.latitude or 0.0)) < 1e-4
+                and abs(pin['longitude'] - (p_asset.longitude or 0.0)) < 1e-4
+            ):
+                matched_pin = pin['pin_id']
+                break
+        assert matched_pin is not None, f'Could not find pin matching photo {photo["photo_id"]}'
+        perfect_answers.append(
+            {
+                'photo_id': photo['photo_id'],
+                'assigned_pin_id': matched_pin,
+                'assigned_timeline_index': None,
+            }
+        )
+
+    # Alice submits perfect answer
+    alice_ans = client.post(
+        f'/play/api/{token}/answer',
+        headers={'X-Player-Token': alice_token},
+        json={
+            'round_index': 0,
+            'unshuffle': perfect_answers,
+            'time_taken_seconds': 4.5,
+        },
+    ).json()
+    assert alice_ans['round_score'] == 100
+    assert alice_ans['location_score'] == 100
+
+    # Bob submits perfect answer
+    bob_ans = client.post(
+        f'/play/api/{token}/answer',
+        headers={'X-Player-Token': bob_token},
+        json={
+            'round_index': 0,
+            'unshuffle': perfect_answers,
+            'time_taken_seconds': 5.5,
+        },
+    ).json()
+    assert bob_ans['round_score'] == 100
+    assert bob_ans['location_score'] == 100
+
+    # Alice fetches leaderboard
+    lb_alice = client.get(f'/play/api/{token}/leaderboard', headers={'X-Player-Token': alice_token}).json()
+
+    # Verify authoritative rounds in leaderboard response
+    rounds = lb_alice.get('rounds', [])
+    assert len(rounds) == 2
+    alice_round = next(r for r in rounds if r['player_name'] == 'Alice')
+    bob_round = next(r for r in rounds if r['player_name'] == 'Bob')
+    assert alice_round['round_score'] == 100
+    assert alice_round['location_score'] == 100
+    assert bob_round['round_score'] == 100
+    assert bob_round['location_score'] == 100
+
+    # Verify standings in leaderboard response
+    standings = lb_alice['leaderboard']
+    assert len(standings) == 2
+    alice_standing = next(s for s in standings if s['player_name'] == 'Alice')
+    bob_standing = next(s for s in standings if s['player_name'] == 'Bob')
+    assert alice_standing['total_score'] == 100
+    assert alice_standing['location_score'] == 100
+    assert bob_standing['total_score'] == 100
+    assert bob_standing['location_score'] == 100
+
+    # Verify photo guesses sum strictly to 100 via largest-remainder apportionment
+    guesses = lb_alice['round_guesses']
+    alice_photo_scores = [g['round_score'] for g in guesses if g['player_name'] == 'Alice']
+    bob_photo_scores = [g['round_score'] for g in guesses if g['player_name'] == 'Bob']
+    assert sum(alice_photo_scores) == 100
+    assert sum(bob_photo_scores) == 100
+    assert sorted(alice_photo_scores) == [33, 33, 34]
+    assert sorted(bob_photo_scores) == [33, 33, 34]

@@ -89,6 +89,13 @@
   }
 }
 
+/* Active game focus mode: hide global navigation, PWA install button, and bottom banner */
+html.game-mode-active .header-nav-bar,
+html.game-mode-active #pwa-install-btn,
+html.game-mode-active #pwa-install-banner {
+  display: none !important;
+}
+
 .app-footer {
   text-align: center;
   padding: 0.8rem 0 0.4rem 0;
