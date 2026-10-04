@@ -97,6 +97,7 @@ import {
   refreshReplayPageLanguage,
 } from "./modules/screens/replay.js";
 import { initSettingsMenu } from "./modules/components/settings_menu.js";
+import { initPwaInstall } from "./modules/components/pwa_install.js";
 import { initTheme, updateThemeUi } from "./modules/theme.js";
 
 // Re-export / configure global mode accessor
@@ -758,6 +759,7 @@ function initHomeCard() {
   initStats();
   initReplay();
   initSettingsMenu();
+  initPwaInstall();
   initTheme();
 
   if (el.homeNavBtn) {

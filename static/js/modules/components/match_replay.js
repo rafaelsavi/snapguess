@@ -32,6 +32,7 @@ import {
 } from "../maps.js";
 import { getPinColor } from "../modes/unshuffle.js";
 import { openReportModal } from "./report_modal.js";
+import { isPhotoLightboxOpen } from "./lightbox.js";
 import { renderRevealTableHeaders, renderRevealTableRows } from "./reveal_table.js";
 import { RoundStage } from "./round_stage.js";
 
@@ -520,6 +521,9 @@ export class MatchReplayViewer {
     this._handleKeyDown = (e) => {
       if (!this.containerEl.offsetParent && !this.containerEl.closest(":not(.hidden)")) return;
       if (e.target && e.target.matches("input, textarea, select, [contenteditable]")) return;
+      if (isPhotoLightboxOpen()) return;
+      if (document.querySelector(".modal-overlay:not(.hidden), .photo-lightbox-overlay.active")) return;
+      if (document.fullscreenElement) return;
 
       if (e.key === "ArrowLeft") {
         if (this.currentRoundIndex > 0) {

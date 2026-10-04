@@ -2756,3 +2756,40 @@ def test_image_swap_and_stale_thumbnail_lifecycle() -> None:
     unshuffle_content = unshuffle_file.read_text(encoding='utf-8')
     assert 'img.style.opacity = "0";' in unshuffle_content
     assert 'img.onload = () => { img.style.opacity = ""; };' in unshuffle_content
+
+
+def test_pwa_install_components_and_mobile_experience() -> None:
+    """Verify that PWA install elements (SVG header button, mobile bottom banner,
+    and iOS step-by-step guidance modal) are fully integrated in HTML, CSS, and JS.
+    """
+    index_html = INDEX_HTML.read_text(encoding='utf-8')
+    assert 'id="pwa-install-btn"' in index_html
+    assert 'class="pwa-install-svg"' in index_html
+    assert 'id="pwa-install-banner"' in index_html
+    assert 'id="pwa-banner-install-btn"' in index_html
+    assert 'id="pwa-banner-dismiss-btn"' in index_html
+    assert 'id="pwa-ios-modal"' in index_html
+    assert 'class="pwa-ios-steps"' in index_html
+    assert 'id="pwa-ios-gotit-btn"' in index_html
+
+    style_css = (STATIC_DIR / 'css' / 'style.css').read_text(encoding='utf-8')
+    assert '@import "./components/pwa.css";' in style_css
+
+    pwa_css = (STATIC_DIR / 'css' / 'components' / 'pwa.css').read_text(encoding='utf-8')
+    assert '.pwa-install-svg' in pwa_css
+    assert '.pwa-install-banner' in pwa_css
+    assert '@keyframes pwaBannerSlideUp' in pwa_css
+    assert '.pwa-ios-card' in pwa_css
+    assert '[data-theme="dark"] .pwa-install-banner' in pwa_css
+
+    pwa_js = (JS_DIR / 'modules' / 'components' / 'pwa_install.js').read_text(encoding='utf-8')
+    assert 'export function isStandalone()' in pwa_js
+    assert 'export function isIOS()' in pwa_js
+    assert 'export function isMobile()' in pwa_js
+    assert 'export function initPwaInstall()' in pwa_js
+    assert 'beforeinstallprompt' in pwa_js
+    assert 'appinstalled' in pwa_js
+
+    app_js = (JS_DIR / 'app.js').read_text(encoding='utf-8')
+    assert 'import { initPwaInstall } from "./modules/components/pwa_install.js";' in app_js
+    assert 'initPwaInstall();' in app_js

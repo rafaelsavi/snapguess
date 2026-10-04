@@ -13,6 +13,7 @@ ROUND_STAGE_CSS = STATIC_DIR / 'css' / 'components' / 'round_stage.css'
 REPLAY_CSS = STATIC_DIR / 'css' / 'components' / 'replay.css'
 CARDS_CSS = STATIC_DIR / 'css' / 'components' / 'cards.css'
 REVIEW_DECK_CSS = STATIC_DIR / 'css' / 'components' / 'review_deck.css'
+SHORTCUTS_JS = STATIC_DIR / 'js' / 'modules' / 'shortcuts.js'
 
 
 def test_round_stage_has_swipe_support_and_methods() -> None:
@@ -160,3 +161,26 @@ def test_lightbox_zoom_and_pan() -> None:
     assert '.photo-lightbox-overlay.is-zoomed' in cards_css
     assert 'cursor: zoom-in' in cards_css
     assert 'touch-action: none' in cards_css
+
+
+def test_lightbox_and_match_replay_keyboard_isolation() -> None:
+    """Verify that photo lightbox prevents arrow keys from changing rounds in the background."""
+    lightbox_code = LIGHTBOX_JS.read_text(encoding='utf-8')
+    match_replay_code = MATCH_REPLAY_JS.read_text(encoding='utf-8')
+    shortcuts_code = SHORTCUTS_JS.read_text(encoding='utf-8')
+
+    # 1. Lightbox must call stopImmediatePropagation on Escape and arrow keys
+    assert 'e.stopImmediatePropagation()' in lightbox_code
+    assert 'navigateLightbox("prev")' in lightbox_code
+    assert 'navigateLightbox("next")' in lightbox_code
+
+    # 2. MatchReplay must check isPhotoLightboxOpen and modals before navigating rounds
+    assert 'isPhotoLightboxOpen' in match_replay_code
+    assert 'if (isPhotoLightboxOpen()) return;' in match_replay_code
+    assert '.photo-lightbox-overlay.active' in match_replay_code
+    assert 'document.fullscreenElement' in match_replay_code
+
+    # 3. Shortcuts must check isPhotoLightboxOpen and not trigger actions during fullscreen lightbox
+    assert 'isPhotoLightboxOpen' in shortcuts_code
+    assert 'isPhotoLightboxOpen()' in shortcuts_code
+    assert '.photo-lightbox-overlay.active' in shortcuts_code
