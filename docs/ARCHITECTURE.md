@@ -401,6 +401,7 @@ Player names in match and challenge result standings link to `/players/{playerNa
 - **Mobile (`<= 760px`)**: Structured 2-row layout:
   - **Row 1**: Brand title (`.header-main`) on the left and utility controls (`.header-utility-actions`: `#identity-badge` with responsive flexible max-width up to 220px and graceful name truncation, `#pwa-install-btn`, `#settings-dropdown`) on the right.
   - **Row 2**: Full-width dedicated navigation bar (`.header-nav-bar`) with 4 equal-width touch tabs (Home, Challenges, Players, Replays) meeting $\ge 40$px touch target standards with active state pills.
+- **Active Gameplay Focus Mode (`html.game-mode-active`)**: During active gameplay rounds and reveals, `.header-nav-bar`, `#pwa-install-btn`, and `#pwa-install-banner` are cleanly hidden via CSS (`display: none !important`), maximizing vertical screen space on mobile viewports and preventing accidental interruptions during timed guessing. They are automatically restored upon match summary or return to lobby.
 
 ### Hub & Sub-Page Header (`.hub-page-header`)
 

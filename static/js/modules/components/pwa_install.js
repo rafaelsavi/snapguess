@@ -104,6 +104,9 @@ export function showInstallBanner() {
   if (!_bannerEl || isStandalone() || isBannerDismissed() || !isMobile()) {
     return;
   }
+  if (document.documentElement.classList.contains("game-mode-active")) {
+    return;
+  }
   _bannerEl.classList.remove("hidden", "exiting");
 }
 

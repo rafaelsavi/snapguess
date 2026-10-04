@@ -33,6 +33,9 @@
       if (p !== "/") {
         document.documentElement.classList.add("route-non-lobby");
       }
+      if (/^\/game\/[^/]+$/.test(p)) {
+        document.documentElement.classList.add("game-mode-active");
+      }
       try {
         var s = localStorage.getItem("immich_quiz_theme") === "dark" ? "dark" : "light";
         document.documentElement.setAttribute("data-theme", s);

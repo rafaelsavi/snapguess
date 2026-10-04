@@ -2793,3 +2793,37 @@ def test_pwa_install_components_and_mobile_experience() -> None:
     app_js = (JS_DIR / 'app.js').read_text(encoding='utf-8')
     assert 'import { initPwaInstall } from "./modules/components/pwa_install.js";' in app_js
     assert 'initPwaInstall();' in app_js
+
+
+def test_active_game_focus_mode_header_and_install_hiding() -> None:
+    """Verify that during active game mode, header-nav-bar, pwa-install-btn, and pwa-install-banner
+    are hidden via CSS, and that game-mode-active class is toggled across common.js, app.js, and pwa_install.js.
+    """
+    layout_css = (STATIC_DIR / 'css' / 'base' / 'layout.css').read_text(encoding='utf-8')
+    common_js = (JS_DIR / 'modules' / 'screens' / 'common.js').read_text(encoding='utf-8')
+    pwa_js = (JS_DIR / 'modules' / 'components' / 'pwa_install.js').read_text(encoding='utf-8')
+    app_js = (JS_DIR / 'app.js').read_text(encoding='utf-8')
+    index_html = (STATIC_DIR / 'index.html').read_text(encoding='utf-8')
+    arch_md = (Path(__file__).parents[2] / 'docs' / 'ARCHITECTURE.md').read_text(encoding='utf-8')
+
+    # 1. CSS rules exist for html.game-mode-active
+    assert 'html.game-mode-active .header-nav-bar' in layout_css
+    assert 'html.game-mode-active #pwa-install-btn' in layout_css
+    assert 'html.game-mode-active #pwa-install-banner' in layout_css
+    assert 'display: none !important;' in layout_css
+
+    # 2. showCard toggles game-mode-active on documentElement
+    assert 'document.documentElement.classList.toggle("game-mode-active", cardEl === el.gameCard);' in common_js
+    assert 'document.documentElement.classList.remove("game-mode-active");' in common_js
+
+    # 3. app.js cleans up game-mode-active on non-game route transitions
+    assert 'document.documentElement.classList.remove("game-mode-active");' in app_js
+
+    # 4. pwa_install.js suppresses install banner during active game
+    assert 'document.documentElement.classList.contains("game-mode-active")' in pwa_js
+
+    # 5. index.html head script early tags active game routes
+    assert 'document.documentElement.classList.add("game-mode-active");' in index_html
+
+    # 6. Documented in ARCHITECTURE.md
+    assert 'Active Gameplay Focus Mode (`html.game-mode-active`)' in arch_md

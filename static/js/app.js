@@ -191,6 +191,9 @@ async function handleRoute(route) {
     return;
   }
   document.documentElement.classList.remove("route-non-lobby");
+  if (route.type !== RouteType.GAME_ACTIVE && route.type !== RouteType.CHALLENGE) {
+    document.documentElement.classList.remove("game-mode-active");
+  }
   if (el.homeNavBtn) {
     el.homeNavBtn.classList.toggle("active", route.type === RouteType.LOBBY);
   }
