@@ -620,3 +620,66 @@ def batch_exponential_date_score(
 
     clamped_score = max(0, min(max_points, round(total_points)))
     return clamped_score, exact_matches, total_photos
+
+
+def apportion_batch_scores(raw_scores: Sequence[float], total_target: int) -> list[int]:
+    """Distribute an integer total score across batch photos using the largest remainder method.
+
+    Guarantees sum(apportioned_scores) == total_target exactly, preventing fractional rounding
+    drift (e.g. 33 + 33 + 33 = 99 for a 100-point perfect batch of 3 photos becomes 34 + 33 + 33 = 100).
+
+    Args:
+        raw_scores: Sequence of non-negative float points computed for each photo.
+        total_target: Target integer sum that the apportioned scores must sum to.
+
+    Returns:
+        List of integer point values corresponding to each item in raw_scores.
+
+    """
+    n = len(raw_scores)
+    if n == 0:
+        return []
+    if total_target <= 0:
+        return [0] * n
+
+    # Step 1: Base integer floor for each item
+    floors = [max(0, math.floor(s)) for s in raw_scores]
+    current_sum = sum(floors)
+    deficit = total_target - current_sum
+
+    if deficit == 0:
+        return floors
+
+    if deficit > 0:
+        # Give +1 to the photos with the largest fractional remainders
+        # Deterministic tie-breaker: (-remainder, -raw_score, index)
+        remainders = [(raw_scores[i] - floors[i], raw_scores[i], i) for i in range(n)]
+        remainders.sort(key=lambda item: (-item[0], -item[1], item[2]))
+
+        allocated = list(floors)
+        for k in range(min(deficit, n)):
+            allocated[remainders[k][2]] += 1
+
+        rem_deficit = deficit - min(deficit, n)
+        idx = 0
+        while rem_deficit > 0:
+            allocated[idx % n] += 1
+            rem_deficit -= 1
+            idx += 1
+
+        return allocated
+
+    # If deficit < 0 (sum of floors > total_target, rare edge case)
+    surplus = -deficit
+    remainders = [(raw_scores[i] - floors[i], raw_scores[i], i) for i in range(n)]
+    remainders.sort(key=lambda item: (item[0], item[1], item[2]))
+    allocated = list(floors)
+    for k in range(n):
+        if surplus <= 0:
+            break
+        idx = remainders[k][2]
+        if allocated[idx] > 0:
+            allocated[idx] -= 1
+            surplus -= 1
+
+    return allocated

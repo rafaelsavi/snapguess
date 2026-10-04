@@ -1334,6 +1334,21 @@ class ChallengeLeaderboardEntry(BaseModel):
     awards: list[str] = Field(default_factory=list)
 
 
+class ChallengeRoundSummary(BaseModel):
+    """Authoritative round outcome for a player in a challenge round."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    player_name: str
+    round_index: int
+    game_mode: GameMode
+    location_score: int | None = None
+    date_score: int | None = None
+    round_score: int
+    time_taken_seconds: float = 0.0
+    timed_out: bool = False
+
+
 class ChallengeLeaderboardResponse(BaseModel):
     """Challenge leaderboard and Fog of War filtered round guesses."""
 
@@ -1349,6 +1364,7 @@ class ChallengeLeaderboardResponse(BaseModel):
     is_concluded: bool = False
     leaderboard: list[ChallengeLeaderboardEntry]
     round_guesses: list[ChallengeRoundGuessData]
+    rounds: list[ChallengeRoundSummary] = Field(default_factory=list)
     location_mode: bool = True
     date_mode: bool = True
     round_history: list[dict[str, Any]] = Field(default_factory=list)

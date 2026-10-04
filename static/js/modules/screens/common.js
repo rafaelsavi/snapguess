@@ -37,6 +37,7 @@ export function showCard(cardEl) {
   if (cardEl) {
     cardEl.classList.remove("hidden");
   }
+  document.documentElement.classList.toggle("game-mode-active", cardEl === el.gameCard);
 }
 
 export function scrollToGameCard(behavior = "smooth") {
@@ -57,6 +58,7 @@ export function scrollToGameCard(behavior = "smooth") {
 export function resetGameUi() {
   clearRevealAnimation();
   clearTimer();
+  document.documentElement.classList.remove("game-mode-active");
 
   state.matchId = null;
   state.currentQuestion = null;

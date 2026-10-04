@@ -238,6 +238,7 @@ export function openPhotoLightbox(src, { photos = null, currentIndex = 0, onInde
     document.addEventListener("keydown", (e) => {
       if (!lightbox.classList.contains("active")) return;
       if (e.key === "Escape") {
+        e.stopImmediatePropagation();
         if (_scale > 1.05) {
           resetLightboxZoom(true);
         } else {
@@ -245,9 +246,11 @@ export function openPhotoLightbox(src, { photos = null, currentIndex = 0, onInde
         }
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
+        e.stopImmediatePropagation();
         navigateLightbox("prev");
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
+        e.stopImmediatePropagation();
         navigateLightbox("next");
       }
     });

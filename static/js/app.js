@@ -97,6 +97,7 @@ import {
   refreshReplayPageLanguage,
 } from "./modules/screens/replay.js";
 import { initSettingsMenu } from "./modules/components/settings_menu.js";
+import { initPwaInstall } from "./modules/components/pwa_install.js";
 import { initTheme, updateThemeUi } from "./modules/theme.js";
 
 // Re-export / configure global mode accessor
@@ -190,6 +191,9 @@ async function handleRoute(route) {
     return;
   }
   document.documentElement.classList.remove("route-non-lobby");
+  if (route.type !== RouteType.GAME_ACTIVE && route.type !== RouteType.CHALLENGE) {
+    document.documentElement.classList.remove("game-mode-active");
+  }
   if (el.homeNavBtn) {
     el.homeNavBtn.classList.toggle("active", route.type === RouteType.LOBBY);
   }
@@ -758,6 +762,7 @@ function initHomeCard() {
   initStats();
   initReplay();
   initSettingsMenu();
+  initPwaInstall();
   initTheme();
 
   if (el.homeNavBtn) {

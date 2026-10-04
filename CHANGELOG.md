@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026-10-04
+
+### Added
+
+- **Mobile app install banner and guidance**: Added an in-app bottom install banner and header action with a crisp vector download icon on mobile devices, plus interactive step-by-step guidance for adding the app to the home screen on iOS Safari.
+
+### Changed
+
+- **Distraction-free gameplay view**: Hidden the top navigation bar, install button, and install prompts during active rounds and reveals to maximize screen space for photos and maps while preventing accidental interruptions during timed guessing.
+
+### Fixed
+
+- **Fullscreen photo review isolation**: Fixed an issue where navigating photos with arrow keys in fullscreen preview could accidentally advance or reverse rounds in the background during game reviews and replays.
+- **Unshuffle perfect score parity**: Fixed an issue where perfect answers in multiplayer Unshuffle matches displayed as 100 for the active player but appeared as 99 for opponents on the leaderboard and replay screens.
+
 ## [3.3.2] - 2026-10-03
 
 ### Added

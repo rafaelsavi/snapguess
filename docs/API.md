@@ -965,6 +965,18 @@ Response (`200 OK`):
       "awards": []
     }
   ],
+  "rounds": [
+    {
+      "player_name": "Alice",
+      "round_index": 0,
+      "game_mode": "pinpoint",
+      "location_score": 48,
+      "date_score": 46,
+      "round_score": 94,
+      "time_taken_seconds": 12.5,
+      "timed_out": false
+    }
+  ],
   "round_guesses": [
     {
       "player_name": "Alice",

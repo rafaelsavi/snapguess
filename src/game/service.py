@@ -40,6 +40,7 @@ from src.models import (
 from src.scoring import (
     SCORE_MAX_POINTS,
     accuracy_pct,
+    apportion_batch_scores,
     calculate_date_decay,
     calculate_location_decay,
     haversine_km,
@@ -75,7 +76,16 @@ def extract_round_guesses(state: MatchState) -> list[dict[str, Any]]:
             decay_km = calculate_location_decay(q.round_data.assets) if state.setup.location_mode else None
             decay_days = calculate_date_decay(q.round_data.assets) if state.setup.date_mode else None
 
-            for idx, ba in enumerate(q.round_data.assets):
+            # Calculate raw photo scores for largest-remainder apportionment
+            raw_loc_scores: list[float] = []
+            raw_dt_scores: list[float] = []
+            photo_distances: list[float | None] = []
+            photo_diff_days: list[int | None] = []
+            photo_coords_guess: list[tuple[float | None, float | None]] = []
+            loc_correct_flags: list[int | None] = []
+            dt_correct_flags: list[int | None] = []
+
+            for ba in q.round_data.assets:
                 guessed_item = guess_map.get(ba.asset_id, {})
                 assigned_pin_id = guessed_item.get('assigned_pin_id')
                 assigned_timeline_index = guessed_item.get('assigned_timeline_index')
@@ -91,6 +101,7 @@ def extract_round_guesses(state: MatchState) -> list[dict[str, Any]]:
                     if assigned_pin and assigned_pin.get('longitude') is not None
                     else None
                 )
+                photo_coords_guess.append((guess_lat, guess_lng))
 
                 dist_km: float | None = None
                 if (
@@ -103,43 +114,70 @@ def extract_round_guesses(state: MatchState) -> list[dict[str, Any]]:
                         dist_km = 0.0
                     else:
                         dist_km = haversine_km(ba.answer.latitude, ba.answer.longitude, guess_lat, guess_lng)
+                photo_distances.append(dist_km)
 
                 if state.setup.location_mode:
-                    is_correct_loc: int | None = (
+                    is_correct_loc = (
                         1 if (ba.asset_id in true_pin_map and assigned_pin_id == true_pin_map[ba.asset_id]) else 0
                     )
-                    if dist_km is not None and decay_km is not None and decay_km > 0:
-                        loc_points: int | None = round(per_photo_pts * math.exp(-dist_km / decay_km))
-                    else:
-                        loc_points = 0
+                    raw_loc = (
+                        per_photo_pts * math.exp(-dist_km / decay_km)
+                        if dist_km is not None and decay_km and decay_km > 0
+                        else 0.0
+                    )
                 else:
                     is_correct_loc = None
-                    loc_points = None
+                    raw_loc = 0.0
+                loc_correct_flags.append(is_correct_loc)
+                raw_loc_scores.append(raw_loc)
 
-                diff_days: int | None = None
                 if state.setup.date_mode:
                     p_date = ba.answer.capture_date or date.min
                     if assigned_timeline_index is not None and 0 <= assigned_timeline_index < total_photos:
                         target_date = slot_target_dates[assigned_timeline_index]
                         d_days = abs((p_date - target_date).days)
-                        diff_days = d_days
-                        is_correct_date: int | None = (
+                        is_correct_date = (
                             1
                             if (assigned_timeline_index == true_rank_map.get(ba.asset_id) or p_date == target_date)
                             else 0
                         )
-                        dt_points: int | None = (
-                            round(per_photo_pts * math.exp(-d_days / decay_days))
-                            if (decay_days is not None and decay_days > 0)
-                            else 0
+                        raw_dt = (
+                            per_photo_pts * math.exp(-d_days / decay_days) if (decay_days and decay_days > 0) else 0.0
                         )
                     else:
+                        d_days = None
                         is_correct_date = 0
-                        dt_points = 0
+                        raw_dt = 0.0
                 else:
+                    d_days = None
                     is_correct_date = None
-                    dt_points = None
+                    raw_dt = 0.0
+                photo_diff_days.append(d_days)
+                dt_correct_flags.append(is_correct_date)
+                raw_dt_scores.append(raw_dt)
 
+            apportioned_loc: list[int | None] = (
+                [int(x) for x in apportion_batch_scores(raw_loc_scores, q.location_points)]
+                if state.setup.location_mode
+                else [None] * total_photos
+            )
+            apportioned_dt: list[int | None] = (
+                [int(x) for x in apportion_batch_scores(raw_dt_scores, q.date_points)]
+                if state.setup.date_mode
+                else [None] * total_photos
+            )
+
+            for idx, ba in enumerate(q.round_data.assets):
+                guessed_item = guess_map.get(ba.asset_id, {})
+                assigned_pin_id = guessed_item.get('assigned_pin_id')
+                assigned_timeline_index = guessed_item.get('assigned_timeline_index')
+                guess_lat, guess_lng = photo_coords_guess[idx]
+                dist_km = photo_distances[idx]
+                diff_days = photo_diff_days[idx]
+                is_correct_loc = loc_correct_flags[idx]
+                is_correct_date = dt_correct_flags[idx]
+                loc_points = apportioned_loc[idx]
+                dt_points = apportioned_dt[idx]
                 photo_score = (loc_points or 0) + (dt_points or 0)
 
                 guesses.append(
@@ -214,6 +252,35 @@ def extract_round_guesses(state: MatchState) -> list[dict[str, Any]]:
                 }
             )
     return guesses
+
+
+def extract_match_rounds(state: MatchState) -> list[dict[str, Any]]:
+    """Extract authoritative round outcome records from match state."""
+    rounds: list[dict[str, Any]] = []
+    ordered_questions = sorted(
+        state.questions.values(),
+        key=lambda q: (q.round_index, q.player_name),
+    )
+    for q in ordered_questions:
+        if not q.answered:
+            continue
+        loc_score = q.location_points if state.setup.location_mode else None
+        dt_score = q.date_points if state.setup.date_mode else None
+        rounds.append(
+            {
+                'match_id': state.match_id,
+                'player_name': q.player_name,
+                'round_index': q.round_index,
+                'game_mode': state.setup.game_mode.value,
+                'location_score': loc_score,
+                'date_score': dt_score,
+                'round_score': (q.location_points or 0) + (q.date_points or 0),
+                'time_taken_seconds': float(q.time_taken_seconds or 0.0),
+                'timed_out': bool(q.timed_out),
+                'submitted_at': q.submitted_at or datetime.now(timezone.utc).isoformat(),
+            }
+        )
+    return rounds
 
 
 class GameService:
@@ -464,6 +531,7 @@ class GameService:
                 for player in updated_state.setup.players
             }
             round_guesses = extract_round_guesses(updated_state)
+            match_rounds = extract_match_rounds(updated_state)
 
             self.leaderboard_store.append_match(
                 match_id=updated_state.match_id,
@@ -473,6 +541,7 @@ class GameService:
                 duration_seconds=duration_sec,
                 player_times=player_times,
                 round_guesses=round_guesses,
+                match_rounds=match_rounds,
             )
             logger.info(
                 '🏁 Match %s finished in %.1fs across %d turns',
