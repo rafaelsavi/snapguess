@@ -196,7 +196,7 @@ export function setupShareBox(containerOrElements, url, options = {}) {
           if (!currentUrl) return;
           try {
             await navigator.share({
-              title: options.title || t("challenge.invite_message") || "Immich Quiz Challenge",
+              title: options.title || t("challenge.invite_message") || "SnapGuess Challenge",
               url: currentUrl,
             });
           } catch (_) {}

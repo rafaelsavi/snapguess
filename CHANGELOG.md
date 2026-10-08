@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Rebranded to SnapGuess**: Rebranded application, package name, and repository to SnapGuess with fixed brand title, updated PWA manifest, and bilingual localization parity.
 - **Distraction-free gameplay view**: Hidden the top navigation bar, install button, and install prompts during active rounds and reveals to maximize screen space for photos and maps while preventing accidental interruptions during timed guessing.
 
 ### Fixed

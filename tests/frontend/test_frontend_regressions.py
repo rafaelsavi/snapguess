@@ -1541,7 +1541,7 @@ def test_focus_trap_and_dynamic_version_stamping_regression() -> None:
     assert 'src="/static/js/app.js?v={{APP_VERSION}}"' in index_html
 
     # 3. Service Worker dynamic version template and ignoreSearch option
-    assert "const CACHE_NAME = 'immich-quiz-v{{APP_VERSION}}';" in sw_js
+    assert "const CACHE_NAME = 'snapguess-v{{APP_VERSION}}';" in sw_js
     assert 'ignoreSearch: true' in sw_js
 
 

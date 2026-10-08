@@ -28,10 +28,11 @@ def get_app_version(ignore_rc: bool = False) -> str:
         except Exception as exc:
             logger.warning('Failed to parse version from pyproject.toml: %s', exc)
 
-    try:
-        return importlib.metadata.version('immich-quiz')
-    except Exception:
-        pass
+    for pkg in ('snapguess', 'immich-quiz'):
+        try:
+            return importlib.metadata.version(pkg)
+        except Exception:
+            pass
 
     return ''
 

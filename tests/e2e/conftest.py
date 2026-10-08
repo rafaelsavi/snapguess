@@ -188,7 +188,7 @@ def e2e_server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     settings = AppSettings(
         immich_server_url='https://placeholder.example.com/api',
         immich_libraries={'family': 'token'},
-        app_title='Immich Quiz E2E',
+        app_title='SnapGuess E2E',
         app_host='127.0.0.1',
         app_port=port,
         language='EN',

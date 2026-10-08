@@ -398,7 +398,7 @@ function displayShareResult(challengeData) {
     qrBtnId: "challenge-qr-btn",
     qrContainerId: "challenge-qr-container",
     qrDisplayId: "challenge-qr-code",
-    title: challengeData?.title || "Immich Quiz Challenge",
+    title: challengeData?.title || "SnapGuess Challenge",
     qrSize: 180,
   });
 

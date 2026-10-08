@@ -1,10 +1,10 @@
 /**
- * Service Worker for Immich Quiz PWA
+ * Service Worker for SnapGuess PWA
  * Caches UI shell and static assets for instant load and offline resiliency.
  * API calls and dynamic Immich media streams bypass cache.
  */
 
-const CACHE_NAME = 'immich-quiz-v{{APP_VERSION}}';
+const CACHE_NAME = 'snapguess-v{{APP_VERSION}}';
 
 const PRECACHE_ASSETS = [
   '/',

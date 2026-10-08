@@ -262,7 +262,7 @@ server {
 
 ```yaml
 services:
-  immich-quiz:
+  snapguess:
     labels:
       - "traefik.enable=true"
       # Public Router for Challenge Players

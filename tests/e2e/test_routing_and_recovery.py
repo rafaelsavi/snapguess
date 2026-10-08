@@ -224,26 +224,33 @@ async def test_pass_and_play_multiplayer_ready_overlay_flow(page: Page) -> None:
     without errors.
     """
     await page.goto('/')
+    await expect(page.locator('#setup-card')).to_be_visible()
 
     # Configure date mode only
     loc_card = page.locator('#card-goal-location')
     date_card = page.locator('#card-goal-date')
-    if 'active' in (await loc_card.get_attribute('class') or ''):
-        await loc_card.click()
     if 'active' not in (await date_card.get_attribute('class') or ''):
         await date_card.click()
+    if 'active' in (await loc_card.get_attribute('class') or ''):
+        await loc_card.click()
 
     # Configure 5 rounds for test
     await page.locator('#round-count button[data-value="5"]').click()
 
     # Open prepare game modal and add a second player
     await page.locator('#prepare-game-btn').click()
-    player_input = page.locator('#player-text-input')
-    if await player_input.is_visible():
-        await player_input.fill('Bob')
-        await page.keyboard.press('Enter')
+    modal = page.locator('#prepare-game-modal')
+    await expect(modal).to_be_visible()
 
-    await page.locator('#start-match-btn').click()
+    player_input = page.locator('#player-text-input')
+    await expect(player_input).to_be_visible()
+    await player_input.fill('Bob')
+    await page.keyboard.press('Enter')
+    await expect(page.locator('.player-chip:has-text("Bob")')).to_be_visible()
+
+    start_btn = page.locator('#start-match-btn')
+    await expect(start_btn).to_be_visible()
+    await start_btn.click()
     await expect(page.locator('#game-card')).to_be_visible()
 
     pass_overlay = page.locator('#pass-overlay')

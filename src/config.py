@@ -153,7 +153,7 @@ class AppSettings:
     immich_libraries: dict[str, str]
 
     # 2. Application & Server Network
-    app_title: str = 'Immich Quiz'
+    app_title: str = 'SnapGuess'
     app_host: str = '127.0.0.1'
     app_port: int = 8010
     language: SupportedLanguage = SupportedLanguage.EN
@@ -301,8 +301,6 @@ def load_settings() -> AppSettings:
     }
 
     # Application & Server
-    if val := _get_env('APP_TITLE'):
-        kwargs['app_title'] = val
     if val := _get_env('APP_HOST'):
         kwargs['app_host'] = val
     if val := _get_env('APP_PORT'):

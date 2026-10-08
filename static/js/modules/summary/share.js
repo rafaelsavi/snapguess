@@ -113,13 +113,13 @@ export async function shareMatchSummary(summary) {
     shareUrl = capToken
       ? `${window.location.origin}/play/${encodeURIComponent(capToken)}/summary`
       : window.location.href;
-    title = tOr("summary.share_title", "Immich Quiz Results");
+    title = tOr("summary.share_title", "SnapGuess Results");
     successMessage = tOr("summary.share_copied", "Replay link copied to clipboard!");
   } else {
     shareUrl = summary.match_id
       ? `${window.location.origin}/game/${encodeURIComponent(summary.match_id)}/replay`
       : window.location.href;
-    title = tOr("summary.share_title", "Immich Quiz Results");
+    title = tOr("summary.share_title", "SnapGuess Results");
     successMessage = tOr("summary.share_copied", "Replay link copied to clipboard!");
   }
 

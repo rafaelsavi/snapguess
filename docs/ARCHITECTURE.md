@@ -13,7 +13,7 @@
 ## Module Map
 
 ```
-immich-quiz/
+snapguess/
 ├── src/
 │   ├── main.py          App factory and lifespan. Creates ImmichClient,
 │   │                    SessionStore, MetadataStore, and LeaderboardStore;

@@ -68,7 +68,7 @@ Update the version string in [`pyproject.toml`](../pyproject.toml):
 
 ```toml
 [project]
-name = "immich-quiz"
+name = "snapguess"
 version = "3.1.0"
 ```
 
@@ -134,7 +134,7 @@ Upon merge to `main`, the single unified **`CI/CD Pipeline`** executes in strict
    - Runs **only** if Stage 2 successfully created the release.
    - Provisions QEMU and Docker Buildx.
    - Builds multi-architecture container images for `linux/amd64` and `linux/arm64`.
-   - Pushes images to GitHub Container Registry (`ghcr.io/rafaelsavi/immich-quiz`) with tags:
+   - Pushes images to GitHub Container Registry (`ghcr.io/rafaelsavi/snapguess`) with tags:
      - `:latest` (pointing to the latest official release)
      - `:vX.Y.Z` (e.g. `:v3.1.0`)
      - `:X.Y.Z` (e.g. `:3.1.0`)
