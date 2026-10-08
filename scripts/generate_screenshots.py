@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Automated script to generate high-resolution, privacy-safe, anonymized screenshots
-for Immich Quiz documentation and README.
+for SnapGuess documentation and README.
 """
 
 from __future__ import annotations
