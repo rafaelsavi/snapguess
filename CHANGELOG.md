@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-10-04
+
+### Changed
+
+- **Rebranded to SnapGuess**: Rebranded application, package name, and repository to SnapGuess with fixed brand title, updated PWA manifest, and bilingual localization parity.
+
 ## [3.4.0] - 2026-10-04
 
 ### Added
@@ -13,7 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Rebranded to SnapGuess**: Rebranded application, package name, and repository to SnapGuess with fixed brand title, updated PWA manifest, and bilingual localization parity.
 - **Distraction-free gameplay view**: Hidden the top navigation bar, install button, and install prompts during active rounds and reveals to maximize screen space for photos and maps while preventing accidental interruptions during timed guessing.
 
 ### Fixed
