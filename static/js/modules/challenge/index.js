@@ -1,5 +1,5 @@
 /**
- * Challenge Mode Controller for Immich Quiz (Unified Facade).
+ * Challenge Mode Controller for SnapGuess (Unified Facade).
  *
  * Assembles challenge sub-modules (session, landing, game, reveal, intermission, summary)
  * into a single cohesive facade matching the existing challenge singleton API.

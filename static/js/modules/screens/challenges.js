@@ -1,5 +1,5 @@
 /**
- * Dedicated Challenges Hub Page Controller for Immich Quiz.
+ * Dedicated Challenges Hub Page Controller for SnapGuess.
  *
  * Provides a comprehensive challenges management and discovery view:
  * - Real-time statistics overview (Active challenges, total players, most popular)

@@ -1,4 +1,4 @@
-"""Configuration system, environment variable parsing, and validation for Immich Quiz."""
+"""Configuration system, environment variable parsing, and validation for SnapGuess."""
 
 from __future__ import annotations
 

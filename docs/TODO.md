@@ -1,6 +1,6 @@
-# Immich Quiz Roadmap & TODO List
+# SnapGuess Roadmap & TODO List
 
-This document lists planned features, design ideas, and technical debt items for **Immich Quiz**, sorted by implementation priority and dependencies.
+This document lists planned features, design ideas, and technical debt items for **SnapGuess**, sorted by implementation priority and dependencies.
 
 ---
 

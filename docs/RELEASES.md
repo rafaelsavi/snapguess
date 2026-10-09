@@ -1,6 +1,6 @@
 # Release & CI/CD Guidelines
 
-This guide details the release workflow, versioning strategy, CI/CD pipelines, and local verification procedures for **Immich Quiz**.
+This guide details the release workflow, versioning strategy, CI/CD pipelines, and local verification procedures for **SnapGuess**.
 
 ---
 

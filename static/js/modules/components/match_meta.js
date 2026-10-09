@@ -1,5 +1,5 @@
 /**
- * Unified Match Metadata Component for Immich Quiz.
+ * Unified Match Metadata Component for SnapGuess.
  *
  * Renders a standardized 2-category specification panel:
  *  1. Game Setup (Mode, Targets/Guessing, Rounds, Time Limit)

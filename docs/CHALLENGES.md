@@ -1,6 +1,6 @@
 # Multiplayer Challenges (Async & Hybrid)
 
-Immich Quiz features **Multiplayer Challenge Mode**, enabling multi-device trivia matches across your Immich library. A host creates a match seed that generates an unguessable capability URL, allowing friends to play asynchronously at their own pace or socially in a hybrid group call.
+SnapGuess features **Multiplayer Challenge Mode**, enabling multi-device trivia matches across your Immich library. A host creates a match seed that generates an unguessable capability URL, allowing friends to play asynchronously at their own pace or socially in a hybrid group call.
 
 ---
 
@@ -128,7 +128,7 @@ Grand Reveal Summary (/play/:token/summary)
 
 ## 4. Anti-Cheat & Security Model
 
-Immich Quiz implements defense-in-depth protections for challenge matches:
+SnapGuess implements defense-in-depth protections for challenge matches:
 
 ### 1. Server-Enforced Fog of War
 
@@ -159,7 +159,7 @@ Immich Quiz implements defense-in-depth protections for challenge matches:
 
 ## 5. Reverse Proxy & Zero Trust Deployment
 
-Immich Quiz consolidates all public player traffic under two clean prefixes:
+SnapGuess consolidates all public player traffic under two clean prefixes:
 
 1. **`/play/*`**: Challenge SPA pages, player APIs, in-game photo flagging, and scoped media streaming.
 2. **`/static/*`**: Frontend assets (JavaScript bundles, CSS stylesheets, sound effects, favicons).
@@ -183,12 +183,12 @@ All administrative, host-only, and moderation routes (`/`, `/challenges`, `/play
 
 ### Cloudflare Zero Trust (Access) Setup
 
-If you run Immich Quiz behind Cloudflare Zero Trust (Cloudflare Access), protecting your instance requires zero reverse-proxy regexes or priority conflicts:
+If you run SnapGuess behind Cloudflare Zero Trust (Cloudflare Access), protecting your instance requires zero reverse-proxy regexes or priority conflicts:
 
 #### 1. Public Challenge Bypass Application
 
 - **Application Type**: Self-hosted
-- **Application Name**: `Immich Quiz - Challenge Player`
+- **Application Name**: `SnapGuess - Challenge Player`
 - **Application Domain**: `quiz.example.com`
 - **Path**: `/play*` (add an additional path rule for `/static*`)
 - **Policy**:
@@ -199,7 +199,7 @@ If you run Immich Quiz behind Cloudflare Zero Trust (Cloudflare Access), protect
 #### 2. Default Protected Application
 
 - **Application Type**: Self-hosted
-- **Application Name**: `Immich Quiz - Host`
+- **Application Name**: `SnapGuess - Host`
 - **Application Domain**: `quiz.example.com`
 - **Path**: *(leave empty to protect all other paths, including root `/` and `/api/*`)*
 - **Policy**:

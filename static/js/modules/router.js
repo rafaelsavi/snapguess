@@ -1,5 +1,5 @@
 /**
- * Client-Side Router for Immich Quiz
+ * Client-Side Router for SnapGuess
  * Manages deep links, History API (pushState/popstate), and navigation guards.
  */
 

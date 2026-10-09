@@ -394,7 +394,7 @@ Player names in match and challenge result standings link to `/players/{playerNa
 
 - **Desktop (`> 760px`)**: Single unified flex row. `.header-brand-row` and `.header-utility-actions` use `display: contents;` with CSS `order` sequencing:
   1. `order: 1`: Brand title and logo (`.header-main`)
-  2. `order: 2`: Player identity badge (`#identity-badge`)
+  2. `order: 2`: Player identity badge (`#identity-badge`) (dynamically expands across available horizontal space with ellipsis truncation)
   3. `order: 3`: Navigation links (`.header-nav-bar`)
   4. `order: 4`: PWA install button (`#pwa-install-btn`)
   5. `order: 5`: Settings menu (`#settings-dropdown`)

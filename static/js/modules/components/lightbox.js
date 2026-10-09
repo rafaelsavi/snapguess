@@ -1,5 +1,5 @@
 /**
- * Photo Lightbox Component for Immich Quiz.
+ * Photo Lightbox Component for SnapGuess.
  *
  * Provides a modal fullscreen photo preview with mobile pinch-to-zoom,
  * double-tap to zoom, drag-to-pan, escape key dismissal,

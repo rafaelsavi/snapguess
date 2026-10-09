@@ -92,7 +92,7 @@
       "args": [
         "build",
         "-t",
-        "immich-quiz",
+        "snapguess",
         "."
       ],
       "problemMatcher": []
@@ -108,7 +108,7 @@
         "8010:8010",
         "--env-file",
         ".env",
-        "immich-quiz"
+        "snapguess"
       ],
       "problemMatcher": []
     }

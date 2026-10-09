@@ -1,6 +1,6 @@
 # Scoring System
 
-Immich Quiz awards up to **100 points** for each enabled objective in a round (Location and/or Date). The scoring style depends on the game mode:
+SnapGuess awards up to **100 points** for each enabled objective in a round (Location and/or Date). The scoring style depends on the game mode:
 
 - **Pinpoint**: Uses exponential decay—the closer your guess, the more points you get.
 - **Unshuffle**: Uses strict matching—points are split evenly among correctly matched or sequenced photos in the batch.

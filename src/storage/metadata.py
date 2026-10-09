@@ -212,7 +212,7 @@ class AssetFilterCriteria:
 
 
 class MetadataStore:
-    """Manages SQLite-based metadata storage, indexing, and unified filtering for Immich Quiz."""
+    """Manages SQLite-based metadata storage, indexing, and unified filtering for SnapGuess."""
 
     def __init__(self, db: DatabaseManager) -> None:
         self._db = db
