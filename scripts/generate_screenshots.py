@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Automated script to generate high-resolution, privacy-safe, anonymized screenshots
-for Immich Quiz documentation and README.
+for SnapGuess documentation and README.
 """
 
 from __future__ import annotations
@@ -214,7 +214,7 @@ async def main() -> None:
         settings = AppSettings(
             immich_server_url='https://photos.example.com/api',
             immich_libraries={'Family': 'token123'},
-            app_title='Immich Quiz',
+            app_title='SnapGuess',
             app_host='127.0.0.1',
             app_port=port,
             language='EN',

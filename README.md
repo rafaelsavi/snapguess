@@ -1,13 +1,13 @@
-# 📸 Immich Quiz
+# 📸 SnapGuess
 
 <p align="center">
   <strong>Turn your self-hosted Immich photo library into an interactive, multiplayer trivia game.</strong>
 </p>
 
 <p align="center">
-  <a href="https://github.com/rafaelsavi/immich-quiz/releases"><img src="https://img.shields.io/github/v/release/rafaelsavi/immich-quiz?color=blue&logo=github&label=release" alt="GitHub Release"></a>
-  <a href="https://github.com/rafaelsavi/immich-quiz/pkgs/container/immich-quiz"><img src="https://img.shields.io/badge/docker-ghcr.io%2Frafaelsavi%2Fimmich--quiz-blue?logo=docker" alt="GHCR Container"></a>
-  <a href="https://github.com/rafaelsavi/immich-quiz/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/rafaelsavi/immich-quiz/ci.yml?branch=main&label=CI&logo=githubactions" alt="CI Status"></a>
+  <a href="https://github.com/rafaelsavi/snapguess/releases"><img src="https://img.shields.io/github/v/release/rafaelsavi/snapguess?color=blue&logo=github&label=release" alt="GitHub Release"></a>
+  <a href="https://github.com/rafaelsavi/snapguess/pkgs/container/snapguess"><img src="https://img.shields.io/badge/docker-ghcr.io%2Frafaelsavi%2Fsnapguess-blue?logo=docker" alt="GHCR Container"></a>
+  <a href="https://github.com/rafaelsavi/snapguess/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/rafaelsavi/snapguess/ci.yml?branch=main&label=CI&logo=githubactions" alt="CI Status"></a>
   <a href="https://github.com/immich-app/immich"><img src="https://img.shields.io/badge/immich-v1.118+-5c6bc0?logo=googlephotos" alt="Immich Compatibility"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/i18n-en--US%20%7C%20pt--BR-orange" alt="Supported Locales">
@@ -25,7 +25,7 @@
 
 ---
 
-![Immich Quiz - Round Reveal Screen](docs/assets/round_reveal.webp)
+![SnapGuess - Round Reveal Screen](docs/assets/round_reveal.webp)
 
 <p align="center">
   <em>Challenge your memory of where and when your photos were taken. See distance vectors, score rollups, and exact capture dates.</em>
@@ -96,14 +96,14 @@ See [docs/GAMEPLAY.md](docs/GAMEPLAY.md) for the full gameplay walkthrough, [doc
 
 The official Docker image is published to GitHub Container Registry (GHCR):
 
-`ghcr.io/rafaelsavi/immich-quiz`
+`ghcr.io/rafaelsavi/snapguess`
 
 | Tag                  | Description                                                | Command                                             |
 |----------------------|------------------------------------------------------------|-----------------------------------------------------|
-| `:latest`            | Latest official stable release (multi-arch: amd64 / arm64) | `docker pull ghcr.io/rafaelsavi/immich-quiz:latest` |
-| `:rc`                | Latest Release Candidate build                             | `docker pull ghcr.io/rafaelsavi/immich-quiz:rc`     |
-| `:v3.2.1` / `:3.2.1` | Specific semantic release version                          | `docker pull ghcr.io/rafaelsavi/immich-quiz:v3.2.1` |
-| `:<sha>`             | Exact commit hash build                                    | `docker pull ghcr.io/rafaelsavi/immich-quiz:<sha>`  |
+| `:latest`            | Latest official stable release (multi-arch: amd64 / arm64) | `docker pull ghcr.io/rafaelsavi/snapguess:latest` |
+| `:rc`                | Latest Release Candidate build                             | `docker pull ghcr.io/rafaelsavi/snapguess:rc`     |
+| `:v3.2.1` / `:3.2.1` | Specific semantic release version                          | `docker pull ghcr.io/rafaelsavi/snapguess:v3.2.1` |
+| `:<sha>`             | Exact commit hash build                                    | `docker pull ghcr.io/rafaelsavi/snapguess:<sha>`  |
 
 ### Quick Start
 
@@ -118,7 +118,6 @@ Use the example files:
 |----------------------------------|----------|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `IMMICH_SERVER_URL`              | Yes      | —             | Full URL to the Immich API, e.g. `https://photos.example.com/api`                                                                                                                                                |
 | `IMMICH_LIBRARIES`               | Yes      | —             | JSON object mapping display names to API keys, e.g. `{"Family": "key123"}`                                                                                                                                       |
-| `APP_TITLE`                      | No       | `Immich Quiz` | Browser tab title and main heading shown on the landing page                                                                                                                                                     |
 | `APP_HOST`                       | No       | `127.0.0.1`   | Set to `0.0.0.0` in Docker so the port is reachable from the host                                                                                                                                                |
 | `APP_PORT`                       | No       | `8010`        | Port the app listens on                                                                                                                                                                                          |
 | `LANGUAGE`                       | No       | `en-US`       | UI language (`en-US` for English, `pt-BR` for Brazilian Portuguese)                                                                                                                                              |
@@ -147,7 +146,7 @@ Use the example files:
 
 ## 🔐 Role-Based Access Control (Zero Trust)
 
-Immich Quiz features a zero-trust, role-based access control (RBAC) architecture to separate host administration from player gameplay:
+SnapGuess features a zero-trust, role-based access control (RBAC) architecture to separate host administration from player gameplay:
 
 | Role | Lobby View | Challenges Hub | Stats & Directory | Replay Viewer | Library Config & Moderation |
 |:---|:---|:---|:---|:---|:---|

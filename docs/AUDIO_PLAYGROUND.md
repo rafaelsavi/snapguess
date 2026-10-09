@@ -1,6 +1,6 @@
 # Sound & Audio Testing Playground
 
-Immich Quiz features a zero-dependency, local-first sound engine built directly on the browser **Web Audio API** in [`static/js/modules/audio.js`](../static/js/modules/audio.js).
+SnapGuess features a zero-dependency, local-first sound engine built directly on the browser **Web Audio API** in [`static/js/modules/audio.js`](../static/js/modules/audio.js).
 
 To facilitate testing, tuning, and designing sound effects without having to play through full game rounds, an interactive **Audio Testing Playground** is included in the project.
 
@@ -17,7 +17,7 @@ When the app server is running (e.g., via `uv run python -m src.main` or Docker)
 
 ## Sound Engine Architecture (`audio.js`)
 
-All sound effects in Immich Quiz are synthesized dynamically at runtime using browser Web Audio oscillators (`OscillatorNode` + `GainNode`). No external audio file assets (such as MP3 or WAV files) are required.
+All sound effects in SnapGuess are synthesized dynamically at runtime using browser Web Audio oscillators (`OscillatorNode` + `GainNode`). No external audio file assets (such as MP3 or WAV files) are required.
 
 ### Core Exported Functions
 

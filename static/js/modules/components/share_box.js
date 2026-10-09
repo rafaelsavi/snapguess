@@ -1,5 +1,5 @@
 /**
- * Standardized Share Box & URL Container Component for Immich Quiz.
+ * Standardized Share Box & URL Container Component for SnapGuess.
  *
  * Provides a reusable, uniform interface for sharing capability URLs and challenge links:
  *  1. Clickable URL input box with copy-on-click
@@ -196,7 +196,7 @@ export function setupShareBox(containerOrElements, url, options = {}) {
           if (!currentUrl) return;
           try {
             await navigator.share({
-              title: options.title || t("challenge.invite_message") || "Immich Quiz Challenge",
+              title: options.title || t("challenge.invite_message") || "SnapGuess Challenge",
               url: currentUrl,
             });
           } catch (_) {}

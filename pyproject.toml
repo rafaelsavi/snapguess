@@ -3,8 +3,8 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "immich-quiz"
-version = "3.4.0"
+name = "snapguess"
+version = "4.0.0"
 description = "Trivia game powered by Immich libraries"
 readme = "README.md"
 requires-python = ">=3.13"

@@ -1,12 +1,12 @@
 # Library & Photo Filters Architecture (`docs/FILTERS.md`)
 
-This document provides a comprehensive technical guide to the **Library & Photo Filters** engine in **Immich Quiz**: the two-layer evaluation architecture, dynamic faceted search mechanics, structural filter hierarchies, preflight validation lifecycle, and state persistence.
+This document provides a comprehensive technical guide to the **Library & Photo Filters** engine in **SnapGuess**: the two-layer evaluation architecture, dynamic faceted search mechanics, structural filter hierarchies, preflight validation lifecycle, and state persistence.
 
 ---
 
 ## 1. Overview & Core Mental Model
 
-Filters in Immich Quiz operate as a **Real-Time Dynamic Faceted Search Engine** (similar to modern e-commerce product catalogs).
+Filters in SnapGuess operate as a **Real-Time Dynamic Faceted Search Engine** (similar to modern e-commerce product catalogs).
 
 Instead of a rigid one-way navigation tree where selecting one category locks out all others, **all active filter dimensions simultaneously narrow a single central candidate photo pool**. When the pool shrinks, the server recalculates option counts, and options with **0 matching photos are automatically hidden** to prevent dead-end configurations.
 

@@ -1,6 +1,6 @@
-# How to Play Immich Quiz
+# How to Play SnapGuess
 
-Immich Quiz turns photos from your Immich library into a guessing game. See how well you remember where a photo was taken, when it was captured, or both.
+SnapGuess turns photos from your Immich library into a guessing game. See how well you remember where a photo was taken, when it was captured, or both.
 
 The game supports two distinct play modes:
 

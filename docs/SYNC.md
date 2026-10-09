@@ -1,12 +1,12 @@
 # Metadata Synchronization & Storage Engine (`docs/SYNC.md`)
 
-This document provides a comprehensive guide to the **Metadata Synchronization Engine** in **Immich Quiz**. It details the architecture, database schema, synchronization modes (Full vs. Delta), background scheduling, API integration, and performance characteristics.
+This document provides a comprehensive guide to the **Metadata Synchronization Engine** in **SnapGuess**. It details the architecture, database schema, synchronization modes (Full vs. Delta), background scheduling, API integration, and performance characteristics.
 
 ---
 
 ## 1. Overview & Purpose
 
-Immich Quiz indexes photo metadata into a local, high-performance SQLite database (`data/metadata.db`).
+SnapGuess indexes photo metadata into a local, high-performance SQLite database (`data/metadata.db`).
 
 ### Why Local Metadata Indexing?
 

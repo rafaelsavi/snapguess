@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unified verification script for Immich Quiz.
+"""Unified verification script for SnapGuess.
 
 Runs all linting, formatting, type checking, test suites, and version/changelog
 validations identically both locally and in CI.
@@ -288,7 +288,7 @@ def validate_version_and_changelog() -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='Unified verification runner for Immich Quiz')
+    parser = argparse.ArgumentParser(description='Unified verification runner for SnapGuess')
     parser.add_argument('--fix', action='store_true', help='Auto-fix formatting and lint errors')
     parser.add_argument('--quick', action='store_true', help='Run tests without coverage')
     parser.add_argument('--skip-tests', action='store_true', help='Skip pytest test suite')
@@ -310,7 +310,7 @@ def main() -> None:
     args = parser.parse_args()
 
     total_start = time.perf_counter()
-    log_header('IMMICH QUIZ QUALITY VERIFICATION')
+    log_header('SNAPGUESS QUALITY VERIFICATION')
 
     # 1. Format
     check_formatting(args.fix)

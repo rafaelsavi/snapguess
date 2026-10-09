@@ -16,7 +16,6 @@ def isolated_env(monkeypatch: pytest.MonkeyPatch) -> None:
     for key in (
         'IMMICH_SERVER_URL',
         'IMMICH_LIBRARIES',
-        'APP_TITLE',
         'APP_HOST',
         'APP_PORT',
         'DATE_LOWER_BOUND',
@@ -89,7 +88,7 @@ def test_valid_settings_normalizes_url(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert settings.immich_server_url == 'https://example.test/api'
     assert settings.immich_libraries == {'family': 'token'}
-    assert settings.app_title == 'Immich Quiz'
+    assert settings.app_title == 'SnapGuess'
     assert settings.app_host == '127.0.0.1'
     assert settings.app_port == 8010
     assert settings.date_lower_bound is None
@@ -155,16 +154,6 @@ def test_date_bounds_reject_inverted_range(monkeypatch: pytest.MonkeyPatch) -> N
 
     with pytest.raises(ConfigError, match='on or before'):
         load_settings()
-
-
-def test_custom_app_title(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv('IMMICH_SERVER_URL', 'https://example.test/api')
-    monkeypatch.setenv('IMMICH_LIBRARIES', '{"family": "token"}')
-    monkeypatch.setenv('APP_TITLE', 'Quiz Night')
-
-    settings = load_settings()
-
-    assert settings.app_title == 'Quiz Night'
 
 
 def test_language_setting_supports_pt(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -330,7 +319,7 @@ def test_app_settings_dataclass_defaults() -> None:
     )
     assert settings.immich_server_url == 'https://example.test/api'
     assert settings.immich_libraries == {'family': 'token'}
-    assert settings.app_title == 'Immich Quiz'
+    assert settings.app_title == 'SnapGuess'
     assert settings.app_host == '127.0.0.1'
     assert settings.app_port == 8010
     assert settings.language == SupportedLanguage.EN
@@ -375,7 +364,6 @@ def test_app_settings_dataclass_validations() -> None:
 def test_empty_and_whitespace_env_vars_fallback_to_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv('IMMICH_SERVER_URL', 'https://example.test/api')
     monkeypatch.setenv('IMMICH_LIBRARIES', '{"family": "token"}')
-    monkeypatch.setenv('APP_TITLE', '   ')
     monkeypatch.setenv('APP_HOST', '  ')
     monkeypatch.setenv('APP_PORT', '')
     monkeypatch.setenv('LANGUAGE', '  ')
@@ -385,7 +373,7 @@ def test_empty_and_whitespace_env_vars_fallback_to_defaults(monkeypatch: pytest.
     monkeypatch.setenv('AUTO_FULL_SYNC_INTERVAL_HOURS', '')
 
     settings = load_settings()
-    assert settings.app_title == 'Immich Quiz'
+    assert settings.app_title == 'SnapGuess'
     assert settings.app_host == '127.0.0.1'
     assert settings.app_port == 8010
     assert settings.language == SupportedLanguage.EN

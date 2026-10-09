@@ -1,4 +1,4 @@
-"""Domain models, request/response schemas, and validation logic for Immich Quiz."""
+"""Domain models, request/response schemas, and validation logic for SnapGuess."""
 
 from __future__ import annotations
 

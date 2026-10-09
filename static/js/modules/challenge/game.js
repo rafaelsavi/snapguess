@@ -1,5 +1,5 @@
 /**
- * Challenge Gameplay Controller for Immich Quiz.
+ * Challenge Gameplay Controller for SnapGuess.
  *
  * Coordinates question loading, active mode mounting, timer management,
  * and answer submission for async multiplayer challenge matches.

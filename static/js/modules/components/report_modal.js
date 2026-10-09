@@ -1,5 +1,5 @@
 /**
- * Report Issue Modal Component for Immich Quiz.
+ * Report Issue Modal Component for SnapGuess.
  * Allows players to report map/GPS or date inconsistencies and open direct source links in Immich Web.
  */
 
