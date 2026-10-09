@@ -2827,3 +2827,34 @@ def test_active_game_focus_mode_header_and_install_hiding() -> None:
 
     # 6. Documented in ARCHITECTURE.md
     assert 'Active Gameplay Focus Mode (`html.game-mode-active`)' in arch_md
+
+
+def test_header_brand_title_nowrap_and_identity_badge_bounds() -> None:
+    """Verify that .header-main and .header-main h1 enforce white-space: nowrap and
+    flex-shrink: 0 without word-break to prevent the brand title from breaking across
+    multiple lines, while navigation and settings controls are protected with flex-shrink: 0
+    allowing the identity badge to use all available horizontal space dynamically.
+    """
+    layout_css = (STATIC_DIR / 'css' / 'base' / 'layout.css').read_text(encoding='utf-8')
+    auth_css = (STATIC_DIR / 'css' / 'components' / 'auth.css').read_text(encoding='utf-8')
+
+    # 1. Base app-header enforces full width containment
+    assert 'width: 100%;\n  max-width: 100%;\n  min-width: 0;\n  box-sizing: border-box;' in layout_css
+
+    # 2. Base header-main has flex: 0 0 auto and h1 enforces constant 2.25rem and white-space: nowrap
+    assert '.header-main {\n  min-width: 0;\n  flex: 0 0 auto;\n}' in layout_css
+    assert 'font-size: 2.25rem;' in layout_css
+    assert 'white-space: nowrap;' in layout_css
+    assert 'word-break: break-word;' not in layout_css
+    assert 'overflow-wrap: break-word;' not in layout_css
+
+    # 3. Controls prevent flex shrinking so they are never bothered
+    assert '.header-main {\n    order: 1;\n    margin-right: auto;\n    flex-shrink: 0;\n  }' in layout_css
+    assert (
+        '.header-nav-bar {\n  display: flex;\n  align-items: center;\n  gap: 0.5rem;\n  flex-shrink: 0;\n}'
+        in layout_css
+    )
+    assert '#settings-dropdown,\n#pwa-install-btn {\n  flex-shrink: 0;\n}' in layout_css
+
+    # 4. Mobile preserves mobile max-width containment
+    assert '@media (max-width: 760px) {\n  .identity-badge {\n    max-width: 220px;' in auth_css
