@@ -1,5 +1,5 @@
 /**
- * Dedicated Challenges Hub Page Controller for Immich Quiz.
+ * Dedicated Challenges Hub Page Controller for SnapGuess.
  *
  * Provides a comprehensive challenges management and discovery view:
  * - Real-time statistics overview (Active challenges, total players, most popular)
@@ -534,7 +534,7 @@ export function renderChallenges() {
       if (drawerEl) {
         setupShareBox(drawerEl, ch.play_url, {
           prefix: `hub-share-${chId}`,
-          title: ch.title || "Immich Quiz Challenge",
+          title: ch.title || "SnapGuess Challenge",
         });
       }
     }
@@ -578,7 +578,7 @@ export function toggleChallengeShare(challengeId, playUrl) {
     const ch = _challenges.find((c) => c.challenge_id === challengeId);
     setupShareBox(drawerEl, playUrl, {
       prefix: `hub-share-${challengeId}`,
-      title: ch?.title || "Immich Quiz Challenge",
+      title: ch?.title || "SnapGuess Challenge",
     });
   }
   if (btn) {

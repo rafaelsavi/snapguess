@@ -287,6 +287,7 @@ async def test_challenge_individual_icon_colors_e2e(page: Page, e2e_server: str)
     # Type name and verify avatar initial updates dynamically
     await page.locator('#player-name-input').fill('Alice')
     await expect(avatar_preview).to_have_text('A')
+    await page.wait_for_timeout(250)
 
     # Get avatar background color for Player 1
     p1_bg_color = await avatar_preview.evaluate('el => getComputedStyle(el).backgroundColor')

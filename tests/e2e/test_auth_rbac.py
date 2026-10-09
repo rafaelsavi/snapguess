@@ -129,3 +129,79 @@ async def test_auth_user_permissions_and_identity_badge(page: Page) -> None:
     await page.locator('#home-quick-players').click()
     await page.wait_for_url('**/players')
     await expect(page.locator('#stats-page-card')).to_be_visible()
+
+
+async def test_header_brand_title_nowrap_across_resolutions(page: Page) -> None:
+    """Verify that the brand title 'SnapGuess' never breaks into multiple lines across
+    mobile, tablet, and desktop viewports, even when an identity badge with a long name
+    is present, and verify that identity-badge dynamically expands while nav and settings
+    are never squished or clipped.
+    """
+    await page.route(
+        '**/api/auth/me',
+        lambda route: route.fulfill(
+            status=200,
+            json={
+                'role': 'creator',
+                'email': 'verylonghostname@example.com',
+                'name': 'Hostffffffffffffffffffffffffffffff',
+                'authenticated': True,
+            },
+        ),
+    )
+    prev_badge_width = 0.0
+    for width in [360, 390, 768, 850, 1024, 1280]:
+        await page.set_viewport_size({'width': width, 'height': 800})
+        await page.goto('/')
+        h1 = page.locator('.header-main h1')
+        badge = page.locator('#identity-badge')
+        nav = page.locator('.header-nav-bar')
+        settings_btn = page.locator('#settings-dropdown')
+
+        await expect(h1).to_be_visible()
+        await expect(badge).to_be_visible()
+        await expect(nav).to_be_visible()
+        await expect(settings_btn).to_be_visible()
+
+        text = await h1.inner_text()
+        assert text.startswith('SnapGuess')
+
+        h1_box = await h1.bounding_box()
+        badge_box = await badge.bounding_box()
+        nav_box = await nav.bounding_box()
+        settings_box = await settings_btn.bounding_box()
+
+        assert h1_box is not None
+        assert badge_box is not None
+        assert nav_box is not None
+        assert settings_box is not None
+
+        # Verify nav and settings maintain unbothered touch targets
+        assert settings_box['width'] >= 38.0
+        assert nav_box['width'] >= 180.0
+
+        metrics = await page.evaluate(
+            """() => {
+                const el = document.querySelector('.header-main h1');
+                const style = window.getComputedStyle(el);
+                return {
+                    clientHeight: el.clientHeight,
+                    fontSize: parseFloat(style.fontSize),
+                    whiteSpace: style.whiteSpace,
+                    scrollWidth: document.documentElement.scrollWidth,
+                    clientWidth: document.documentElement.clientWidth
+                };
+            }"""
+        )
+        assert metrics['whiteSpace'] == 'nowrap'
+        assert metrics['clientHeight'] <= metrics['fontSize'] * 1.8
+        assert metrics['scrollWidth'] == metrics['clientWidth']
+
+        # Verify font size remains strictly constant across all desktop viewports (> 760px)
+        if width >= 768:
+            assert metrics['fontSize'] == 36.0
+
+        # Verify badge dynamically expands as desktop viewport widens
+        if width in [768, 850, 1024]:
+            assert badge_box['width'] >= prev_badge_width
+        prev_badge_width = badge_box['width']

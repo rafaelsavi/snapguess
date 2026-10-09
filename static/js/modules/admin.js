@@ -1,5 +1,5 @@
 /**
- * Unified Prepare Game & Challenge Creator Module for Immich Quiz.
+ * Unified Prepare Game & Challenge Creator Module for SnapGuess.
  * Handles opening the 2-tab "Prepare Game" modal (Local Match & Challenge),
  * local player name configuration, preflight checking, auto-title generation,
  * async multiplayer challenge creation, and clipboard link sharing.
@@ -398,7 +398,7 @@ function displayShareResult(challengeData) {
     qrBtnId: "challenge-qr-btn",
     qrContainerId: "challenge-qr-container",
     qrDisplayId: "challenge-qr-code",
-    title: challengeData?.title || "Immich Quiz Challenge",
+    title: challengeData?.title || "SnapGuess Challenge",
     qrSize: 180,
   });
 

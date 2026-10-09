@@ -970,7 +970,7 @@ def test_asset_filter_criteria_from_setup_factory() -> None:
     settings = AppSettings(
         immich_server_url='http://immich.local',
         immich_libraries={'family': 'key'},
-        app_title='Immich Quiz',
+        app_title='SnapGuess',
         date_lower_bound=date(2020, 1, 1),
         date_upper_bound=date(2024, 12, 31),
         app_host='127.0.0.1',

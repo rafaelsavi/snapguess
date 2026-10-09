@@ -90,7 +90,7 @@ This document provides context, architectural constraints, and standards for AI 
 - **Header Architecture on Mobile**:
   - **No Squished Brand Titles**: Never place an expanding or fixed button group in a single flex row alongside `.header-main` or page titles without wrapping.
   - **Standardized Mobile App Header**: `.app-header` MUST use the structured 2-row layout on viewports <= 760px:
-    - Row 1: Brand title `Immich Quiz` (`.header-main`) and utility controls (`.header-utility-actions`: `#identity-badge`, `#pwa-install-btn`, `#settings-dropdown`).
+    - Row 1: Brand title `SnapGuess` (`.header-main`) and utility controls (`.header-utility-actions`: `#identity-badge`, `#pwa-install-btn`, `#settings-dropdown`).
     - Row 2: Dedicated full-width navigation bar (`.header-nav-bar`) with equal-spaced touch targets for Home, Challenges (with badge), Players, and Replays.
   - **Hub Headers on Mobile**: In `.hub-page-header`, when a back button is present, use clean mobile wrapping (back button and badges/actions on top row, full-width title and subtitle below).
   - **Safe Dropdown Positioning**: Dropdowns (such as `.settings-menu`) must never overflow viewport bounds (`right: 0`, safe padding).

@@ -1,5 +1,5 @@
 /**
- * Reported Asset Moderation Screen Controller for Immich Quiz.
+ * Reported Asset Moderation Screen Controller for SnapGuess.
  *
  * Provides review dashboard for flagged/reported assets:
  * - Direct deep links to Immich Web for quick metadata correction

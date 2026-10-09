@@ -85,4 +85,4 @@ def test_changelog_contains_current_version() -> None:
 def test_service_worker_contains_current_version(client: TestClient) -> None:
     response = client.get('/sw.js')
     assert response.status_code == 200
-    assert f"const CACHE_NAME = 'immich-quiz-v{APP_VERSION}';" in response.text
+    assert f"const CACHE_NAME = 'snapguess-v{APP_VERSION}';" in response.text

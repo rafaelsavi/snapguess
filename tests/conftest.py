@@ -1,4 +1,4 @@
-"""Shared pytest fixtures, test data builders, and mock helpers for Immich Quiz test suite."""
+"""Shared pytest fixtures, test data builders, and mock helpers for SnapGuess test suite."""
 
 from __future__ import annotations
 
@@ -317,7 +317,7 @@ def seed_test_metadata(
 def build_client(
     tmp_path: Path,
     immich: FakeImmichClient,
-    app_title: str = 'Immich Quiz',
+    app_title: str = 'SnapGuess',
     date_lower_bound: date | None = None,
     date_upper_bound: date | None = None,
     language: str = 'EN',

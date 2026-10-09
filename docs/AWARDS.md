@@ -1,6 +1,6 @@
 # Performance Awards Guide & Customization
 
-This guide documents all end-of-match performance awards in **Immich Quiz**, their evaluation criteria, default thresholds, and instructions on how to customize them.
+This guide documents all end-of-match performance awards in **SnapGuess**, their evaluation criteria, default thresholds, and instructions on how to customize them.
 
 ---
 

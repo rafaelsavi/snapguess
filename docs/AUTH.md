@@ -1,6 +1,6 @@
 # Authentication & Access Control (Zero Trust)
 
-Immich Quiz provides a zero-trust, role-based access control (RBAC) architecture designed to secure administrative host controls while delivering a frictionless gameplay experience for players and guests.
+SnapGuess provides a zero-trust, role-based access control (RBAC) architecture designed to secure administrative host controls while delivering a frictionless gameplay experience for players and guests.
 
 ---
 
@@ -65,7 +65,7 @@ When `AUTH_MODE=cloudflare`:
 
 ## 3. Identity & Display Name Resolution
 
-Immich Quiz determines the active player's display name and email address using a prioritized resolution waterfall:
+SnapGuess determines the active player's display name and email address using a prioritized resolution waterfall:
 
 ```mermaid
 flowchart TD
@@ -107,7 +107,7 @@ flowchart TD
 
 ## 4. Reverse Proxy Integration
 
-When running behind Caddy, Nginx, or Traefik, your reverse proxy can pass client identities straight to Immich Quiz.
+When running behind Caddy, Nginx, or Traefik, your reverse proxy can pass client identities straight to SnapGuess.
 
 ### Caddyfile Examples
 
@@ -204,8 +204,8 @@ To pass the real user name from your identity provider (Google, Microsoft, GitHu
    - `given_name` (First Name)
    - `family_name` (Last Name)
    - `email` (Email Address)
-5. Under your Access Application (**Applications** > your Immich Quiz app), ensure the identity provider policy is attached.
-6. Cloudflare will include these attributes in the `Cf-Access-Jwt-Assertion` token payload (either at root or inside `oidc_fields`). Immich Quiz will automatically parse and display the full player name on screen.
+5. Under your Access Application (**Applications** > your SnapGuess app), ensure the identity provider policy is attached.
+6. Cloudflare will include these attributes in the `Cf-Access-Jwt-Assertion` token payload (either at root or inside `oidc_fields`). SnapGuess will automatically parse and display the full player name on screen.
 
 ---
 

@@ -1,4 +1,4 @@
-"""Observability and structured logging package for Immich Quiz."""
+"""Observability and structured logging package for SnapGuess."""
 
 from __future__ import annotations
 

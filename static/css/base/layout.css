@@ -31,6 +31,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .header-brand-row {
@@ -39,28 +43,33 @@
 
 .header-main {
   min-width: 0;
-  flex: 1;
+  flex: 0 0 auto;
 }
 
 .header-main h1 {
   margin: 0;
   font-family: "Fraunces", serif;
-  font-size: clamp(1.6rem, 5vw, 3rem);
+  font-size: 2.25rem;
   line-height: 1.15;
-  word-break: break-word;
-  overflow-wrap: break-word;
+  white-space: nowrap;
 }
 
 .header-nav-bar {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .header-utility-actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+#settings-dropdown,
+#pwa-install-btn {
   flex-shrink: 0;
 }
 
@@ -71,6 +80,7 @@
   .header-main {
     order: 1;
     margin-right: auto;
+    flex-shrink: 0;
   }
   .header-utility-actions {
     display: contents;

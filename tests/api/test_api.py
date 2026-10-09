@@ -1488,7 +1488,7 @@ def test_webmanifest_endpoint(client: TestClient) -> None:
         assert response.status_code == 200
         assert response.headers['content-type'].startswith('application/manifest+json')
         data = response.json()
-        assert data['name'] == 'Immich Quiz'
+        assert data['name'] == 'SnapGuess'
         assert data['display'] == 'standalone'
         assert len(data['icons']) > 0
 
@@ -1501,7 +1501,7 @@ def test_service_worker_endpoint(client: TestClient) -> None:
     assert 'javascript' in response.headers['content-type']
     assert response.headers.get('service-worker-allowed') == '/'
     assert response.headers.get('cache-control') == 'no-cache, must-revalidate'
-    assert f"const CACHE_NAME = 'immich-quiz-v{APP_VERSION}';" in response.text
+    assert f"const CACHE_NAME = 'snapguess-v{APP_VERSION}';" in response.text
 
 
 def test_index_accept_language_negotiation(client: TestClient) -> None:

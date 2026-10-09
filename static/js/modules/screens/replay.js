@@ -44,7 +44,7 @@ export function initReplay() {
       if (navigator.share && navigator.canShare && navigator.canShare({ url })) {
         try {
           await navigator.share({
-            title: tOr("replay.title", "Immich Quiz Match Replay"),
+            title: tOr("replay.title", "SnapGuess Match Replay"),
             url,
           });
           return;

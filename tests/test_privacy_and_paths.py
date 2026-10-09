@@ -141,7 +141,7 @@ def test_scanner_detects_violations_correctly() -> None:
 
     sample_violations = [
         "screenshot_dir = Path('C:/Users/JohnDoe/.gemini/antigravity-ide/brain/12345')",
-        'file_path = "D:\\Projects\\immich-quiz\\data\\test.db"',
+        'file_path = "D:\\Projects\\snapguess\\data\\test.db"',
         'cache_path = "/home/developer/.cache/app"',
         'artifact_dir = "C:\\\\Users\\\\Admin\\\\AppData"',
     ]

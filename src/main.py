@@ -98,7 +98,7 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.info(
-            '🚀 Immich Quiz v%s starting up (Host: %s:%d, Data: %s, Log Level: %s)',
+            '🚀 SnapGuess v%s starting up (Host: %s:%d, Data: %s, Log Level: %s)',
             APP_VERSION,
             settings.app_host,
             settings.app_port,
@@ -162,7 +162,7 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
         try:
             yield
         finally:
-            logger.info('🛑 Immich Quiz server shutting down')
+            logger.info('🛑 SnapGuess server shutting down')
             for t in periodic_tasks:
                 t.cancel()
             active_sync_engine = getattr(app.state, 'sync_engine', None)
@@ -180,7 +180,7 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
                 leaderboard_db.checkpoint(mode='TRUNCATE')
                 leaderboard_db.optimize()
 
-    app = FastAPI(title='Immich Quiz', version=APP_VERSION, lifespan=lifespan)
+    app = FastAPI(title='SnapGuess', version=APP_VERSION, lifespan=lifespan)
     app.state.settings = settings
     app.state.session_store = session_store
     app.state.immich_client = immich_client
@@ -268,7 +268,7 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
 try:
     app = create_app()
 except ConfigError as exc:
-    app = FastAPI(title='Immich Quiz', version=APP_VERSION)
+    app = FastAPI(title='SnapGuess', version=APP_VERSION)
     config_error = str(exc)
 
     @app.get('/')

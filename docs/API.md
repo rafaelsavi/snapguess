@@ -1283,7 +1283,7 @@ Response (`200 OK`):
 
 ## Anti-Cheat & Security Model
 
-Immich Quiz implements multi-layered security controls across both Local and Challenge modes:
+SnapGuess implements multi-layered security controls across both Local and Challenge modes:
 
 ### 1. Sanitized Question Payloads
 

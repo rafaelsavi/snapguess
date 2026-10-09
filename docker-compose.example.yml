@@ -1,7 +1,7 @@
 services:
-  immich-quiz:
-    image: ghcr.io/rafaelsavi/immich-quiz:latest
-    container_name: immich-quiz
+  snapguess:
+    image: ghcr.io/rafaelsavi/snapguess:latest
+    container_name: snapguess
     restart: unless-stopped
     # Non-root user execution (UID:GID 1000:1000) for security hardening
     user: "1000:1000"
@@ -15,7 +15,7 @@ services:
     networks:
       - quiz-net
     # Security: Do NOT mount /var/run/docker.sock
-    # Cloudflare Tunnel: Connect cloudflared to quiz-net or route to http://immich-quiz:8010
+    # Cloudflare Tunnel: Connect cloudflared to quiz-net or route to http://snapguess:8010
 
 networks:
   quiz-net:
