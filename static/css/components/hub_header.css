@@ -195,7 +195,9 @@
   }
 
   .hub-page-header:has(.page-back-btn:not(.hidden)) .hub-page-title-group,
-  .hub-page-header.has-back-btn .hub-page-title-group {
+  .hub-page-header:has(.page-back-btn:not(.hidden)) .stats-profile-hero,
+  .hub-page-header.has-back-btn .hub-page-title-group,
+  .hub-page-header.has-back-btn .stats-profile-hero {
     order: 2;
     flex: 1 1 100%;
     width: 100%;

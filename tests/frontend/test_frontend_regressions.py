@@ -2913,7 +2913,11 @@ def test_general_back_button_strategy_and_router_history_tracking() -> None:
     assert 'profile-header-top' not in stats_js
     assert 'player-profile-header' not in stats_js
     assert 'player-profile-header' not in stats_css
+    assert 'player-profile-hero' not in stats_js
+    assert 'player-profile-hero' not in stats_css
     assert '<div class="replay-header-main">\n            <button type="button" id="replay-back-btn"' in index_html
     assert 'id="profile-back-to-hub-btn"' in index_html
+    assert 'id="stats-profile-header-main"' in index_html
+    assert 'id="profile-hero-name"' in index_html
     assert 'id="summary-back-btn"' in index_html
     assert '<div id="review-header-summary" class="summary-page-header replay-page-header">' in index_html

@@ -113,11 +113,15 @@ export function showPlayerDirectory(initialSearch = null) {
 
   const profileView = document.getElementById("stats-profile-view");
   const playersView = document.getElementById("stats-players-view");
+  const directoryTitle = document.getElementById("stats-directory-title-group");
+  const profileHeader = document.getElementById("stats-profile-header-main");
   const heading = document.getElementById("stats-page-heading");
   const desc = document.getElementById("stats-page-desc");
   const backBtn = document.getElementById("profile-back-to-hub-btn");
 
   if (backBtn) backBtn.classList.add("hidden");
+  if (profileHeader) profileHeader.classList.add("hidden");
+  if (directoryTitle) directoryTitle.classList.remove("hidden");
   if (profileView) profileView.classList.add("hidden");
   if (playersView) playersView.classList.remove("hidden");
 
@@ -342,20 +346,30 @@ export async function showPlayerProfile(playerName) {
   showCard(el.statsPageCard);
 
   const profileView = document.getElementById("stats-profile-view");
-  const heading = document.getElementById("stats-page-heading");
-  const desc = document.getElementById("stats-page-desc");
+  const directoryTitle = document.getElementById("stats-directory-title-group");
+  const profileHeader = document.getElementById("stats-profile-header-main");
   const backBtn = document.getElementById("profile-back-to-hub-btn");
+  const avatarEl = document.getElementById("profile-hero-avatar");
+  const nameEl = document.getElementById("profile-hero-name");
+  const badgesEl = document.getElementById("profile-hero-badges");
 
   if (backBtn) backBtn.classList.remove("hidden");
+  if (directoryTitle) directoryTitle.classList.add("hidden");
+  if (profileHeader) profileHeader.classList.remove("hidden");
   document.getElementById("stats-players-view")?.classList.add("hidden");
 
-  if (heading) {
-    heading.setAttribute("data-i18n", "stats.profile_title");
-    heading.textContent = t("stats.profile_title");
+  const initial = (playerName || "?").charAt(0).toUpperCase();
+  const color = playerColor(playerName);
+  if (avatarEl) {
+    avatarEl.textContent = initial;
+    avatarEl.style.backgroundColor = color;
+    avatarEl.className = "player-hero-avatar";
   }
-  if (desc) {
-    desc.removeAttribute("data-i18n");
-    desc.textContent = playerName;
+  if (nameEl) {
+    nameEl.textContent = playerName;
+  }
+  if (badgesEl) {
+    badgesEl.innerHTML = "";
   }
 
   if (profileView) {
@@ -523,23 +537,30 @@ function renderPlayerProfile(data) {
         .join("")
     : `<tr><td colspan="${canWatchReplays ? 6 : 5}" style="text-align:center; color: var(--text-muted);">${t("stats.no_recent_matches")}</td></tr>`;
 
+  // Update hero header in .stats-page-header
+  const avatarEl = document.getElementById("profile-hero-avatar");
+  const nameEl = document.getElementById("profile-hero-name");
+  const badgesEl = document.getElementById("profile-hero-badges");
+
+  if (avatarEl) {
+    avatarEl.textContent = initial;
+    avatarEl.style.backgroundColor = color;
+    avatarEl.className = `player-hero-avatar ${isCurrentUser ? "is-current-user" : ""}`;
+  }
+  if (nameEl) {
+    nameEl.textContent = player.player_name;
+  }
+  if (badgesEl) {
+    badgesEl.innerHTML = `
+      ${isCurrentUser ? `<span class="player-hero-badge is-you">👤 ${t("stats.you_badge")}</span>` : ""}
+      ${isCurrentUser ? `<span class="player-hero-badge is-verified">✓ ${t("stats.verified_account")}</span>` : ""}
+      <span class="player-hero-badge">📅 ${t("stats.active_since", player.first_played_at ? formatDateTime(player.first_played_at) : "-")}</span>
+      <span class="player-hero-badge">⏱️ ${t("stats.last_played", player.last_played_at ? formatDateTime(player.last_played_at) : "-")}</span>
+    `;
+  }
+
   container.innerHTML = `
     <div class="player-profile-view">
-      <div class="player-profile-hero">
-        <div class="player-hero-avatar ${isCurrentUser ? "is-current-user" : ""}" style="background-color: ${color};">
-          ${initial}
-        </div>
-        <div>
-          <h2 class="player-hero-name">${escapeHtml(player.player_name)}</h2>
-          <div class="player-hero-badges">
-            ${isCurrentUser ? `<span class="player-hero-badge is-you">👤 ${t("stats.you_badge")}</span>` : ""}
-            ${isCurrentUser ? `<span class="player-hero-badge is-verified">✓ ${t("stats.verified_account")}</span>` : ""}
-            <span class="player-hero-badge">📅 ${t("stats.active_since", player.first_played_at ? formatDateTime(player.first_played_at) : "-")}</span>
-            <span class="player-hero-badge">⏱️ ${t("stats.last_played", player.last_played_at ? formatDateTime(player.last_played_at) : "-")}</span>
-          </div>
-        </div>
-      </div>
-
       <!-- Key Metrics Row -->
       <div class="player-kpis-grid">
         <div class="player-kpi-card">
@@ -711,11 +732,6 @@ export function refreshStatsPageLanguage() {
   const isProfileActive = profileView && !profileView.classList.contains("hidden");
 
   if (isProfileActive) {
-    const heading = document.getElementById("stats-page-heading");
-    if (heading) {
-      heading.setAttribute("data-i18n", "stats.profile_title");
-      heading.textContent = t("stats.profile_title");
-    }
     if (_cachedProfileData) {
       renderPlayerProfile(_cachedProfileData);
     }

@@ -8,8 +8,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from src.immich.client import AssetAnswer
-from src.models import GameSetupRequest, PinpointAnswerItem, PinpointDeviation
+from src.models import AssetAnswer, GameSetupRequest, PinpointAnswerItem, PinpointDeviation
 from src.scoring import DATE_MAX_DECAY_DAYS, LOCATION_MAX_DECAY_KM
 
 

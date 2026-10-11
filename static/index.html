@@ -846,15 +846,26 @@
           <span aria-hidden="true">←</span>
           <span data-i18n="common.back">Back</span>
         </button>
-        <div class="stats-page-title-group hub-page-title-group">
+
+        <!-- Directory Mode Title Group (visible on /players) -->
+        <div id="stats-directory-title-group" class="stats-page-title-group hub-page-title-group">
           <div class="stats-title-badge-row hub-title-badge-row">
             <span class="badge-stats hub-page-badge badge-players" data-i18n="nav.players">Players</span>
           </div>
-          <h2 id="stats-page-heading" class="hub-page-heading" data-i18n="stats.hub_title">Player Directory & Statistics
-          </h2>
+          <h2 id="stats-page-heading" class="hub-page-heading" data-i18n="stats.hub_title">Player Directory & Statistics</h2>
           <p id="stats-page-desc" class="stats-page-desc hub-page-desc" data-i18n="stats.hub_subtitle">Player legacy,
             career accuracy analytics, and competitive profiles.</p>
         </div>
+
+        <!-- Profile Mode Hero Header (visible on /players/:name) -->
+        <div id="stats-profile-header-main" class="stats-profile-hero hidden">
+          <div id="profile-hero-avatar" class="player-hero-avatar"></div>
+          <div class="player-hero-text">
+            <h2 id="profile-hero-name" class="player-hero-name"></h2>
+            <div id="profile-hero-badges" class="player-hero-badges"></div>
+          </div>
+        </div>
+
         <div class="stats-page-head-actions hub-page-head-actions">
           <button type="button" id="stats-page-refresh-btn" class="btn-icon-action" title="Refresh"
             aria-label="Refresh"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
 from typing import Any
@@ -15,6 +16,28 @@ from src.scoring import SCORE_MAX_POINTS
 # ---------------------------------------------------------------------------
 # Enums and Shared Primitives
 # ---------------------------------------------------------------------------
+
+
+@dataclass
+class AssetAnswer:
+    """Ground truth geographic and temporal metadata for an indexed or candidate photo asset."""
+
+    latitude: float | None
+    longitude: float | None
+    capture_datetime: datetime | None = None
+    city: str | None = None
+    state: str | None = None
+    country: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.latitude is not None and not (-90.0 <= self.latitude <= 90.0):
+            raise ValueError(f'latitude must be between -90.0 and 90.0, got {self.latitude}')
+        if self.longitude is not None and not (-180.0 <= self.longitude <= 180.0):
+            raise ValueError(f'longitude must be between -180.0 and 180.0, got {self.longitude}')
+
+    @property
+    def capture_date(self) -> date | None:
+        return self.capture_datetime.date() if self.capture_datetime is not None else None
 
 
 class RoundLength(str, Enum):

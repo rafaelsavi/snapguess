@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from src.immich.client import AssetAnswer
+from src.models import AssetAnswer
 from src.scoring import (
     DATE_MAX_DECAY_DAYS,
     DATE_MIN_DECAY_DAYS,

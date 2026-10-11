@@ -11,8 +11,7 @@ from src.game.selector import (
     select_batch_round_assets,
     select_pinpoint_round_asset,
 )
-from src.immich.client import AssetAnswer
-from src.models import GameSetupRequest, RoundLength
+from src.models import AssetAnswer, GameSetupRequest, RoundLength
 from src.storage.session import SessionStore
 
 

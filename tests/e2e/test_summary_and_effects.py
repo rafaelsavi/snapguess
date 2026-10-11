@@ -125,8 +125,7 @@ async def test_match_summary_player_name_opens_profile(page: Page) -> None:
 
     await expect(page).to_have_url(re.compile(r'/players/[^/]+$'))
     await expect(page.locator('#stats-profile-view')).to_be_visible()
-    await expect(page.locator('#stats-page-heading')).to_have_text('Player Profile')
-    await expect(page.locator('#stats-page-desc')).to_have_text(player_name)
+    await expect(page.locator('#profile-hero-name')).to_have_text(player_name)
 
 
 async def test_multiplayer_podium_and_winner_resolution(page: Page) -> None:

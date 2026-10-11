@@ -424,19 +424,19 @@ async def test_stats_hub_and_replay_dynamic_language_switch(page: Page) -> None:
     await expect(page.locator('#stats-profile-view')).to_be_visible()
 
     # In English
-    await expect(page.locator('#stats-page-heading')).to_have_text('Player Profile')
+    await expect(page.locator('#profile-hero-name')).to_have_text('Alice')
     await expect(page.locator('#profile-back-to-hub-btn')).to_contain_text('Back')
     await expect(page.locator('.player-profile-view h3').first).to_contain_text('Location Accuracy')
 
     # Realtime toggle profile to Portuguese
     await _toggle_language(page)
-    await expect(page.locator('#stats-page-heading')).to_have_text('Perfil do Jogador')
+    await expect(page.locator('#profile-hero-name')).to_have_text('Alice')
     await expect(page.locator('#profile-back-to-hub-btn')).to_contain_text('Voltar')
     await expect(page.locator('.player-profile-view h3').first).to_contain_text('Precisão de Local')
 
     # Realtime toggle back to English
     await _toggle_language(page)
-    await expect(page.locator('#stats-page-heading')).to_have_text('Player Profile')
+    await expect(page.locator('#profile-hero-name')).to_have_text('Alice')
     await expect(page.locator('#profile-back-to-hub-btn')).to_contain_text('Back')
     await expect(page.locator('.player-profile-view h3').first).to_contain_text('Location Accuracy')
 
