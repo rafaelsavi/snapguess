@@ -1277,6 +1277,12 @@ function renderBatchRevealMap(containerEl, batchItems) {
 
   if (!map) return;
 
+  map.on("click", (e) => {
+    if (e && e.latlng) {
+      map.panTo(e.latlng, { animate: true, duration: 0.3 });
+    }
+  });
+
   const bounds = L.latLngBounds();
 
   // Local spiderfy state — scoped to this reveal instance.

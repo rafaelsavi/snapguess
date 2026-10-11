@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Interactive Hybrid Map Layer**: Replaced the pure satellite basemap with a high-contrast Hybrid map layer combining aerial satellite photography with crisp road networks, bridges, administrative borders, and geographic labels for improved navigation and landmark identification.
+- **Replay Map Viewport-Aware Navigation**: Enhanced replay and match review maps so clicking any empty map region smoothly centers the view, photo tab switching no longer pulls the camera away if the pin is already visible on-screen, and the reset zoom button toggles smoothly between round pin framing and a full world overview.
 - **Context-Aware Back Navigation**: Replay viewers, challenge results, and player profile screens now return to the exact page you arrived from (such as a player profile or the home screen) rather than redirecting to the catalog, preserving scroll position and active filters.
 - **Unified Screen Header Architecture**: Standardized header lockups across Match Replays, Challenge Results, and Player Profiles with consistent top-left back navigation, integrated match metadata, and elimination of duplicate profile headers.
 

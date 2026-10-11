@@ -1106,9 +1106,23 @@ export function resetMapZoom(map) {
     const maxZoom = (map._regionalOptions && map._regionalOptions.maxZoom !== undefined) ? map._regionalOptions.maxZoom : 6;
     fitMapToBounds(map, map._regionalBounds, { padding, maxZoom });
   } else if (map._lastFitBounds && typeof map._lastFitBounds.isValid === "function" && map._lastFitBounds.isValid()) {
-    const padding = (map._lastFitOptions && map._lastFitOptions.padding) || [50, 50];
-    const maxZoom = (map._lastFitOptions && map._lastFitOptions.maxZoom !== undefined) ? map._lastFitOptions.maxZoom : 15;
-    map.fitBounds(map._lastFitBounds, { padding, maxZoom });
+    const curBounds = typeof map.getBounds === "function" ? map.getBounds() : null;
+    const curZoom = typeof map.getZoom === "function" ? map.getZoom() : 0;
+    const initialZoom = map._initialZoom !== undefined ? map._initialZoom : 2;
+
+    const isFramingPins =
+      curBounds &&
+      curBounds.isValid() &&
+      curBounds.contains(map._lastFitBounds) &&
+      curZoom > initialZoom;
+
+    if (isFramingPins && map._initialCenter) {
+      map.setView(map._initialCenter, initialZoom);
+    } else {
+      const padding = (map._lastFitOptions && map._lastFitOptions.padding) || [50, 50];
+      const maxZoom = (map._lastFitOptions && map._lastFitOptions.maxZoom !== undefined) ? map._lastFitOptions.maxZoom : 15;
+      map.fitBounds(map._lastFitBounds, { padding, maxZoom });
+    }
   } else if (map._initialCenter && map._initialZoom !== undefined) {
     map.setView(map._initialCenter, map._initialZoom);
   } else {

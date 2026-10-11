@@ -407,7 +407,11 @@ export class UnshuffleReplayStrategy {
     if (marker && map) {
       try {
         marker.openPopup();
-        map.panTo(marker.getLatLng(), { animate: true, duration: 0.4 });
+        const latLng = marker.getLatLng();
+        const bounds = typeof map.getBounds === "function" ? map.getBounds() : null;
+        if (!bounds || !bounds.contains(latLng)) {
+          map.panTo(latLng, { animate: true, duration: 0.4 });
+        }
       } catch (_) {}
     }
   }
@@ -636,6 +640,12 @@ export class MatchReplayViewer {
       this.mapMarkers = [];
       this.mapPolylines = [];
       this.markersByPin = {};
+
+      this.map.on("click", (e) => {
+        if (e && e.latlng) {
+          this.map.panTo(e.latlng, { animate: true, duration: 0.3 });
+        }
+      });
     }
   }
 
