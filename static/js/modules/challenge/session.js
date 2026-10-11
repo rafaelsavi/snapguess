@@ -9,7 +9,7 @@ import { state, el } from "../state.js";
 import { unregisterActiveMap } from "../maps.js";
 
 export const POLL_INTERVAL_MS = 3000;
-export const SESSION_STORAGE_PREFIX = "immich_challenge_";
+export const SESSION_STORAGE_PREFIX = "snapguess_challenge_";
 
 export const challengeSession = {
   challengeData: null,

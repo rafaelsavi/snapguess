@@ -194,7 +194,7 @@ flowchart TD
     classDef greyHighlight fill:#3a3a3a,stroke:#cccccc,stroke-width:2px,color:#ffffff;
 
     Init["1. <b>Page Load</b> (<code>initLibraries</code>)<br/>Mount DOM components & fetch <code>/api/libraries</code>"]:::greyMain
-    Restore["2. <b>Restore State</b><br/>Read <code>immich_quiz_filters_global</code> from <code>localStorage</code>"]:::greyHighlight
+    Restore["2. <b>Restore State</b><br/>Read <code>snapguess_filters_global</code> from <code>localStorage</code>"]:::greyHighlight
     Populate["3. <b>Option Discovery</b> (<code>onLibrariesChanged</code>)<br/>Fetch base albums/filters & mount range slider"]:::greyMain
     Validate["4. <b>Preflight Validation</b><br/>Trigger <code>/api/game/preflight</code> to compute facet counts"]:::greyHighlight
     Persist["5. <b>On Mutation</b> (<code>saveCurrentFilters</code>)<br/>Serialize active scope to <code>localStorage</code>"]:::greyMain

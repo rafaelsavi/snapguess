@@ -16,7 +16,7 @@ async def _toggle_language(page: Page) -> None:
 
 async def _ensure_language(page: Page, target_lang: str) -> None:
     """Ensure page is set to target_lang ('en-US' or 'pt-BR') without page reload."""
-    current_lang = await page.evaluate("() => localStorage.getItem('immich_quiz_language') || 'en-US'")
+    current_lang = await page.evaluate("() => localStorage.getItem('snapguess_language') || 'en-US'")
     if current_lang != target_lang:
         await _toggle_language(page)
 
@@ -352,14 +352,14 @@ async def test_stats_hub_and_replay_dynamic_language_switch(page: Page) -> None:
     # Still in Portuguese from previous toggle
     await expect(page.locator('#replay-round-indicator')).to_contain_text(re.compile(r'Rodada 1 de 1', re.IGNORECASE))
     await expect(page.locator('#replay-scoreboard-round-tag')).to_contain_text(re.compile(r'Após R1', re.IGNORECASE))
-    await expect(page.locator('#replay-back-btn')).to_contain_text('Sair do Replay')
+    await expect(page.locator('#replay-back-btn')).to_contain_text('Voltar')
     await expect(page.locator("span[data-i18n='replay.player_guess_heading']")).to_have_text('Palpites dos Jogadores')
 
     # Realtime toggle replay to English
     await _toggle_language(page)
     await expect(page.locator('#replay-round-indicator')).to_contain_text(re.compile(r'Round 1 of 1', re.IGNORECASE))
     await expect(page.locator('#replay-scoreboard-round-tag')).to_contain_text(re.compile(r'After R1', re.IGNORECASE))
-    await expect(page.locator('#replay-back-btn')).to_contain_text('Exit Replay')
+    await expect(page.locator('#replay-back-btn')).to_contain_text('Back')
     await expect(page.locator("span[data-i18n='replay.player_guess_heading']")).to_have_text('Player Guesses')
 
     # 4. Test Player Profile with mocked data
@@ -425,19 +425,19 @@ async def test_stats_hub_and_replay_dynamic_language_switch(page: Page) -> None:
 
     # In English
     await expect(page.locator('#stats-page-heading')).to_have_text('Player Profile')
-    await expect(page.locator('#profile-back-to-hub-btn')).to_contain_text('Back to Players')
+    await expect(page.locator('#profile-back-to-hub-btn')).to_contain_text('Back')
     await expect(page.locator('.player-profile-view h3').first).to_contain_text('Location Accuracy')
 
     # Realtime toggle profile to Portuguese
     await _toggle_language(page)
     await expect(page.locator('#stats-page-heading')).to_have_text('Perfil do Jogador')
-    await expect(page.locator('#profile-back-to-hub-btn')).to_contain_text('Voltar para Jogadores')
+    await expect(page.locator('#profile-back-to-hub-btn')).to_contain_text('Voltar')
     await expect(page.locator('.player-profile-view h3').first).to_contain_text('Precisão de Local')
 
     # Realtime toggle back to English
     await _toggle_language(page)
     await expect(page.locator('#stats-page-heading')).to_have_text('Player Profile')
-    await expect(page.locator('#profile-back-to-hub-btn')).to_contain_text('Back to Players')
+    await expect(page.locator('#profile-back-to-hub-btn')).to_contain_text('Back')
     await expect(page.locator('.player-profile-view h3').first).to_contain_text('Location Accuracy')
 
 

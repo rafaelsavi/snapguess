@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Context-Aware Back Navigation**: Replay viewers and player profile screens now return to the exact page you arrived from (such as a player profile or the home screen) rather than redirecting to the catalog, preserving scroll position and active filters.
+
 ### Fixed
 
 - **Accurate Player Profile Match Ranks**: Fixed the recent matches table on player profile views displaying 1st place medals for non-winning challenge entries and solo local games. Ranks now accurately reflect actual standings across challenge participants, and solo games display a neutral dash.

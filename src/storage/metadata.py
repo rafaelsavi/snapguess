@@ -708,7 +708,7 @@ class MetadataStore:
         ignore_location_mode: bool = False,
         ignore_date_mode: bool = False,
     ) -> tuple[str, list[Any]]:
-        """Construct unified SQL WHERE clauses and parameters matching exact quiz filter semantics."""
+        """Construct unified SQL WHERE clauses and parameters matching exact game filter semantics."""
         clauses: list[str] = ["a.file_type != 'VIDEO'"]
         params: list[Any] = []
         if criteria.library_names:

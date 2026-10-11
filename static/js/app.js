@@ -8,6 +8,7 @@ import {
 } from "./modules/state.js";
 import {
   navigate,
+  navigateBack,
   initRouter,
   setNavigationGuard,
   RouteType,
@@ -799,6 +800,15 @@ function initHomeCard() {
   syncFullscreenButtons();
   initHomeCard();
   initPlayerProfileLinks();
+
+  document.addEventListener("click", (e) => {
+    const backBtn = e.target.closest("[data-action='back']");
+    if (backBtn) {
+      e.preventDefault();
+      const fallback = backBtn.dataset.fallback || "/";
+      navigateBack(fallback);
+    }
+  });
 
   setNavigationGuard((toRoute, fromRoute) => {
     if (!canAccessRoute(toRoute.type, state.auth.role)) {

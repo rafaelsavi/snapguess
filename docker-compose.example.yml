@@ -13,10 +13,10 @@ services:
       # Persistent SQLite data directory (metadata.db, leaderboard.db)
       - ./data:/app/data
     networks:
-      - quiz-net
+      - snapguess-net
     # Security: Do NOT mount /var/run/docker.sock
-    # Cloudflare Tunnel: Connect cloudflared to quiz-net or route to http://snapguess:8010
+    # Cloudflare Tunnel: Connect cloudflared to snapguess-net or route to http://snapguess:8010
 
 networks:
-  quiz-net:
+  snapguess-net:
     driver: bridge

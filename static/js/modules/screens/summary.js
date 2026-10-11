@@ -591,7 +591,7 @@ export function refreshSummaryLanguage() {
       const backBtn = document.getElementById("replay-back-btn");
       if (backBtn) {
         const span = backBtn.querySelector("[data-i18n]");
-        if (span) span.textContent = t("replay.exit");
+        if (span) span.textContent = t("common.back");
       }
     }
   }

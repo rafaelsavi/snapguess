@@ -1,6 +1,6 @@
 """Asset selection, diversity sampling, and map bounding box calculations.
 
-This module provides the core asset selection engine for the quiz game, including:
+This module provides the core asset selection engine for the trivia game, including:
 - **Pool Ingestion & Caching**: Loading candidate assets per match from the fast indexed SQLite
   metadata store (`MetadataStore`) or falling back to the Immich Search API.
 - **Smart Map Bounds**: Calculating match-wide geographic bounding boxes with anti-spoiler guards.

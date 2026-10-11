@@ -261,8 +261,8 @@ async def main() -> None:
         # Set dark theme & english
         await page.goto(base_url)
         await page.evaluate(
-            "() => { localStorage.setItem('immich_quiz_theme', 'dark'); "
-            "localStorage.setItem('immich_quiz_language', 'en-US'); }"
+            "() => { localStorage.setItem('snapguess_theme', 'dark'); "
+            "localStorage.setItem('snapguess_language', 'en-US'); }"
         )
         await page.reload()
         await page.wait_for_selector('#setup-card')

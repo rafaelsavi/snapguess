@@ -239,7 +239,7 @@ export default {
   "reported_page.sort_id": "Asset ID (A-Z)",
   "reported_page.loading": "Loading reported photos...",
   "reported_page.empty_title": "No Reported Photos",
-  "reported_page.empty_desc": "All photos are clean and eligible for quiz games!",
+  "reported_page.empty_desc": "All photos are clean and eligible for games!",
   "reported_page.no_match_title": "No Matching Reports",
   "reported_page.no_match_desc": "No reported photos match your active search or filter.",
   "reported_page.reported_by": "Reported by {0}",

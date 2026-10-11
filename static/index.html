@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>{{APP_TITLE}}</title>
-  <meta name="description" content="Multiplayer photo quiz game powered by your Immich photos." />
+  <meta name="description" content="Multiplayer photo trivia game powered by your Immich photos." />
   <meta name="theme-color" content="#0f172a" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -547,9 +547,9 @@
         <!-- Replay Mode Header (used when viewing historical replay via /game/:id/replay) -->
         <div id="review-header-replay" class="replay-page-header hidden">
           <div class="replay-header-top">
-            <button type="button" id="replay-back-btn" class="btn-secondary btn-sm replay-back-btn page-back-btn">
+            <button type="button" id="replay-back-btn" class="btn-secondary btn-sm replay-back-btn page-back-btn" data-action="back" data-fallback="/replays">
               <span aria-hidden="true">←</span>
-              <span data-i18n="replay.exit">Exit Replay</span>
+              <span data-i18n="common.back">Back</span>
             </button>
           </div>
 
@@ -586,8 +586,8 @@
         <div id="replay-error-state" class="empty-state hidden" style="padding: 3rem 1rem; text-align: center;">
           <p style="color: var(--text-muted); font-size: 1.1rem;" id="replay-error-text" data-i18n="replay.not_found">
             Match replay not found.</p>
-          <button type="button" class="btn-secondary" style="margin-top: 1rem;" id="replay-error-back-btn">
-            ← <span data-i18n="replay.exit">Exit Replay</span>
+          <button type="button" class="btn-secondary" style="margin-top: 1rem;" id="replay-error-back-btn" data-action="back" data-fallback="/replays">
+            ← <span data-i18n="common.back">Back</span>
           </button>
         </div>
 

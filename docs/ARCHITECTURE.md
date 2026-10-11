@@ -134,7 +134,7 @@ snapguess/
         ├── i18n.js      Multi-language translation engine (EN/PT), live switcher, and locale-aware date formatting with Today/Yesterday labels.
         ├── leaderboard.js Leaderboard UI rendering and filtering.
         ├── maps.js      Leaflet map wrapper, marker placement, auto-zoom, and updateSubmitState.
-        ├── router.js    Client-side History API router (normalizePath, parseRoute, setNavigationGuard).
+        ├── router.js    Client-side History API router (normalizePath, parseRoute, navigateBack, setNavigationGuard).
         ├── setup_filters.js Setup filter controls, dependent cities, persistence, and live preflight.
         ├── game_settings.js Normalizes and persists game mode, guess modes, round count, and round length in localStorage.
         ├── shortcuts.js Global keyboard navigation (<kbd>Space</kbd> / <kbd>Enter</kbd>).

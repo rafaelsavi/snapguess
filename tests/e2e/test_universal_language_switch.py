@@ -209,7 +209,7 @@ JS_VERIFY_TRANSLATIONS = """
 
 
 async def _ensure_language(page: Page, target_lang: str) -> None:
-    current_lang = await page.evaluate("() => localStorage.getItem('immich_quiz_language') || 'en-US'")
+    current_lang = await page.evaluate("() => localStorage.getItem('snapguess_language') || 'en-US'")
     if current_lang != target_lang:
         await page.evaluate("() => document.getElementById('lang-toggle-btn')?.click()")
         await page.wait_for_timeout(150)

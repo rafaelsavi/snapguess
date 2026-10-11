@@ -7,7 +7,7 @@ import { state, el } from "../state.js";
 import { api } from "../api.js";
 import { t, tOr, formatDateTime } from "../i18n.js";
 import { showCard } from "./common.js";
-import { navigate } from "../router.js";
+import { navigate, navigateBack } from "../router.js";
 import { playerColor, playerInitial, escapeHtml, formatRankBadge } from "../formatters.js";
 import { attachPlayerAutocomplete } from "../components/player_autocomplete.js";
 
@@ -360,14 +360,16 @@ export async function showPlayerProfile(playerName) {
       profileView.innerHTML = `
         <div class="empty-state" style="padding: 3rem 1rem; text-align: center;">
           <p style="color: var(--text-muted); font-size: 1.1rem;">${t("stats.player_not_found", playerName)}</p>
-          <button type="button" class="btn-secondary btn-sm page-back-btn" style="margin-top: 1rem;" id="profile-back-btn">
+          <button type="button" class="btn-secondary btn-sm page-back-btn" style="margin-top: 1rem;" id="profile-back-btn" data-action="back" data-fallback="/players">
             <span aria-hidden="true">←</span>
-            <span>${t("stats.back_to_hub")}</span>
+            <span>${t("common.back")}</span>
           </button>
         </div>
       `;
-      document.getElementById("profile-back-btn")?.addEventListener("click", () => {
-        navigate("/players");
+      document.getElementById("profile-back-btn")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        navigateBack("/players");
       });
     }
   }
@@ -513,9 +515,9 @@ function renderPlayerProfile(data) {
       <!-- Profile Header -->
       <div class="player-profile-header">
         <div class="profile-header-top">
-          <button type="button" id="profile-back-to-hub-btn" class="btn-secondary btn-sm page-back-btn">
+          <button type="button" id="profile-back-to-hub-btn" class="btn-secondary btn-sm page-back-btn" data-action="back" data-fallback="/players">
             <span aria-hidden="true">←</span>
-            <span>${t("stats.back_to_hub")}</span>
+            <span>${t("common.back")}</span>
           </button>
         </div>
 
@@ -672,8 +674,10 @@ function renderPlayerProfile(data) {
     </div>
   `;
 
-  document.getElementById("profile-back-to-hub-btn")?.addEventListener("click", () => {
-    navigate("/players");
+  document.getElementById("profile-back-to-hub-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigateBack("/players");
   });
 
   document.getElementById("profile-view-all-replays-link")?.addEventListener("click", (e) => {

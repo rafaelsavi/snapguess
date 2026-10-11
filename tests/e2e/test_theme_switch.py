@@ -17,7 +17,7 @@ async def test_theme_switch_default_and_cycle(page: Page) -> None:
     """Verify default light (Clear) theme, gear menu theme toggle presence, and cycling between Clear and Dark."""
     # Ensure fresh state
     await page.goto('/')
-    await page.evaluate("() => localStorage.removeItem('immich_quiz_theme')")
+    await page.evaluate("() => localStorage.removeItem('snapguess_theme')")
     await page.reload()
     await page.wait_for_selector('#setup-card')
 
@@ -36,7 +36,7 @@ async def test_theme_switch_default_and_cycle(page: Page) -> None:
     await expect(page.locator('html')).to_have_attribute('data-theme-setting', 'dark')
     await expect(page.locator('html')).to_have_attribute('data-theme', 'dark')
     await expect(theme_btn).to_have_attribute('title', 'Theme: Dark')
-    stored = await page.evaluate("() => localStorage.getItem('immich_quiz_theme')")
+    stored = await page.evaluate("() => localStorage.getItem('snapguess_theme')")
     assert stored == 'dark'
 
     # 3. Cycle Dark -> Light (Clear)
@@ -44,7 +44,7 @@ async def test_theme_switch_default_and_cycle(page: Page) -> None:
     await expect(page.locator('html')).to_have_attribute('data-theme-setting', 'light')
     await expect(page.locator('html')).to_have_attribute('data-theme', 'light')
     await expect(theme_btn).to_have_attribute('title', 'Theme: Clear')
-    stored = await page.evaluate("() => localStorage.getItem('immich_quiz_theme')")
+    stored = await page.evaluate("() => localStorage.getItem('snapguess_theme')")
     assert stored == 'light'
 
 
@@ -81,8 +81,8 @@ async def test_theme_button_language_translation(page: Page) -> None:
     await page.wait_for_selector('#setup-card')
 
     # Ensure English and light
-    await page.evaluate("() => localStorage.setItem('immich_quiz_language', 'en-US')")
-    await page.evaluate("() => localStorage.setItem('immich_quiz_theme', 'light')")
+    await page.evaluate("() => localStorage.setItem('snapguess_language', 'en-US')")
+    await page.evaluate("() => localStorage.setItem('snapguess_theme', 'light')")
     await page.reload()
 
     await _open_settings_menu(page)

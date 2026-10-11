@@ -2420,7 +2420,7 @@ def test_player_name_prefill_and_cf_identity_standardization() -> None:
     replay_js = (JS_DIR / 'modules' / 'screens' / 'replay.js').read_text(encoding='utf-8')
 
     # 1. Shared resolver applies identity, storage, and fallback precedence
-    assert 'export const LAST_PLAYER_NAME_KEY = "immich_quiz_last_player_name";' in landing_js
+    assert 'export const LAST_PLAYER_NAME_KEY = "snapguess_last_player_name";' in landing_js
     assert 'export function resolvePlayerName(storageKey = null, fallbackFn = null)' in formatters_js
     assert 'state.auth?.name' in formatters_js
     assert 'state.auth?.email' in formatters_js
@@ -2433,7 +2433,7 @@ def test_player_name_prefill_and_cf_identity_standardization() -> None:
     assert 'resolvePlayerName(LAST_PLAYER_NAME_KEY)' in landing_js
     assert 'localStorage.setItem(LAST_PLAYER_NAME_KEY, name);' in landing_js
     assert 'REPLAY_LAST_PLAYER_NAME_KEY' not in replay_js
-    assert 'localStorage.getItem("immich_quiz_players")' not in replay_js
+    assert 'localStorage.getItem("snapguess_players")' not in replay_js
 
     # 2. Challenge landing markup supports locked identity and prefilled default
     assert 'isLocked' in landing_js
@@ -2868,3 +2868,39 @@ def test_stats_recent_matches_solo_and_rank_badge_handling() -> None:
     assert 'const rankBadge = isSolo || !m.rank' in stats_js
     assert '? formatRankBadge(null)' in stats_js
     assert ': formatRankBadge(m.rank, { dot: true });' in stats_js
+
+
+def test_general_back_button_strategy_and_router_history_tracking() -> None:
+    """Verify that router.js implements navigateBack with session depth appIndex tracking,
+    and screens/headers use the standardized back button pattern and common.back translation.
+    """
+    router_js = (JS_DIR / 'modules' / 'router.js').read_text(encoding='utf-8')
+    replay_js = (JS_DIR / 'modules' / 'screens' / 'replay.js').read_text(encoding='utf-8')
+    stats_js = (JS_DIR / 'modules' / 'screens' / 'stats.js').read_text(encoding='utf-8')
+    index_html = INDEX_HTML.read_text(encoding='utf-8')
+    app_js = (JS_DIR / 'app.js').read_text(encoding='utf-8')
+
+    # 1. router.js exports navigateBack and tracks appIndex
+    assert 'export function navigateBack(' in router_js
+    assert 'export function getAppHistoryIndex(' in router_js
+    assert 'appIndex: currentAppIndex + 1' in router_js
+    assert 'window.history.back();' in router_js
+    assert 'navigate(fallbackPath, { replace: true });' in router_js
+
+    # 2. replay.js delegates back actions to navigateBack("/replays")
+    assert 'navigateBack("/replays")' in replay_js
+
+    # 3. stats.js delegates back actions to navigateBack("/players") and uses common.back
+    assert 'navigateBack("/players")' in stats_js
+    assert '${t("common.back")}' in stats_js
+
+    # 4. index.html configures replay back buttons with common.back and fallback metadata
+    assert 'id="replay-back-btn"' in index_html
+    assert 'data-action="back"' in index_html
+    assert 'data-fallback="/replays"' in index_html
+    assert 'data-i18n="common.back"' in index_html
+
+    # 5. app.js contains global delegated back action handler
+    assert 'document.addEventListener("click", (e) => {' in app_js
+    assert 'e.target.closest("[data-action=\'back\']");' in app_js
+    assert 'navigateBack(fallback);' in app_js
