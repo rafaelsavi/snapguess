@@ -546,14 +546,11 @@
 
         <!-- Replay Mode Header (used when viewing historical replay via /game/:id/replay) -->
         <div id="review-header-replay" class="replay-page-header hidden">
-          <div class="replay-header-top">
+          <div class="replay-header-main">
             <button type="button" id="replay-back-btn" class="btn-secondary btn-sm replay-back-btn page-back-btn" data-action="back" data-fallback="/replays">
               <span aria-hidden="true">←</span>
               <span data-i18n="common.back">Back</span>
             </button>
-          </div>
-
-          <div class="replay-header-main">
             <div class="replay-title-block">
               <h2 class="replay-main-heading">
                 <span class="replay-heading-icon" aria-hidden="true">🎬</span>
@@ -567,16 +564,29 @@
         </div>
 
         <!-- Summary Mode Header (used when viewing fresh match finish via /game/:id/summary or /play/:token/summary) -->
-        <div id="review-header-summary" class="summary-page-header">
-          <div class="summary-header-badge-row">
-            <span id="summary-game-mode-badge" class="badge-tag badge-type badge-type-local">🕹️ Local</span>
-            <span id="grand-reveal-live-pill" class="challenge-live-pill hidden">
-              <span class="live-poll-dot" aria-hidden="true"></span>
-              <span id="grand-reveal-live-status"></span>
-            </span>
+        <div id="review-header-summary" class="summary-page-header replay-page-header">
+          <div class="replay-header-main">
+            <button type="button" id="summary-back-btn" class="btn-secondary btn-sm replay-back-btn page-back-btn" data-action="back" data-fallback="/challenges">
+              <span aria-hidden="true">←</span>
+              <span data-i18n="common.back">Back</span>
+            </button>
+            <div class="replay-title-block">
+              <h2 class="replay-main-heading">
+                <span id="summary-heading-icon" class="replay-heading-icon" aria-hidden="true">🏆</span>
+                <span id="summary-heading" data-i18n="summary.heading">Game Results</span>
+              </h2>
+              <p id="summary-match-title" class="replay-match-meta">
+                <span id="summary-game-mode-badge" class="badge-tag badge-type badge-type-local">🕹️ Local</span>
+                <span id="grand-reveal-live-pill" class="challenge-live-pill hidden">
+                  <span class="live-poll-dot" aria-hidden="true"></span>
+                  <span id="grand-reveal-live-status"></span>
+                </span>
+                <span id="summary-match-meta-text"></span>
+              </p>
+            </div>
           </div>
-          <h2 id="summary-heading" data-i18n="summary.heading">Game Results</h2>
-          <div id="summary-meta" class="summary-meta">
+
+          <div id="summary-meta" class="summary-meta replay-match-meta-container">
             <div id="summary-meta-items" class="summary-meta-items"></div>
           </div>
         </div>
@@ -832,6 +842,10 @@
     <!-- Dedicated Player Directory & Statistics Page -->
     <section id="stats-page-card" class="card hidden">
       <div class="stats-page-header hub-page-header">
+        <button type="button" id="profile-back-to-hub-btn" class="btn-secondary btn-sm page-back-btn hidden" data-action="back" data-fallback="/players">
+          <span aria-hidden="true">←</span>
+          <span data-i18n="common.back">Back</span>
+        </button>
         <div class="stats-page-title-group hub-page-title-group">
           <div class="stats-title-badge-row hub-title-badge-row">
             <span class="badge-stats hub-page-badge badge-players" data-i18n="nav.players">Players</span>

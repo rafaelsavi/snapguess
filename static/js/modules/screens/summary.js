@@ -17,7 +17,7 @@
 import { state, el, clearActiveMatchSession } from "../state.js";
 import { api } from "../api.js";
 import { t, getLocale, formatDateTime } from "../i18n.js";
-import { navigate } from "../router.js";
+import { navigate, navigateBack } from "../router.js";
 import { playVictoryFanfare } from "../audio.js";
 import { loadLeaderboard } from "../leaderboard.js";
 import { clearTimer } from "../timer.js";
@@ -89,6 +89,9 @@ export function renderSummaryTitleHeader(data = null) {
   const livePill = el.grandRevealLivePill || document.getElementById("grand-reveal-live-pill");
   const liveStatus = el.grandRevealLiveStatus || document.getElementById("grand-reveal-live-status");
   const headingEl = el.summaryHeading || document.getElementById("summary-heading");
+  const headingIcon = document.getElementById("summary-heading-icon");
+  const backBtn = document.getElementById("summary-back-btn");
+  const metaText = document.getElementById("summary-match-meta-text");
 
   if (!data) return;
 
@@ -100,20 +103,57 @@ export function renderSummaryTitleHeader(data = null) {
     data.challenge_creator
   );
 
+  if (backBtn) {
+    backBtn.setAttribute("data-fallback", isChallenge ? "/challenges" : "/");
+    if (!backBtn.dataset.listenerAttached) {
+      backBtn.dataset.listenerAttached = "true";
+      backBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const fallback = backBtn.getAttribute("data-fallback") || "/challenges";
+        navigateBack(fallback);
+      });
+    }
+  }
+
   if (isChallenge) {
+    if (headingIcon) {
+      headingIcon.textContent = "⚔️";
+    }
     if (badgeEl) {
       badgeEl.className = "badge-tag badge-type badge-type-challenge";
       badgeEl.innerHTML = `⚔️ ${t("replay.play_mode_challenge")}`;
     }
+    const challengeTitle =
+      data.challenge_title ||
+      data.title ||
+      (data.challenge_creator || data.creator_name
+        ? `${data.challenge_creator || data.creator_name}'s Challenge`
+        : t("challenge.badge"));
+
     if (headingEl) {
       headingEl.removeAttribute("data-i18n");
-      headingEl.textContent =
-        data.challenge_title ||
-        data.title ||
-        (data.challenge_creator || data.creator_name
-          ? `${data.challenge_creator || data.creator_name}'s Challenge`
-          : t("challenge.badge"));
+      headingEl.textContent = challengeTitle;
     }
+
+    const hostText = data.challenge_creator || data.creator_name
+      ? t("challenges_page.host_label", data.challenge_creator || data.creator_name)
+      : "";
+    const dateText = data.played_at ? formatDateTime(data.played_at) : "";
+
+    const parts = [];
+    if (hostText) {
+      parts.push(`<span class="replay-challenge-host">${escapeHtml(hostText)}</span>`);
+    }
+    if (dateText) {
+      parts.push(`<span class="replay-match-date">${escapeHtml(dateText)}</span>`);
+    }
+    if (metaText) {
+      metaText.innerHTML = parts.length > 0
+        ? ` <span class="meta-separator" aria-hidden="true">•</span> ` + parts.join(` <span class="meta-separator" aria-hidden="true">•</span> `)
+        : "";
+    }
+
     const totalRounds = data.rounds_played || data.total_rounds || 1;
     const participants = (data.players || data.leaderboard || []);
     if (livePill && liveStatus) {
@@ -125,6 +165,9 @@ export function renderSummaryTitleHeader(data = null) {
     }
 
   } else {
+    if (headingIcon) {
+      headingIcon.textContent = "🏆";
+    }
     if (badgeEl) {
       badgeEl.className = "badge-tag badge-type badge-type-local";
       badgeEl.innerHTML = `🕹️ ${t("replay.play_mode_local")}`;
@@ -134,6 +177,13 @@ export function renderSummaryTitleHeader(data = null) {
       headingEl.textContent = t("summary.heading");
     }
     if (livePill) livePill.classList.add("hidden");
+
+    const dateText = data.played_at ? formatDateTime(data.played_at) : "";
+    if (metaText) {
+      metaText.innerHTML = dateText
+        ? ` <span class="meta-separator" aria-hidden="true">•</span> <span class="replay-match-date">${escapeHtml(dateText)}</span>`
+        : "";
+    }
   }
 }
 
@@ -591,6 +641,11 @@ export function refreshSummaryLanguage() {
       const backBtn = document.getElementById("replay-back-btn");
       if (backBtn) {
         const span = backBtn.querySelector("[data-i18n]");
+        if (span) span.textContent = t("common.back");
+      }
+      const sumBackBtn = document.getElementById("summary-back-btn");
+      if (sumBackBtn) {
+        const span = sumBackBtn.querySelector("[data-i18n]");
         if (span) span.textContent = t("common.back");
       }
     }

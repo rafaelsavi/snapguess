@@ -1726,7 +1726,7 @@ def test_all_missing_components_have_dynamic_language_support():
 
     # 4. leaflet-control-layers-list: maps.js registers layer switcher dynamic update
     assert 'data-i18n", "map.layer_streets"' in maps_js
-    assert 'data-i18n", "map.layer_satellite"' in maps_js
+    assert 'data-i18n", "map.layer_hybrid"' in maps_js
     assert 'export function refreshMapsLanguage()' in maps_js
 
     # 5. reveal-actual & pinpoint-actual: chips render icon and value without labels
@@ -2904,3 +2904,16 @@ def test_general_back_button_strategy_and_router_history_tracking() -> None:
     assert 'document.addEventListener("click", (e) => {' in app_js
     assert 'e.target.closest("[data-action=\'back\']");' in app_js
     assert 'navigateBack(fallback);' in app_js
+
+    # 6. Dead container rows removed; back buttons integrated inline into headers
+    replay_css = (STATIC_DIR / 'css' / 'components' / 'replay.css').read_text(encoding='utf-8')
+    stats_css = (STATIC_DIR / 'css' / 'components' / 'stats.css').read_text(encoding='utf-8')
+    assert 'replay-header-top' not in index_html
+    assert 'replay-header-top' not in replay_css
+    assert 'profile-header-top' not in stats_js
+    assert 'player-profile-header' not in stats_js
+    assert 'player-profile-header' not in stats_css
+    assert '<div class="replay-header-main">\n            <button type="button" id="replay-back-btn"' in index_html
+    assert 'id="profile-back-to-hub-btn"' in index_html
+    assert 'id="summary-back-btn"' in index_html
+    assert '<div id="review-header-summary" class="summary-page-header replay-page-header">' in index_html

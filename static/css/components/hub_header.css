@@ -175,25 +175,26 @@
     min-width: 0;
   }
 
-  /* When a back button is present on sub-screens, wrap cleanly on mobile */
-  .hub-page-header:has(.page-back-btn),
+  /* When a back button is present and visible on sub-screens, wrap cleanly on mobile */
+  .hub-page-header:has(.page-back-btn:not(.hidden)),
   .hub-page-header.has-back-btn {
     flex-wrap: wrap;
     align-items: center;
   }
 
-  .hub-page-header:has(.page-back-btn) .page-back-btn,
+  .hub-page-header:has(.page-back-btn:not(.hidden)) .page-back-btn,
   .hub-page-header.has-back-btn .page-back-btn {
     order: 1;
+    margin-top: 0;
   }
 
-  .hub-page-header:has(.page-back-btn) .hub-page-head-actions,
+  .hub-page-header:has(.page-back-btn:not(.hidden)) .hub-page-head-actions,
   .hub-page-header.has-back-btn .hub-page-head-actions {
     order: 1;
     margin-left: auto;
   }
 
-  .hub-page-header:has(.page-back-btn) .hub-page-title-group,
+  .hub-page-header:has(.page-back-btn:not(.hidden)) .hub-page-title-group,
   .hub-page-header.has-back-btn .hub-page-title-group {
     order: 2;
     flex: 1 1 100%;

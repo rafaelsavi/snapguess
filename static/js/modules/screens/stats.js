@@ -96,6 +96,15 @@ export function initStats() {
       }
     });
   }
+
+  const profileBackBtn = document.getElementById("profile-back-to-hub-btn");
+  if (profileBackBtn) {
+    profileBackBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      navigateBack("/players");
+    });
+  }
 }
 
 export function showPlayerDirectory(initialSearch = null) {
@@ -106,7 +115,9 @@ export function showPlayerDirectory(initialSearch = null) {
   const playersView = document.getElementById("stats-players-view");
   const heading = document.getElementById("stats-page-heading");
   const desc = document.getElementById("stats-page-desc");
+  const backBtn = document.getElementById("profile-back-to-hub-btn");
 
+  if (backBtn) backBtn.classList.add("hidden");
   if (profileView) profileView.classList.add("hidden");
   if (playersView) playersView.classList.remove("hidden");
 
@@ -333,7 +344,9 @@ export async function showPlayerProfile(playerName) {
   const profileView = document.getElementById("stats-profile-view");
   const heading = document.getElementById("stats-page-heading");
   const desc = document.getElementById("stats-page-desc");
+  const backBtn = document.getElementById("profile-back-to-hub-btn");
 
+  if (backBtn) backBtn.classList.remove("hidden");
   document.getElementById("stats-players-view")?.classList.add("hidden");
 
   if (heading) {
@@ -512,27 +525,17 @@ function renderPlayerProfile(data) {
 
   container.innerHTML = `
     <div class="player-profile-view">
-      <!-- Profile Header -->
-      <div class="player-profile-header">
-        <div class="profile-header-top">
-          <button type="button" id="profile-back-to-hub-btn" class="btn-secondary btn-sm page-back-btn" data-action="back" data-fallback="/players">
-            <span aria-hidden="true">←</span>
-            <span>${t("common.back")}</span>
-          </button>
+      <div class="player-profile-hero">
+        <div class="player-hero-avatar ${isCurrentUser ? "is-current-user" : ""}" style="background-color: ${color};">
+          ${initial}
         </div>
-
-        <div class="player-profile-hero">
-          <div class="player-hero-avatar ${isCurrentUser ? "is-current-user" : ""}" style="background-color: ${color};">
-            ${initial}
-          </div>
-          <div>
-            <h2 class="player-hero-name">${escapeHtml(player.player_name)}</h2>
-            <div class="player-hero-badges">
-              ${isCurrentUser ? `<span class="player-hero-badge is-you">👤 ${t("stats.you_badge")}</span>` : ""}
-              ${isCurrentUser ? `<span class="player-hero-badge is-verified">✓ ${t("stats.verified_account")}</span>` : ""}
-              <span class="player-hero-badge">📅 ${t("stats.active_since", player.first_played_at ? formatDateTime(player.first_played_at) : "-")}</span>
-              <span class="player-hero-badge">⏱️ ${t("stats.last_played", player.last_played_at ? formatDateTime(player.last_played_at) : "-")}</span>
-            </div>
+        <div>
+          <h2 class="player-hero-name">${escapeHtml(player.player_name)}</h2>
+          <div class="player-hero-badges">
+            ${isCurrentUser ? `<span class="player-hero-badge is-you">👤 ${t("stats.you_badge")}</span>` : ""}
+            ${isCurrentUser ? `<span class="player-hero-badge is-verified">✓ ${t("stats.verified_account")}</span>` : ""}
+            <span class="player-hero-badge">📅 ${t("stats.active_since", player.first_played_at ? formatDateTime(player.first_played_at) : "-")}</span>
+            <span class="player-hero-badge">⏱️ ${t("stats.last_played", player.last_played_at ? formatDateTime(player.last_played_at) : "-")}</span>
           </div>
         </div>
       </div>
