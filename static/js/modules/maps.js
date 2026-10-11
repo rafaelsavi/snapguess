@@ -11,7 +11,7 @@ export function createBaseTileLayers() {
     maxZoom: 19,
     attribution: "&copy; OpenStreetMap",
   });
-  const satellite = L.tileLayer(
+  const satImagery = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     {
       maxZoom: 19,
@@ -19,7 +19,20 @@ export function createBaseTileLayers() {
         "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS User Community",
     }
   );
-  return { streets, satellite };
+  const boundaries = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+    {
+      maxZoom: 19,
+    }
+  );
+  const transportation = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
+    {
+      maxZoom: 19,
+    }
+  );
+  const hybrid = L.layerGroup([satImagery, boundaries, transportation]);
+  return { streets, hybrid };
 }
 
 export function addLayerControl(map, baseLayers) {
@@ -36,10 +49,11 @@ export function addLayerControl(map, baseLayers) {
   if (!base) return null;
   map._baseLayers = base;
 
+  const hybridLayer = base.hybrid || base.satellite;
   const control = L.control
     .layers({
       [t("map.layer_streets")]: base.streets,
-      [t("map.layer_satellite")]: base.satellite,
+      [t("map.layer_hybrid")]: hybridLayer,
     })
     .addTo(map);
 
@@ -56,7 +70,7 @@ export function addLayerControl(map, baseLayers) {
     const spans = control._container.querySelectorAll(".leaflet-control-layers-base label span");
     if (spans.length >= 2) {
       spans[0].setAttribute("data-i18n", "map.layer_streets");
-      spans[1].setAttribute("data-i18n", "map.layer_satellite");
+      spans[1].setAttribute("data-i18n", "map.layer_hybrid");
     }
 
     const updateActiveLabels = () => {
@@ -288,7 +302,7 @@ export function refreshMapsLanguage() {
       const spans = map._layerControl._container.querySelectorAll(".leaflet-control-layers-base label span");
       if (spans.length >= 2) {
         spans[0].textContent = ` ${t("map.layer_streets")}`;
-        spans[1].textContent = ` ${t("map.layer_satellite")}`;
+        spans[1].textContent = ` ${t("map.layer_hybrid")}`;
       }
     }
 

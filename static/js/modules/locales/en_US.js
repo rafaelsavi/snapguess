@@ -304,7 +304,7 @@ export default {
   "error.unknown_album": "Unknown album ID for selected library.",
   "game.fullscreen_error": "Fullscreen unavailable: {0}",
   "map.layer_streets": "Streets",
-  "map.layer_satellite": "Satellite",
+  "map.layer_hybrid": "Hybrid",
   "map.layer_control_title": "Layers",
   "map.reset_zoom_title": "Reset map view",
   "map.focus_region_title": "Focus match region",

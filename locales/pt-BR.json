@@ -304,7 +304,7 @@
   "error.unknown_album": "ID de álbum desconhecido para a biblioteca selecionada.",
   "game.fullscreen_error": "Tela cheia indisponível: {0}",
   "map.layer_streets": "Ruas",
-  "map.layer_satellite": "Satélite",
+  "map.layer_hybrid": "Híbrido",
   "map.layer_control_title": "Camadas",
   "map.reset_zoom_title": "Redefinir visualização do mapa",
   "map.focus_region_title": "Focar região da partida",
