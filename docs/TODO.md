@@ -6,12 +6,11 @@ This document lists planned features, design ideas, and technical debt items for
 
 ## 🚀 Prioritized TODO List
 
-- [ ] **Add Support for Videos**
-  - [ ] Integrate Immich video streaming adapter using transcoded preview streams (`/api/asset/video/playback/{id}` or `encoded-video`) instead of raw 4K originals.
-  - [ ] Implement in-game video player UI, seamless loop, and poster image fallback.
-  - [ ] Update metadata sync and preflight filter to index video duration and ensure video GPS/date metadata validity.
-  - [ ] Add library filter "Media Type" toggle (*Photos Only*, *Videos Only*, *Photos & Videos*).
-
+- [x] col-rank of recent-matches-card is always showing first place even when it's wrong
+- [x] button "replay-back-btn" doesnt make sense if I arrived to the page from the another page that is not the replay page. Think about a better general strategy for back buttons.
+- [x] Standardize review-header-summary, review-header-replay, and player profile headers with unified layout and back navigation.
+- [x] Change satellite to hybrid maps
+- [ ] Discard support for videos. You can simplify whatever feels necessary, for example the query to immich.
 - [ ] **Improve Audio Effects & Soundtrack**
   - [ ] Expand runtime Web Audio synthesized procedural background music with game state mood transitions (setup -> tense round -> victory fanfare).
   - [ ] Add transitional sound cues (whoosh screen transitions, high-score chimes, round buzzer variations).

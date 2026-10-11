@@ -368,6 +368,25 @@ async def test_unshuffle_replay_map_photo_icons_and_tab_jumping(page: Page) -> N
     await expect(tab_btns.nth(2)).to_have_class(re.compile(r'active'))
     await expect(page.locator('#replay-photo-loc')).to_have_text('Tokyo, Japan')
 
+    # 6. Click empty area on replay map -> centers on that location
+    map_locator = page.locator('#replay-leaflet-map')
+    await map_locator.scroll_into_view_if_needed()
+    initial_center = await page.evaluate("() => document.getElementById('replay-leaflet-map')._leaflet_map.getCenter()")
+    await map_locator.click(position={'x': 40, 'y': 40})
+    await page.wait_for_timeout(400)
+    new_center = await page.evaluate("() => document.getElementById('replay-leaflet-map')._leaflet_map.getCenter()")
+    assert abs(new_center['lat'] - initial_center['lat']) > 0.5 or abs(new_center['lng'] - initial_center['lng']) > 0.5
+
+    # 7. Reset zoom toggle: clicking reset frames pins, second click toggles to world overview
+    reset_btn = page.locator('#replay-map-shell .map-reset-zoom-btn')
+    await reset_btn.click()
+    await page.wait_for_timeout(400)
+    framed_zoom = await page.evaluate("() => document.getElementById('replay-leaflet-map')._leaflet_map.getZoom()")
+    await reset_btn.click()
+    await page.wait_for_timeout(400)
+    overview_zoom = await page.evaluate("() => document.getElementById('replay-leaflet-map')._leaflet_map.getZoom()")
+    assert overview_zoom <= framed_zoom
+
 
 @pytest.mark.asyncio
 async def test_review_deck_journey_map_autozooms_on_first_open(page: Page) -> None:

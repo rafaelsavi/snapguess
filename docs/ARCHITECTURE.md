@@ -408,6 +408,13 @@ Player names in match and challenge result standings link to `/players/{playerNa
 - Top-level sub-pages (Challenges Hub, Players Directory, Match Replays, Moderation Dashboard) share the standardized `.hub-page-header` component (`hub_header.css`).
 - On mobile (`<= 760px`), sub-pages with a back button wrap into a structured 2-row layout: back button and badge/action controls share row 1, while the page title and subtitle expand across row 2 with 100% width.
 
+### Match Review & Replay Headers (`.replay-page-header`)
+
+- Match Replay (`#review-header-replay`) and Game / Challenge Summary (`#review-header-summary`) share a standardized layout (`replay.css`, `summary.css`):
+  - Top-left contextual back button (`.page-back-btn`) utilizing `navigateBack()` with fallback routing (`/replays` or `/challenges`).
+  - Left-aligned title block with mode icon, page heading, and metadata row (game mode badge, live poll indicator `#grand-reveal-live-pill` if active, and host/date text).
+  - Compact match specification container (`.replay-match-meta-container` / `.summary-meta-items`).
+
 ### Mobile Viewport Guarantee
 
 - All tables, matrices, and chips feature container-level horizontal touch scrolling (`overflow-x: auto`), ensuring `document.documentElement.scrollWidth === document.documentElement.clientWidth` across all screens on phone viewports down to 360px.
