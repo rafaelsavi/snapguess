@@ -739,3 +739,112 @@ def test_consolidated_challenge_replays_and_metadata(tmp_path: Path) -> None:
     assert replay_by_session.config.libraries == ['FamilyVault']
     assert replay_by_session.config.album_names == ['Roadtrip 2024']
     assert len(replay_by_session.players) == 2
+
+
+def test_recent_matches_challenge_and_solo_ranks(tmp_path: Path) -> None:
+    """Verify that recent matches correctly report ranks for challenges, solo, and multiplayer matches."""
+    db_path = tmp_path / 'test_recent_ranks.db'
+    store = LeaderboardStore(db_path)
+
+    # 1. Record a solo local match for 'SoloPlayer'
+    solo_config = BaseGameConfig(
+        libraries=['main'],
+        round_count=3,
+        round_length=RoundLength.minute_1,
+        location_mode=True,
+        date_mode=True,
+        game_mode=GameMode.pinpoint,
+    )
+    solo_setup = GameSetupRequest(players=['SoloPlayer'], **solo_config.model_dump())
+    store.append_match(
+        match_id='solo-m1',
+        config=solo_setup,
+        player_scores={'SoloPlayer': {'total': 300, 'location': 150, 'date': 150}},
+        play_mode=PlayMode.local,
+    )
+
+    solo_profile = store.get_player_profile('SoloPlayer')
+    assert solo_profile is not None
+    assert len(solo_profile.recent_matches) == 1
+    solo_recent = solo_profile.recent_matches[0]
+    assert solo_recent['match_id'] == 'solo-m1'
+    assert solo_recent['player_count'] == 1
+    assert solo_recent['rank'] is None  # Solo match must not have rank (e.g. not 1st place)
+
+    # 2. Record challenge completions for multiple players
+    ch_id = 'ch-rank-test'
+    with store.db.connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO challenges (
+                challenge_id, capability_token, title, creator_name,
+                libraries_json, config_json, asset_ids_json, is_active, created_at
+            ) VALUES (?, 'tok-1', 'Rank Test Challenge', 'Alice', '[]', '{}', '["p1"]', 1, '2026-03-01T12:00:00Z')
+            """,
+            (ch_id,),
+        )
+        conn.execute(
+            """
+            INSERT INTO challenge_sessions (
+                session_token, match_id, challenge_id, player_name,
+                current_round, location_score, date_score, total_score, started_at
+            ) VALUES
+            ('tok-a', 'm-ch-a', ?, 'Alice', 1, 200, 200, 400, '2026-03-01T12:00:00Z'),
+            ('tok-b', 'm-ch-b', ?, 'Bob', 1, 100, 100, 200, '2026-03-01T12:01:00Z'),
+            ('tok-c', 'm-ch-c', ?, 'Charlie', 1, 50, 50, 100, '2026-03-01T12:02:00Z')
+            """,
+            (ch_id, ch_id, ch_id),
+        )
+
+    ch_cfg = {'game_mode': 'pinpoint', 'location_mode': True, 'date_mode': True}
+    store.finalize_challenge_player_match(
+        match_id='m-ch-a',
+        challenge_id=ch_id,
+        config=ch_cfg,
+        player_name='Alice',
+        total_score=400,
+        total_rounds=3,
+    )
+    store.finalize_challenge_player_match(
+        match_id='m-ch-b',
+        challenge_id=ch_id,
+        config=ch_cfg,
+        player_name='Bob',
+        total_score=200,
+        total_rounds=3,
+    )
+    store.finalize_challenge_player_match(
+        match_id='m-ch-c',
+        challenge_id=ch_id,
+        config=ch_cfg,
+        player_name='Charlie',
+        total_score=100,
+        total_rounds=3,
+    )
+
+    # Alice should be 1st
+    prof_a = store.get_player_profile('Alice')
+    assert prof_a is not None
+    recent_a = prof_a.recent_matches[0]
+    assert recent_a['match_id'] == 'm-ch-a'
+    assert recent_a['rank'] == 1
+    assert recent_a['is_winner'] is True
+    assert recent_a['player_count'] == 3
+
+    # Bob should be 2nd (NOT 1st!)
+    prof_b = store.get_player_profile('Bob')
+    assert prof_b is not None
+    recent_b = prof_b.recent_matches[0]
+    assert recent_b['match_id'] == 'm-ch-b'
+    assert recent_b['rank'] == 2
+    assert recent_b['is_winner'] is False
+    assert recent_b['player_count'] == 3
+
+    # Charlie should be 3rd (NOT 1st!)
+    prof_c = store.get_player_profile('Charlie')
+    assert prof_c is not None
+    recent_c = prof_c.recent_matches[0]
+    assert recent_c['match_id'] == 'm-ch-c'
+    assert recent_c['rank'] == 3
+    assert recent_c['is_winner'] is False
+    assert recent_c['player_count'] == 3

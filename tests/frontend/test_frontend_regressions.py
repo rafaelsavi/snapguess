@@ -2858,3 +2858,13 @@ def test_header_brand_title_nowrap_and_identity_badge_bounds() -> None:
 
     # 4. Mobile preserves mobile max-width containment
     assert '@media (max-width: 760px) {\n  .identity-badge {\n    max-width: 220px;' in auth_css
+
+
+def test_stats_recent_matches_solo_and_rank_badge_handling() -> None:
+    """Verify that stats.js detects solo local matches and formats rank badge accordingly."""
+    stats_js = (JS_DIR / 'modules' / 'screens' / 'stats.js').read_text(encoding='utf-8')
+
+    assert 'const isSolo = m.play_mode === "local" && (Number(m.player_count) <= 1 || !m.player_count);' in stats_js
+    assert 'const rankBadge = isSolo || !m.rank' in stats_js
+    assert '? formatRankBadge(null)' in stats_js
+    assert ': formatRankBadge(m.rank, { dot: true });' in stats_js

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Accurate Player Profile Match Ranks**: Fixed the recent matches table on player profile views displaying 1st place medals for non-winning challenge entries and solo local games. Ranks now accurately reflect actual standings across challenge participants, and solo games display a neutral dash.
+
 ## [4.0.0] - 2026-10-04
 
 ### Changed

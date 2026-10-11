@@ -481,7 +481,10 @@ function renderPlayerProfile(data) {
           const dateStr = formatDateTime(m.played_at);
           const modeIcon = m.game_mode === "unshuffle" ? "🔀" : "🎯";
           const modeLabel = m.game_mode === "unshuffle" ? t("mode.unshuffle") : t("mode.pinpoint");
-          const rankBadge = formatRankBadge(m.rank, { dot: true });
+          const isSolo = m.play_mode === "local" && (Number(m.player_count) <= 1 || !m.player_count);
+          const rankBadge = isSolo || !m.rank
+            ? formatRankBadge(null)
+            : formatRankBadge(m.rank, { dot: true });
           const replayCell = canWatchReplays
             ? `
               <td class="col-replay text-right">
