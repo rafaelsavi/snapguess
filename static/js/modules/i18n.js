@@ -267,7 +267,7 @@ export function showAlert(msg) {
 
 export function getInitialLanguagePreference() {
   try {
-    const stored = localStorage.getItem("immich_quiz_language");
+    const stored = localStorage.getItem("snapguess_language");
     const normalized = normalizeLanguage(stored);
     if (normalized) return normalized;
   } catch (_) { }
@@ -304,7 +304,7 @@ export function toggleLanguage(onLanguageChanged) {
   const current = getLocale();
   state.language = current === "pt-BR" ? "en-US" : "pt-BR";
   try {
-    localStorage.setItem("immich_quiz_language", state.language);
+    localStorage.setItem("snapguess_language", state.language);
   } catch (_) { }
   updateLanguageUi();
   applyLanguage();

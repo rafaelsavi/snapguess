@@ -37,7 +37,7 @@
         document.documentElement.classList.add("game-mode-active");
       }
       try {
-        var s = localStorage.getItem("immich_quiz_theme") === "dark" ? "dark" : "light";
+        var s = localStorage.getItem("snapguess_theme") === "dark" ? "dark" : "light";
         document.documentElement.setAttribute("data-theme", s);
         document.documentElement.setAttribute("data-theme-setting", s);
       } catch (_) {}

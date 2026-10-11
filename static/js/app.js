@@ -580,11 +580,11 @@ function applyUiConfig(config) {
   if (config.immich_web_url) {
     state.immichWebUrl = config.immich_web_url;
   }
-  if (config.language && !localStorage.getItem("immich_quiz_language")) {
+  if (config.language && !localStorage.getItem("snapguess_language")) {
     const lang = normalizeLanguage(config.language);
     if (lang) {
       state.language = lang;
-      localStorage.setItem("immich_quiz_language", lang);
+      localStorage.setItem("snapguess_language", lang);
       updateLanguageUi();
     }
   }
@@ -849,7 +849,7 @@ function initHomeCard() {
     (window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1" ||
       window.location.hostname === "0.0.0.0" ||
-      window.__IMMICH_QUIZ_TEST__)
+      window.__SNAPGUESS_TEST__)
   ) {
     window.__state = state;
   }

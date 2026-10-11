@@ -31,8 +31,8 @@ export let dateRangeSlider = null;
 /** @type {PlayerInput|null} */
 export let playerInput = null;
 
-const PLAYERS_STORAGE_KEY = "immich_quiz_saved_players";
-const STORAGE_KEY_PREFIX = "immich_quiz_filters_";
+const PLAYERS_STORAGE_KEY = "snapguess_saved_players";
+const STORAGE_KEY_PREFIX = "snapguess_filters_";
 
 let cachedRawCities = [];
 let _preflightDebounceTimer = null;

@@ -14,7 +14,7 @@ import { buildMatchMetaHtml } from "../components/match_meta.js";
 import { challengeSession } from "./session.js";
 import { attachPlayerAutocomplete } from "../components/player_autocomplete.js";
 
-export const LAST_PLAYER_NAME_KEY = "immich_quiz_last_player_name";
+export const LAST_PLAYER_NAME_KEY = "snapguess_last_player_name";
 
 /**
  * Render the challenge landing / entry screen with resume detection.

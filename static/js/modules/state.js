@@ -1,6 +1,6 @@
 function getInitialLanguagePreference() {
   try {
-    const stored = localStorage.getItem("immich_quiz_language");
+    const stored = localStorage.getItem("snapguess_language");
     if (stored) {
       const s = String(stored).trim().toLowerCase().replace("_", "-");
       if (s.startsWith("pt")) return "pt-BR";
@@ -340,7 +340,7 @@ export const el = {
   gameEndedLobbyBtn: document.getElementById("game-ended-lobby-btn"),
 };
 
-const SESSION_STORAGE_KEY = "immich_quiz_active_match";
+const SESSION_STORAGE_KEY = "snapguess_active_match";
 
 export function saveActiveMatchSession() {
   if (!state.matchId || state.matchFinished) {

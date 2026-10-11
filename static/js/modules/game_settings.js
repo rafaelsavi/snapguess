@@ -1,4 +1,4 @@
-export const GAME_SETTINGS_STORAGE_KEY = "immich_quiz_game_settings";
+export const GAME_SETTINGS_STORAGE_KEY = "snapguess_game_settings";
 
 export const DEFAULT_GAME_SETTINGS = Object.freeze({
   game_mode: "pinpoint",
