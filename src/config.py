@@ -193,6 +193,21 @@ class AppSettings:
     log_level_api: str | None = None
     log_level_storage: str | None = None
 
+    # 7. Map Tile Configuration
+    tile_url_streets: str = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+    tile_attribution_streets: str = '&copy; OpenStreetMap'
+    tile_url_satellite: str = (
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+    )
+    tile_url_hybrid_boundaries: str = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
+    tile_url_hybrid_roads: str = (
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}'
+    )
+    tile_attribution_satellite: str = (
+        'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, '
+        'Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS User Community'
+    )
+
     def __post_init__(self) -> None:
         # Normalize and validate Immich server URL
         normalized_url = _normalize_url(self.immich_server_url, 'IMMICH_SERVER_URL')
@@ -375,5 +390,19 @@ def load_settings() -> AppSettings:
         kwargs['log_level_api'] = val.strip().upper()
     if val := _get_env('LOG_LEVEL_STORAGE'):
         kwargs['log_level_storage'] = val.strip().upper()
+
+    # Map Tile Configuration
+    if val := _get_env('TILE_URL_STREETS'):
+        kwargs['tile_url_streets'] = val
+    if val := _get_env('TILE_ATTRIBUTION_STREETS'):
+        kwargs['tile_attribution_streets'] = val
+    if val := _get_env('TILE_URL_SATELLITE'):
+        kwargs['tile_url_satellite'] = val
+    if val := _get_env('TILE_URL_HYBRID_BOUNDARIES'):
+        kwargs['tile_url_hybrid_boundaries'] = val
+    if val := _get_env('TILE_URL_HYBRID_ROADS'):
+        kwargs['tile_url_hybrid_roads'] = val
+    if val := _get_env('TILE_ATTRIBUTION_SATELLITE'):
+        kwargs['tile_attribution_satellite'] = val
 
     return AppSettings(**kwargs)

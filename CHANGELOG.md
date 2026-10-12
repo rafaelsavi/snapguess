@@ -12,11 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Interactive Hybrid Map Layer**: Replaced the pure satellite basemap with a high-contrast Hybrid map layer combining aerial satellite photography with crisp road networks, bridges, administrative borders, and geographic labels for improved navigation and landmark identification.
 - **Replay Map Viewport-Aware Navigation**: Enhanced replay and match review maps so clicking any empty map region smoothly centers the view, photo tab switching no longer pulls the camera away if the pin is already visible on-screen, and the reset zoom button toggles smoothly between round pin framing and a full world overview.
 - **Context-Aware Back Navigation**: Replay viewers, challenge results, and player profile screens now return to the exact page you arrived from (such as a player profile or the home screen) rather than redirecting to the catalog, preserving scroll position and active filters.
-- **Unified Screen Header Architecture**: Standardized header lockups across Match Replays, Challenge Results, and Player Profiles with consistent top-left back navigation, integrated match metadata, and elimination of duplicate profile headers.
+- **Unified Screen Header Architecture**: Standardized header lockups across Match Replays, Game Results, and Player Profiles with consistent top-left back navigation, concise minute-level timestamps, and uniform multi-tier subtitle metadata for challenge and local matches.
 
 ### Fixed
 
 - **Free Map Panning During Match Reviews**: Fixed an issue where selecting a photo or having its marker popup open prevented panning the map away by locking the viewport to the pin. Popups now stay anchored to their pins without preventing free exploration, and clicking empty map areas keeps the selected photo active.
+- **Match Header Subtitle Wrapping on Mobile**: Eliminated awkward 3-line metadata wrapping and orphaned leading bullets in mobile Game Results and Match Replay headers.
 - **Accurate Player Profile Match Ranks**: Fixed the recent matches table on player profile views displaying 1st place medals for non-winning challenge entries and solo local games. Ranks now accurately reflect actual standings across challenge participants, and solo games display a neutral dash.
 
 ## [4.0.0] - 2026-10-04

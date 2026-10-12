@@ -130,6 +130,14 @@ async def ui_config(request: Request) -> dict[str, object]:
         'score_max_points': SCORE_MAX_POINTS,
         'version': APP_VERSION,
         'immich_web_url': immich_web_url,
+        'tile_config': {
+            'streets_url': settings.tile_url_streets,
+            'streets_attribution': settings.tile_attribution_streets,
+            'satellite_url': settings.tile_url_satellite,
+            'hybrid_boundaries_url': settings.tile_url_hybrid_boundaries,
+            'hybrid_roads_url': settings.tile_url_hybrid_roads,
+            'satellite_attribution': settings.tile_attribution_satellite,
+        },
     }
 
 

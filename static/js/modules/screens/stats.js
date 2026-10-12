@@ -5,7 +5,7 @@
 
 import { state, el } from "../state.js";
 import { api } from "../api.js";
-import { t, tOr, formatDateTime } from "../i18n.js";
+import { t, tOr, formatDate, formatDateTime } from "../i18n.js";
 import { showCard } from "./common.js";
 import { navigate, navigateBack } from "../router.js";
 import { playerColor, playerInitial, escapeHtml, formatRankBadge } from "../formatters.js";
@@ -554,7 +554,7 @@ function renderPlayerProfile(data) {
     badgesEl.innerHTML = `
       ${isCurrentUser ? `<span class="player-hero-badge is-you">👤 ${t("stats.you_badge")}</span>` : ""}
       ${isCurrentUser ? `<span class="player-hero-badge is-verified">✓ ${t("stats.verified_account")}</span>` : ""}
-      <span class="player-hero-badge">📅 ${t("stats.active_since", player.first_played_at ? formatDateTime(player.first_played_at) : "-")}</span>
+      <span class="player-hero-badge">📅 ${t("stats.active_since", player.first_played_at ? formatDate(player.first_played_at) : "-")}</span>
       <span class="player-hero-badge">⏱️ ${t("stats.last_played", player.last_played_at ? formatDateTime(player.last_played_at) : "-")}</span>
     `;
   }

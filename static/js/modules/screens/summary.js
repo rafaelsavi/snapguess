@@ -62,9 +62,6 @@ export function renderReplayTitleHeader(data = null) {
     const primaryParts = [
       `<span class="badge-tag badge-type badge-type-challenge">⚔️ ${t("replay.play_mode_challenge")}</span>`,
     ];
-    if (dateText) {
-      primaryParts.push(`<span class="replay-match-date">${escapeHtml(dateText)}</span>`);
-    }
 
     const detailParts = [];
     if (challengeTitle) {
@@ -72,6 +69,9 @@ export function renderReplayTitleHeader(data = null) {
     }
     if (hostText) {
       detailParts.push(`<span class="replay-challenge-host">${escapeHtml(hostText)}</span>`);
+    }
+    if (dateText) {
+      detailParts.push(`<span class="replay-match-date">${escapeHtml(dateText)}</span>`);
     }
 
     const primaryHtml = `<span class="replay-meta-primary">${primaryParts.join(` <span class="meta-separator" aria-hidden="true">•</span> `)}</span>`;
@@ -101,7 +101,6 @@ export function renderSummaryTitleHeader(data = null) {
   const headingEl = el.summaryHeading || document.getElementById("summary-heading");
   const headingIcon = document.getElementById("summary-heading-icon");
   const backBtn = document.getElementById("summary-back-btn");
-  const metaText = document.getElementById("summary-match-meta-text");
 
   if (!data) return;
 
@@ -126,46 +125,37 @@ export function renderSummaryTitleHeader(data = null) {
     }
   }
 
+  // Heading is consistently "Game Results" (t("summary.heading"))
+  if (headingIcon) {
+    headingIcon.textContent = "🏆";
+  }
+  if (headingEl) {
+    headingEl.setAttribute("data-i18n", "summary.heading");
+    headingEl.textContent = t("summary.heading");
+  }
+
+  const playedAt = data.played_at || _currentMatchData?.played_at;
+  const dateText = playedAt ? formatDateTime(playedAt) : "";
+
+  const localDateWrap = document.getElementById("summary-local-date-wrap");
+  const localDateEl = document.getElementById("summary-local-match-date");
+
+  const secondaryEl = document.getElementById("summary-meta-secondary");
+  const titleEl = document.getElementById("summary-challenge-title");
+  const hostSep = document.getElementById("summary-host-sep");
+  const hostEl = document.getElementById("summary-challenge-host");
+  const dateSep = document.getElementById("summary-date-sep");
+  const dateEl = document.getElementById("summary-match-date");
+  const metaBreak = document.getElementById("summary-meta-break");
+
   if (isChallenge) {
-    if (headingIcon) {
-      headingIcon.textContent = "⚔️";
-    }
     if (badgeEl) {
       badgeEl.className = "badge-tag badge-type badge-type-challenge";
       badgeEl.innerHTML = `⚔️ ${t("replay.play_mode_challenge")}`;
     }
-    const challengeTitle =
-      data.challenge_title ||
-      data.title ||
-      (data.challenge_creator || data.creator_name
-        ? `${data.challenge_creator || data.creator_name}'s Challenge`
-        : t("challenge.badge"));
-
-    if (headingEl) {
-      headingEl.removeAttribute("data-i18n");
-      headingEl.textContent = challengeTitle;
-    }
-
-    const hostText = data.challenge_creator || data.creator_name
-      ? t("challenges_page.host_label", data.challenge_creator || data.creator_name)
-      : "";
-    const dateText = data.played_at ? formatDateTime(data.played_at) : "";
-
-    const parts = [];
-    if (hostText) {
-      parts.push(`<span class="replay-challenge-host">${escapeHtml(hostText)}</span>`);
-    }
-    if (dateText) {
-      parts.push(`<span class="replay-match-date">${escapeHtml(dateText)}</span>`);
-    }
-    if (metaText) {
-      metaText.innerHTML = parts.length > 0
-        ? ` <span class="meta-separator" aria-hidden="true">•</span> ` + parts.join(` <span class="meta-separator" aria-hidden="true">•</span> `)
-        : "";
-    }
 
     const totalRounds = data.rounds_played || data.total_rounds || 1;
-    const participants = (data.players || data.leaderboard || []);
+    const participants = data.players || data.leaderboard || [];
     if (livePill && liveStatus) {
       livePill.classList.remove("hidden");
       const finishedCount = participants.filter(
@@ -174,26 +164,65 @@ export function renderSummaryTitleHeader(data = null) {
       liveStatus.textContent = t("challenge.live_finished_tally", finishedCount, participants.length);
     }
 
-  } else {
-    if (headingIcon) {
-      headingIcon.textContent = "🏆";
+    if (localDateWrap) localDateWrap.classList.add("hidden");
+
+    const challengeTitle =
+      data.challenge_title ||
+      data.title ||
+      (data.challenge_creator || data.creator_name
+        ? `${data.challenge_creator || data.creator_name}'s Challenge`
+        : t("challenge.badge"));
+    const hostText = data.challenge_creator || data.creator_name
+      ? t("challenges_page.host_label", data.challenge_creator || data.creator_name)
+      : "";
+
+    if (titleEl) {
+      titleEl.textContent = challengeTitle;
     }
+    if (hostEl) {
+      if (hostText) {
+        hostEl.textContent = hostText;
+        hostEl.classList.remove("hidden");
+        if (hostSep) hostSep.classList.remove("hidden");
+      } else {
+        hostEl.classList.add("hidden");
+        if (hostSep) hostSep.classList.add("hidden");
+      }
+    }
+    if (dateEl) {
+      if (dateText) {
+        dateEl.textContent = dateText;
+        dateEl.classList.remove("hidden");
+        if (dateSep) dateSep.classList.remove("hidden");
+      } else {
+        dateEl.classList.add("hidden");
+        if (dateSep) dateSep.classList.add("hidden");
+      }
+    }
+
+    if (secondaryEl) secondaryEl.classList.remove("hidden");
+    if (metaBreak) metaBreak.classList.remove("hidden");
+
+  } else {
     if (badgeEl) {
       badgeEl.className = "badge-tag badge-type badge-type-local";
       badgeEl.innerHTML = `🕹️ ${t("replay.play_mode_local")}`;
     }
-    if (headingEl) {
-      headingEl.setAttribute("data-i18n", "summary.heading");
-      headingEl.textContent = t("summary.heading");
+    if (livePill) {
+      livePill.classList.add("hidden");
     }
-    if (livePill) livePill.classList.add("hidden");
 
-    const dateText = data.played_at ? formatDateTime(data.played_at) : "";
-    if (metaText) {
-      metaText.innerHTML = dateText
-        ? ` <span class="meta-separator" aria-hidden="true">•</span> <span class="replay-match-date">${escapeHtml(dateText)}</span>`
-        : "";
+    if (localDateWrap && localDateEl) {
+      if (dateText) {
+        localDateEl.textContent = dateText;
+        localDateWrap.classList.remove("hidden");
+      } else {
+        localDateWrap.classList.add("hidden");
+      }
     }
+
+    if (secondaryEl) secondaryEl.classList.add("hidden");
+    if (metaBreak) metaBreak.classList.add("hidden");
   }
 }
 

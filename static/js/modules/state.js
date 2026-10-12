@@ -23,6 +23,7 @@ export const state = {
   players: [],
   language: getInitialLanguagePreference(),
   immichWebUrl: null,
+  tileConfig: null,
   audioEnabled: true,
   scoreMaxPoints: 100,
   auth: {

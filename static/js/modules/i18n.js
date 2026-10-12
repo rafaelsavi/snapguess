@@ -71,7 +71,7 @@ export function formatDate(dateInput, options) {
 /**
  * Locale-aware date & time formatter using active language.
  */
-export function formatDateTime(dateInput, options) {
+export function formatDateTime(dateInput, options = { dateStyle: "short", timeStyle: "short" }) {
   if (!dateInput) return "";
   const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
   if (isNaN(d.getTime())) return "";

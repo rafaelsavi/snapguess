@@ -7,30 +7,34 @@ let journeySpiderLines = {}; // pinLabel -> L.polyline connector line
 let journeyTrueCoords = {};  // pinLabel -> { lat, lng } original coordinates
 
 export function createBaseTileLayers() {
-  const streets = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  const cfg = state.tileConfig || {};
+  const streetsUrl = cfg.streets_url || "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  const streetsAttr = cfg.streets_attribution || "&copy; OpenStreetMap";
+  const satUrl = cfg.satellite_url || "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+  const satAttr =
+    cfg.satellite_attribution ||
+    "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS User Community";
+  const boundariesUrl =
+    cfg.hybrid_boundaries_url ||
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
+  const transportationUrl =
+    cfg.hybrid_roads_url ||
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}";
+
+  const streets = L.tileLayer(streetsUrl, {
     maxZoom: 19,
-    attribution: "&copy; OpenStreetMap",
+    attribution: streetsAttr,
   });
-  const satImagery = L.tileLayer(
-    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    {
-      maxZoom: 19,
-      attribution:
-        "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS User Community",
-    }
-  );
-  const boundaries = L.tileLayer(
-    "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-    {
-      maxZoom: 19,
-    }
-  );
-  const transportation = L.tileLayer(
-    "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
-    {
-      maxZoom: 19,
-    }
-  );
+  const satImagery = L.tileLayer(satUrl, {
+    maxZoom: 19,
+    attribution: satAttr,
+  });
+  const boundaries = L.tileLayer(boundariesUrl, {
+    maxZoom: 19,
+  });
+  const transportation = L.tileLayer(transportationUrl, {
+    maxZoom: 19,
+  });
   const hybrid = L.layerGroup([satImagery, boundaries, transportation]);
   return { streets, hybrid };
 }

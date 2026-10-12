@@ -581,6 +581,9 @@ function applyUiConfig(config) {
   if (config.immich_web_url) {
     state.immichWebUrl = config.immich_web_url;
   }
+  if (config.tile_config) {
+    state.tileConfig = config.tile_config;
+  }
   if (config.language && !localStorage.getItem("snapguess_language")) {
     const lang = normalizeLanguage(config.language);
     if (lang) {
