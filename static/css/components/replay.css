@@ -134,6 +134,24 @@
   user-select: none;
 }
 
+.replay-meta-primary,
+.replay-meta-secondary {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
+@media (max-width: 760px) {
+  .replay-meta-break {
+    display: none;
+  }
+  .replay-meta-primary,
+  .replay-meta-secondary {
+    width: 100%;
+  }
+}
+
 .replay-match-meta .replay-challenge-title {
   font-weight: 600;
   color: var(--text-color, #0f172a);

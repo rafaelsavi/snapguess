@@ -251,7 +251,8 @@ async def test_replay_header_challenge_vs_local(page: Page) -> None:
     await expect(page.locator('#summary-card')).to_be_visible()
     await expect(page.locator('#review-header-replay')).to_be_visible()
 
-    # Subtitle contains challenge title and creator name
+    # Heading is always "Match Replay", subtitle contains challenge title and creator name
+    await expect(page.locator('#replay-heading-title')).to_have_text('Match Replay')
     await expect(page.locator('#replay-match-title .replay-challenge-title')).to_have_text('Summer Roadtrip 2026')
     await expect(page.locator('#replay-match-title .replay-challenge-host')).to_contain_text('Rafael')
 
@@ -386,6 +387,24 @@ async def test_unshuffle_replay_map_photo_icons_and_tab_jumping(page: Page) -> N
     await page.wait_for_timeout(400)
     overview_zoom = await page.evaluate("() => document.getElementById('replay-leaflet-map')._leaflet_map.getZoom()")
     assert overview_zoom <= framed_zoom
+
+    # 8. Pan away while photo is selected: map pans freely without popup snapping camera back
+    box = await map_locator.bounding_box()
+    start_x = box['x'] + box['width'] - 50
+    start_y = box['y'] + 150
+    end_x = start_x - 180
+    c_pre_pan = await page.evaluate("() => document.getElementById('replay-leaflet-map')._leaflet_map.getCenter()")
+    for _ in range(3):
+        await page.mouse.move(start_x, start_y)
+        await page.mouse.down()
+        await page.mouse.move(end_x, start_y, steps=8)
+        await page.mouse.up()
+        await page.wait_for_timeout(200)
+    c_post_pan = await page.evaluate("() => document.getElementById('replay-leaflet-map')._leaflet_map.getCenter()")
+    assert abs(c_post_pan['lng'] - c_pre_pan['lng']) > 5 or abs(c_post_pan['lat'] - c_pre_pan['lat']) > 5
+    # Popup remains held
+    popup_held = await page.evaluate("() => document.querySelector('.leaflet-popup') !== null")
+    assert popup_held is True
 
 
 @pytest.mark.asyncio

@@ -415,6 +415,14 @@ Player names in match and challenge result standings link to `/players/{playerNa
   - Left-aligned title block with mode icon, page heading, and metadata row (game mode badge, live poll indicator `#grand-reveal-live-pill` if active, and host/date text).
   - Compact match specification container (`.replay-match-meta-container` / `.summary-meta-items`).
 
+### Player Directory vs Profile Headers (`.stats-page-header`)
+
+- **Directory Mode (`/players`)**: Displays `.stats-page-title-group` with the `PLAYERS` badge, directory heading, descriptive subtitle, and directory refresh action.
+- **Profile Mode (`/players/:name`)**: Hides `.stats-page-title-group` completely to eliminate title and player name redundancy. Displays a unified hero lockup (`.stats-profile-hero`):
+  - Top-left contextual back button (`#profile-back-to-hub-btn`) utilizing `navigateBack("/players")`.
+  - Circular avatar (`#profile-hero-avatar`), player name heading (`#profile-hero-name`), and activity badges (`#profile-hero-badges`: `You`, `Verified`, `Active since...`, `Last played...`).
+  - Refresh button (`#stats-page-refresh-btn`) dynamically reloading the active player profile.
+
 ### Mobile Viewport Guarantee
 
 - All tables, matrices, and chips feature container-level horizontal touch scrolling (`overflow-x: auto`), ensuring `document.documentElement.scrollWidth === document.documentElement.clientWidth` across all screens on phone viewports down to 360px.

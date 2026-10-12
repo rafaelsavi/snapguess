@@ -6,10 +6,7 @@ This document lists planned features, design ideas, and technical debt items for
 
 ## 🚀 Prioritized TODO List
 
-- [x] col-rank of recent-matches-card is always showing first place even when it's wrong
-- [x] button "replay-back-btn" doesnt make sense if I arrived to the page from the another page that is not the replay page. Think about a better general strategy for back buttons.
-- [x] Standardize review-header-summary, review-header-replay, and player profile headers with unified layout and back navigation.
-- [x] Change satellite to hybrid maps
+- [ ] Add real website popups to replace the current browser based alert/confirm/prompt dialogues to work well with PWA. (If you see some popups that you think should remain as brwoser dialogue, feel free to tell me)
 - [ ] Discard support for videos. You can simplify whatever feels necessary, for example the query to immich.
 - [ ] **Improve Audio Effects & Soundtrack**
   - [ ] Expand runtime Web Audio synthesized procedural background music with game state mood transitions (setup -> tense round -> victory fanfare).

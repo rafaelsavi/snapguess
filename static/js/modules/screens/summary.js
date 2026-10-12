@@ -40,9 +40,16 @@ export function renderReplayTitleHeader(data = null) {
   const titleEl = document.getElementById("replay-match-title");
   if (!titleEl || !data) return;
 
+  if (headingTitleEl) {
+    headingTitleEl.setAttribute("data-i18n", "replay.title");
+    headingTitleEl.textContent = t("replay.title");
+  }
+
   const isChallenge =
     data.play_mode === "challenge" ||
     Boolean(data.challenge_id || data.challenge_title || data.challenge_creator);
+
+  const dateText = data.played_at ? formatDateTime(data.played_at) : "";
 
   if (isChallenge) {
     const challengeTitle =
@@ -51,36 +58,39 @@ export function renderReplayTitleHeader(data = null) {
     const hostText = data.challenge_creator
       ? t("challenges_page.host_label", data.challenge_creator)
       : "";
-    const dateText = formatDateTime(data.played_at);
 
-    if (headingTitleEl) {
-      headingTitleEl.removeAttribute("data-i18n");
-      headingTitleEl.textContent = challengeTitle;
-    }
-
-    const parts = [
+    const primaryParts = [
       `<span class="badge-tag badge-type badge-type-challenge">⚔️ ${t("replay.play_mode_challenge")}</span>`,
-      `<span class="replay-challenge-title">${escapeHtml(challengeTitle)}</span>`,
     ];
-    if (hostText) {
-      parts.push(`<span class="replay-challenge-host">${escapeHtml(hostText)}</span>`);
-    }
     if (dateText) {
-      parts.push(`<span class="replay-match-date">${escapeHtml(dateText)}</span>`);
+      primaryParts.push(`<span class="replay-match-date">${escapeHtml(dateText)}</span>`);
     }
-    titleEl.innerHTML = parts.join(` <span class="meta-separator" aria-hidden="true">•</span> `);
+
+    const detailParts = [];
+    if (challengeTitle) {
+      detailParts.push(`<span class="replay-challenge-title">${escapeHtml(challengeTitle)}</span>`);
+    }
+    if (hostText) {
+      detailParts.push(`<span class="replay-challenge-host">${escapeHtml(hostText)}</span>`);
+    }
+
+    const primaryHtml = `<span class="replay-meta-primary">${primaryParts.join(` <span class="meta-separator" aria-hidden="true">•</span> `)}</span>`;
+    const secondaryHtml = detailParts.length > 0
+      ? `<span class="replay-meta-secondary">${detailParts.join(` <span class="meta-separator" aria-hidden="true">•</span> `)}</span>`
+      : "";
+
+    titleEl.innerHTML = secondaryHtml
+      ? `${primaryHtml} <span class="meta-separator replay-meta-break" aria-hidden="true">•</span> ${secondaryHtml}`
+      : primaryHtml;
 
   } else {
-    if (headingTitleEl) {
-      headingTitleEl.setAttribute("data-i18n", "replay.title");
-      headingTitleEl.textContent = t("replay.title");
+    const primaryParts = [
+      `<span class="badge-tag badge-type badge-type-local">🕹️ ${t("replay.play_mode_local")}</span>`,
+    ];
+    if (dateText) {
+      primaryParts.push(`<span class="replay-match-date">${escapeHtml(dateText)}</span>`);
     }
-    const dateText = formatDateTime(data.played_at);
-    titleEl.innerHTML = `
-      <span class="badge-tag badge-type badge-type-local">🕹️ ${t("replay.play_mode_local")}</span>
-      <span class="meta-separator" aria-hidden="true">•</span>
-      <span class="replay-match-date">${escapeHtml(dateText)}</span>
-    `;
+    titleEl.innerHTML = `<span class="replay-meta-primary">${primaryParts.join(` <span class="meta-separator" aria-hidden="true">•</span> `)}</span>`;
   }
 }
 

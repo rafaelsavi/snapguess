@@ -836,7 +836,7 @@ export function renderJourneyMap(roundHistory, locationMode = true, options = {}
       _trueLabel: pin.label,
     })
       .addTo(mapInstance)
-      .bindPopup(pin.popupText);
+      .bindPopup(pin.popupText, { autoPan: false, closeOnClick: false });
     layersArr.push(marker);
   });
 

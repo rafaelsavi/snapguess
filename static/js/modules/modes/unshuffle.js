@@ -3,7 +3,7 @@ import { state, el } from "../state.js";
 import { createStandardMap, createBadgePinIcon, updateSubmitState, fitMapToBounds, applySpiderfy, unregisterActiveMap, toggleMapFullscreen } from "../maps.js";
 import { renderGuessingModeSettings } from "./common.js";
 import { readGameSettings } from "../game_settings.js";
-import { playerNameCell, buildCell, renderRoundMeta } from "../formatters.js";
+import { playerNameCell, buildCell, renderRoundMeta, escapeHtml } from "../formatters.js";
 import { animateScoreRollup, createPerfectBadge } from "../effects.js";
 import { openReportModal } from "../components/report_modal.js";
 import { openPhotoLightbox, closePhotoLightbox, isPhotoLightboxOpen } from "../components/lightbox.js";
@@ -788,7 +788,16 @@ export const unshuffleMode = {
           onPhotoChange: (idx, photo) => {
             if (photo && photo.true_pin_id && _revealMarkerByKey[String(photo.true_pin_id)]) {
               try {
-                _revealMarkerByKey[String(photo.true_pin_id)].openPopup();
+                const marker = _revealMarkerByKey[String(photo.true_pin_id)];
+                marker.openPopup();
+                const map = state.revealMap;
+                if (map) {
+                  const latLng = marker.getLatLng();
+                  const bounds = typeof map.getBounds === "function" ? map.getBounds() : null;
+                  if (!bounds || !bounds.contains(latLng)) {
+                    map.panTo(latLng, { animate: true, duration: 0.4 });
+                  }
+                }
               } catch (_) {}
             }
           },
@@ -1301,9 +1310,17 @@ function renderBatchRevealMap(containerEl, batchItems) {
     const photoUrl = item.media_url || (item.photo_id ? `/api/media/${item.photo_id}` : (item.asset_id ? `/api/media/${encodeURIComponent(item.asset_id)}` : null));
     const icon = createBadgePinIcon(item.true_pin_id, pinColor, { isTaken: true, size: 36, photoUrl });
 
+    const locParts = [item.actual_city, item.actual_country].filter(Boolean);
+    const locText = locParts.length > 0 ? locParts.join(", ") : "";
     const dateStr = item.actual_date ? formatDate(item.actual_date, { year: "numeric", month: "short", day: "numeric" }) : "";
-    const marker = L.marker([lat, lon], { icon })
-      .bindPopup(`<b>${item.true_pin_id}</b><br>${dateStr}`)
+    const marker = L.marker([lat, lon], { icon, zIndexOffset: 700 })
+      .bindPopup(`
+        <div style="font-size: 0.88rem;">
+          <strong style="color: ${escapeHtml(pinColor)}; font-size: 1rem;">Pin ${escapeHtml(item.true_pin_id)}</strong><br>
+          ${locText ? `<span>📍 ${escapeHtml(locText)}</span><br>` : ""}
+          ${dateStr ? `<span>📅 ${escapeHtml(dateStr)}</span>` : ""}
+        </div>
+      `, { autoPan: false, closeOnClick: false })
       .addTo(map);
 
     const selectPhoto = () => {
