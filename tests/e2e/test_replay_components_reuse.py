@@ -389,6 +389,8 @@ async def test_unshuffle_replay_map_photo_icons_and_tab_jumping(page: Page) -> N
     assert overview_zoom <= framed_zoom
 
     # 8. Pan away while photo is selected: map pans freely without popup snapping camera back
+    await tab_btns.nth(0).click()
+    await page.wait_for_timeout(300)
     box = await map_locator.bounding_box()
     start_x = box['x'] + box['width'] - 50
     start_y = box['y'] + 150

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Free Map Panning During Match Reviews**: Fixed an issue where selecting a photo or having its marker popup open prevented panning the map away by locking the viewport to the pin. Popups now stay anchored to their pins without preventing free exploration, and clicking empty map areas keeps the selected photo active.
 - **Accurate Player Profile Match Ranks**: Fixed the recent matches table on player profile views displaying 1st place medals for non-winning challenge entries and solo local games. Ranks now accurately reflect actual standings across challenge participants, and solo games display a neutral dash.
 
 ## [4.0.0] - 2026-10-04
