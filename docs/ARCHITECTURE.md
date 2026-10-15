@@ -45,10 +45,12 @@ snapguess/
 │   │   │                preflight checks, answer scoring, and match finish persistence.
 │   │   └── challenge_service.py ChallengeService managing deterministic match seeds,
 │   │                    frozen decay calculations, capability tokens, and player sessions.
+│   ├── providers/       Swappable photo providers subsystem.
+│   │   ├── base.py      BasePhotoProvider abstract class and ProviderError base exception.
+│   │   ├── immich.py    ImmichPhotoProvider implementing BasePhotoProvider for Immich v3.2.0+.
+│   │   └── factory.py   Provider factory instantiating configured provider (via PHOTO_PROVIDER).
 │   ├── immich/
-│   │   └── client.py    ImmichClient adapter. Wraps httpx AsyncClient.
-│   │                    Provides: validate_access, list_albums, list_tags, search_assets,
-│   │                    search_random_assets, list_people, get_timeline_bounds, get_asset_bytes.
+│   │   └── client.py    Backward-compatible proxy re-exporting ImmichClient from src.providers.immich.
 │   ├── app_logging/     Structured logging and observability subsystem.
 │   │   ├── context.py   Async contextvars tracking (match_id, request_id, player_name).
 │   │   ├── filters.py   ContextFilter record enrichment and RedactionFilter secret scrubbing.

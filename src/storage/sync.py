@@ -10,8 +10,9 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from src.app_logging import LOGGER_SYNC, get_logger
-from src.immich.client import ImmichClient, ImmichClientError
 from src.models import SyncMode, SyncStage, SyncStatus
+from src.providers.base import BasePhotoProvider
+from src.providers.immich import ImmichClient, ImmichClientError
 from src.storage.metadata import MetadataStore
 
 logger = get_logger(LOGGER_SYNC)
@@ -37,18 +38,19 @@ def _clean_str(val: Any) -> str | None:
 
 
 class SyncEngine:
-    """Coordinates background synchronization between Immich and the local SQLite metadata index."""
+    """Coordinates background synchronization between photo providers and the local SQLite metadata index."""
 
     def __init__(
         self,
-        immich: ImmichClient,
+        provider: BasePhotoProvider,
         metadata_store: MetadataStore,
         *,
         on_sync_complete: Callable[[str], None] | None = None,
         cooldown_seconds: int = 60,
     ) -> None:
-        """Initialize SyncEngine with Immich client, metadata store, optional callback, and cooldown."""
-        self._immich = immich
+        """Initialize SyncEngine with photo provider, metadata store, optional callback, and cooldown."""
+        self._provider = provider
+        self._immich: Any = provider  # Backward-compatible reference for tests and legacy callers
         self._metadata_store = metadata_store
         self._on_sync_complete = on_sync_complete
         self._cooldown_seconds = max(0, cooldown_seconds)
@@ -76,8 +78,8 @@ class SyncEngine:
             libs = [library_name]
         elif available_libraries is not None:
             libs = list(available_libraries)
-        elif hasattr(self._immich, 'list_libraries') and self._immich.list_libraries():
-            libs = self._immich.list_libraries()
+        elif hasattr(self._provider, 'list_libraries') and self._provider.list_libraries():
+            libs = self._provider.list_libraries()
         else:
             all_states = self._metadata_store.get_all_sync_states()
             libs = [s['library_name'] for s in all_states] or list(self._active_sync_tasks.keys())
@@ -151,8 +153,8 @@ class SyncEngine:
             libs = [available_libraries]
         elif available_libraries is not None:
             libs = list(available_libraries)
-        elif hasattr(self._immich, 'list_libraries') and self._immich.list_libraries():
-            libs = self._immich.list_libraries()
+        elif hasattr(self._provider, 'list_libraries') and self._provider.list_libraries():
+            libs = self._provider.list_libraries()
         else:
             all_states = self._metadata_store.get_all_sync_states()
             libs = [s['library_name'] for s in all_states] or list(self._active_sync_tasks.keys())
@@ -256,7 +258,7 @@ class SyncEngine:
         available_libraries: list[str] | None = None,
     ) -> list[asyncio.Task[None]]:
         """Trigger background synchronization for all configured and available libraries."""
-        libs = available_libraries if available_libraries is not None else self._immich.list_libraries()
+        libs = available_libraries if available_libraries is not None else self._provider.list_libraries()
         tasks = []
         for lib in libs:
             t = self.trigger_sync(lib, force_full=force_full, bypass_cooldown=bypass_cooldown)

@@ -10,7 +10,6 @@ from src.auth.service import require_role
 from src.config import AppSettings
 from src.game.service import GameService
 from src.i18n import SupportedLanguage, parse_accept_language
-from src.immich.client import ImmichClient, ImmichClientError
 from src.models import (
     AnswerRequest,
     AnswerResponse,
@@ -37,6 +36,7 @@ from src.models import (
     SyncStateResponse,
     UiConfigResponse,
 )
+from src.providers import BasePhotoProvider, ProviderError
 from src.scoring import SCORE_MAX_POINTS
 from src.storage.challenge import ChallengeStore
 from src.storage.leaderboard import LeaderboardStore
@@ -72,9 +72,20 @@ def get_session_store(request: Request) -> SessionStore:
     return request.app.state.session_store
 
 
-def get_immich_client(request: Request) -> ImmichClient:
-    """FastAPI dependency yielding the configured Immich HTTP client."""
-    return request.app.state.immich_client
+def get_photo_provider(request: Request) -> BasePhotoProvider:
+    """FastAPI dependency yielding the configured photo provider."""
+    provider: BasePhotoProvider | None = getattr(request.app.state, 'photo_provider', None)
+    immich: BasePhotoProvider | None = getattr(request.app.state, 'immich_client', None)
+    if immich is not None and immich is not provider:
+        return immich
+    active = provider or immich
+    if active is None:
+        raise RuntimeError('Photo provider is not initialized on app state')
+    return active
+
+
+# Backward-compatible alias
+get_immich_client = get_photo_provider
 
 
 def get_leaderboard_store(request: Request) -> LeaderboardStore:
@@ -142,8 +153,8 @@ async def ui_config(request: Request) -> dict[str, object]:
 
 
 @router.get('/libraries', dependencies=[Depends(require_role(Role.CREATOR))])
-async def libraries(request: Request, immich: ImmichClient = Depends(get_immich_client)) -> dict[str, object]:
-    names = immich.list_libraries()
+async def libraries(request: Request, provider: BasePhotoProvider = Depends(get_photo_provider)) -> dict[str, object]:
+    names = provider.list_libraries()
     available = request.app.state.available_libraries
     unavailable = request.app.state.unavailable_libraries
     return {
@@ -352,7 +363,7 @@ async def media(
     request: Request,
     store: SessionStore = Depends(get_session_store),
     challenge_store: ChallengeStore = Depends(get_challenge_store),
-    immich: ImmichClient = Depends(get_immich_client),
+    provider: BasePhotoProvider = Depends(get_photo_provider),
     metadata_store: MetadataStore = Depends(get_metadata_store),
     leaderboard_store: LeaderboardStore = Depends(get_leaderboard_store),
 ) -> Response:
@@ -380,8 +391,8 @@ async def media(
         )
 
     try:
-        content, content_type = await immich.get_asset_bytes(target_library, asset_id)
-    except ImmichClientError as exc:
+        content, content_type = await provider.get_asset_bytes(target_library, asset_id)
+    except ProviderError as exc:
         await asyncio.to_thread(metadata_store.mark_asset_invalid, asset_id)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

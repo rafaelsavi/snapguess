@@ -91,6 +91,10 @@ class FakeImmichClient:
         self.last_include_shared = False
         self.last_query = None
 
+    @property
+    def provider_id(self) -> str:
+        return 'fake_immich'
+
     def list_libraries(self) -> list[str]:
         return ['family']
 
@@ -353,6 +357,7 @@ def build_client(
         tag_blacklist=tag_blacklist,
     )
     app = create_app(settings=settings)
+    app.state.photo_provider = immich
     app.state.immich_client = immich
     if hasattr(app.state, 'sync_engine'):
         app.state.sync_engine._immich = immich
