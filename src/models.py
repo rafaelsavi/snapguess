@@ -1442,3 +1442,28 @@ class ChallengeDeactivateResponse(BaseModel):
 
     success: bool
     challenge_id: str
+
+
+class TileConfig(BaseModel):
+    """Configuration for client map tile providers."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    streets_url: str
+    streets_attribution: str
+    satellite_url: str
+    hybrid_boundaries_url: str
+    hybrid_roads_url: str
+    satellite_attribution: str
+
+
+class UiConfigResponse(BaseModel):
+    """Runtime frontend configuration and capability payload."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    language: str
+    score_max_points: int
+    version: str
+    immich_web_url: str
+    tile_config: TileConfig

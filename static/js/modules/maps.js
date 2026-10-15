@@ -6,6 +6,25 @@ import { playPinDropSound } from "./audio.js";
 let journeySpiderLines = {}; // pinLabel -> L.polyline connector line
 let journeyTrueCoords = {};  // pinLabel -> { lat, lng } original coordinates
 
+export const MAP_LAYER_STORAGE_KEY = "snapguess_preferred_map_layer";
+
+export function getPreferredMapLayer() {
+  try {
+    const pref = localStorage.getItem(MAP_LAYER_STORAGE_KEY);
+    return pref === "hybrid" ? "hybrid" : "streets";
+  } catch (_) {
+    return "streets";
+  }
+}
+
+export function setPreferredMapLayer(layerName) {
+  try {
+    if (layerName === "hybrid" || layerName === "streets") {
+      localStorage.setItem(MAP_LAYER_STORAGE_KEY, layerName);
+    }
+  } catch (_) {}
+}
+
 export function createBaseTileLayers() {
   const cfg = state.tileConfig || {};
   const streetsUrl = cfg.streets_url || "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -62,6 +81,17 @@ export function addLayerControl(map, baseLayers) {
     .addTo(map);
 
   map._layerControl = control;
+
+  if (!map._hasLayerChangeListener) {
+    map._hasLayerChangeListener = true;
+    map.on("baselayerchange", (e) => {
+      if (e.layer === hybridLayer) {
+        setPreferredMapLayer("hybrid");
+      } else if (e.layer === base.streets) {
+        setPreferredMapLayer("streets");
+      }
+    });
+  }
 
   if (control._container) {
     const toggleBtn = control._container.querySelector(".leaflet-control-layers-toggle");
@@ -373,12 +403,14 @@ export function createStandardMap(containerOrEl, options = {}) {
   const initialMinZoom = Math.max(1, Math.ceil(Math.log2(containerHeight / 256)));
 
   const base = createBaseTileLayers();
+  const prefLayer = getPreferredMapLayer();
+  const activeBaseLayer = prefLayer === "hybrid" ? base.hybrid : base.streets;
   const mapOptions = {
     worldCopyJump: true,
     zoomControl: false,
     minZoom: initialMinZoom,
     maxBounds: [[-85.05112878, -Infinity], [85.05112878, Infinity]],
-    layers: [base.streets],
+    layers: [activeBaseLayer],
     ...options.leafletOptions,
   };
 

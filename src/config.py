@@ -139,6 +139,21 @@ def _validate_no_overlap(set_a: frozenset[str], set_b: frozenset[str], name_a: s
         raise ConfigError(f'{name_a} and {name_b} cannot overlap: {", ".join(sorted(overlap))}')
 
 
+def _sanitize_tile_url(value: str, env_name: str) -> str:
+    """Sanitize and validate a map tile template URL, stripping quotes and ensuring valid protocol."""
+    cleaned = value.strip().strip('\'"')
+    if not cleaned:
+        raise ConfigError(f'{env_name} cannot be empty')
+    if not (cleaned.startswith('http://') or cleaned.startswith('https://') or cleaned.startswith('//')):
+        raise ConfigError(f'{env_name} must be a valid HTTP/HTTPS URL template, got {value!r}')
+    return cleaned
+
+
+def _sanitize_tile_attribution(value: str) -> str:
+    """Sanitize attribution string, stripping outer quotes and whitespace."""
+    return value.strip().strip('\'"')
+
+
 # ---------------------------------------------------------------------------
 # Application Settings Model
 # ---------------------------------------------------------------------------
@@ -281,6 +296,38 @@ class AppSettings:
                     raise ConfigError(f'{attr.upper()} must be one of {sorted(valid_levels)}, got {val!r}')
                 object.__setattr__(self, attr, norm_val)
 
+        # Sanitize and validate map tile settings
+        object.__setattr__(
+            self,
+            'tile_url_streets',
+            _sanitize_tile_url(self.tile_url_streets, 'TILE_URL_STREETS'),
+        )
+        object.__setattr__(
+            self,
+            'tile_attribution_streets',
+            _sanitize_tile_attribution(self.tile_attribution_streets),
+        )
+        object.__setattr__(
+            self,
+            'tile_url_satellite',
+            _sanitize_tile_url(self.tile_url_satellite, 'TILE_URL_SATELLITE'),
+        )
+        object.__setattr__(
+            self,
+            'tile_url_hybrid_boundaries',
+            _sanitize_tile_url(self.tile_url_hybrid_boundaries, 'TILE_URL_HYBRID_BOUNDARIES'),
+        )
+        object.__setattr__(
+            self,
+            'tile_url_hybrid_roads',
+            _sanitize_tile_url(self.tile_url_hybrid_roads, 'TILE_URL_HYBRID_ROADS'),
+        )
+        object.__setattr__(
+            self,
+            'tile_attribution_satellite',
+            _sanitize_tile_attribution(self.tile_attribution_satellite),
+        )
+
     @property
     def metadata_db_path(self) -> Path:
         """Absolute path to the SQLite metadata database."""
@@ -393,16 +440,16 @@ def load_settings() -> AppSettings:
 
     # Map Tile Configuration
     if val := _get_env('TILE_URL_STREETS'):
-        kwargs['tile_url_streets'] = val
+        kwargs['tile_url_streets'] = _sanitize_tile_url(val, 'TILE_URL_STREETS')
     if val := _get_env('TILE_ATTRIBUTION_STREETS'):
-        kwargs['tile_attribution_streets'] = val
+        kwargs['tile_attribution_streets'] = _sanitize_tile_attribution(val)
     if val := _get_env('TILE_URL_SATELLITE'):
-        kwargs['tile_url_satellite'] = val
+        kwargs['tile_url_satellite'] = _sanitize_tile_url(val, 'TILE_URL_SATELLITE')
     if val := _get_env('TILE_URL_HYBRID_BOUNDARIES'):
-        kwargs['tile_url_hybrid_boundaries'] = val
+        kwargs['tile_url_hybrid_boundaries'] = _sanitize_tile_url(val, 'TILE_URL_HYBRID_BOUNDARIES')
     if val := _get_env('TILE_URL_HYBRID_ROADS'):
-        kwargs['tile_url_hybrid_roads'] = val
+        kwargs['tile_url_hybrid_roads'] = _sanitize_tile_url(val, 'TILE_URL_HYBRID_ROADS')
     if val := _get_env('TILE_ATTRIBUTION_SATELLITE'):
-        kwargs['tile_attribution_satellite'] = val
+        kwargs['tile_attribution_satellite'] = _sanitize_tile_attribution(val)
 
     return AppSettings(**kwargs)

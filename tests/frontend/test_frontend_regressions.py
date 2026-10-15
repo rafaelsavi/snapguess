@@ -3174,3 +3174,17 @@ def test_application_dialog_component_and_pwa_popups() -> None:
     assert 'game.abandon_exit_message' in common_js
     assert 'game.abandon_exit_message' in setup_js
     assert 'game.abandon_exit_message' in app_js
+
+
+def test_map_layer_preference_persistence() -> None:
+    """Verify that maps.js provides layer preference persistence with localStorage fallback."""
+    maps_js = (JS_DIR / 'modules' / 'maps.js').read_text(encoding='utf-8')
+
+    assert 'MAP_LAYER_STORAGE_KEY = "snapguess_preferred_map_layer"' in maps_js
+    assert 'export function getPreferredMapLayer()' in maps_js
+    assert 'export function setPreferredMapLayer(layerName)' in maps_js
+    assert 'localStorage.getItem(MAP_LAYER_STORAGE_KEY)' in maps_js
+    assert 'localStorage.setItem(MAP_LAYER_STORAGE_KEY, layerName)' in maps_js
+    assert 'map.on("baselayerchange"' in maps_js
+    assert 'getPreferredMapLayer()' in maps_js
+    assert 'activeBaseLayer = prefLayer === "hybrid" ? base.hybrid : base.streets' in maps_js
