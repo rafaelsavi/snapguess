@@ -5,13 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [4.1.0] - 2026-10-15
 
 ### Added
 
 - **Persistent Map Layer Preference**: SnapGuess now automatically remembers your preferred map style (Streets or Hybrid) across rounds, match reviews, replays, and future gaming sessions.
 - **Themed Website Dialog Popups for PWA & Mobile**: Replaced native browser `alert`, `confirm`, and `prompt` dialogs with modern, styled modal popups matching SnapGuess's visual design. Features smooth entrance animations, full keyboard accessibility (Escape to dismiss, Tab cycling with focus trapping), accessible touch targets (≥44px), safe area spacing on mobile devices, and seamless dark mode theme support.
-- **1-Click Challenge Recreation for Creators**: Creators can now quickly recreate concluded challenges directly from the Challenges Hub, match results, and replay screens. Recreating restores the original game mode (Pinpoint or Unshuffle), Immich library selection, and photo filter criteria into the creator setup modal, allowing instant generation of a new challenge seed once an event has finished.
+- **Universal Game & Challenge Recreation for Creators**: Creators can now quickly recreate matches directly from match results and replay screens across all game modes (including local Pinpoint and Unshuffle matches, in addition to challenges from the Challenges Hub). Recreating restores the original game mode, Immich library selection, and photo filter criteria into the Prepare Game lobby to easily launch a new match or generate a new challenge.
 - **Concluded Challenge Outcome Banners**: Added dedicated summary banners on the Grand Reveal and Match Review screens when a challenge concludes with no winning scores or with a solo participant, providing clear confirmation of the final result.
 - **Concluded Challenge Status Indicator**: Concluded challenges now display a neutral, non-pulsing status badge and dot on match review screens, distinguishing completed events from actively running multiplayer lobbies.
 

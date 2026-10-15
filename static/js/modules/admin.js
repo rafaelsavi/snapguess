@@ -518,18 +518,26 @@ export function syncCreatorName() {
 /**
  * Recreate an existing challenge:
  * Restores the game mode and library selection (and all associated filters & settings)
- * into the setup lobby, navigates to Setup, and opens the Challenge Creator modal.
+ * into the setup lobby, navigates to Setup, and opens the Prepare Game modal.
+ * Supports both challenge recreation and local game mode recreation.
  *
- * @param {object} challengeData - Challenge object containing config, game_mode, libraries, etc.
+ * @param {object} challengeData - Challenge or match object containing config, game_mode, libraries, etc.
  */
 export async function recreateChallenge(challengeData) {
   if (!challengeData) return;
 
+  const isChallenge = Boolean(
+    challengeData.is_challenge ||
+      challengeData.play_mode === "challenge" ||
+      challengeData.challenge_id
+  );
+
   // Defensive guard: do not recreate if challenge is still active/running
   const isConcluded =
-    challengeData.is_concluded ??
-    (challengeData.is_active === false ||
-      (challengeData.expires_at && new Date(challengeData.expires_at).getTime() <= Date.now()));
+    !isChallenge ||
+    (challengeData.is_concluded ??
+      (challengeData.is_active === false ||
+        (challengeData.expires_at && new Date(challengeData.expires_at).getTime() <= Date.now())));
 
   if (isConcluded === false) {
     return;
@@ -551,7 +559,7 @@ export async function recreateChallenge(challengeData) {
   }
   await onLibrariesChanged(false);
 
-  // 3. Restore filters with challenge config
+  // 3. Restore filters with challenge/match config
   restoreFilters({
     ...config,
     libraries,
@@ -563,18 +571,38 @@ export async function recreateChallenge(challengeData) {
     game_mode: gameMode,
   });
 
-  // 5. Persist restored state to storage & refresh preflight
+  // 5. Restore players if available for local match setup
+  if (playerInput && Array.isArray(challengeData.players) && challengeData.players.length > 0) {
+    const names = challengeData.players
+      .map((p) => (typeof p === "string" ? p : p?.player_name))
+      .filter(Boolean);
+    if (names.length > 0) {
+      playerInput.setPlayers(names);
+    }
+  }
+
+  // 6. Persist restored state to storage & refresh preflight
   saveCurrentFilters();
   saveGameSettings();
   updateFiltersSummaryBadge();
   triggerPreflightDebounced();
 
-  // 6. Open Prepare Game modal directly on Challenge tab with pre-filled title & expiration
-  openAdminModal("challenge", {
-    title,
-    expirationHours: expiresInHours,
-  });
+  // 7. Open Prepare Game modal directly on appropriate tab
+  if (isChallenge) {
+    openAdminModal("challenge", {
+      title,
+      expirationHours: expiresInHours,
+    });
+  } else {
+    openAdminModal("local", {
+      title,
+      expirationHours: expiresInHours,
+    });
+  }
 
-  // 7. Show toast notification
-  showShareToast(t("admin.recreate_toast"));
+  // 8. Show toast notification
+  showShareToast(isChallenge ? t("admin.recreate_toast") : t("admin.recreate_game_toast"));
 }
+
+export const recreateGame = recreateChallenge;
+

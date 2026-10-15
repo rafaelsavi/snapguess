@@ -3089,21 +3089,26 @@ def test_recreate_challenge_creator_capability() -> None:
     assert 'if (ch && !isChallengeActive(ch))' in challenges_js
     assert 'isConcluded === false' in admin_js
 
-    # 3. Summary actions render recreate button only when challenge is concluded
+    # 3. Summary and replay actions render recreate button for all game modes when user is creator
     assert 'id="summary-recreate-challenge-btn"' in index_html
     assert 'id="replay-recreate-challenge-btn"' in index_html
     assert 'summary.is_concluded' in summary_js
-    assert 'Boolean(isChallenge && summary.is_concluded && state.auth?.role === "creator")' in summary_js
+    assert 'Boolean((!isChallenge || summary.is_concluded) && state.auth?.role === "creator")' in summary_js
     assert 'summary-recreate-challenge-btn' in summary_js
     assert 'replay-recreate-challenge-btn' in summary_js
     assert 'recreateChallenge(summary)' in summary_js
+    assert 'summary.recreate_game_btn' in summary_js
+    assert 'export const recreateGame = recreateChallenge' in admin_js
+    assert 'openAdminModal("local"' in admin_js
 
     # 4. Locale parity for recreation
     for loc in (en_us, pt_br):
         assert '"challenges_page.recreate_btn"' in loc
         assert '"challenges_page.recreate_btn_title"' in loc
         assert '"summary.recreate_challenge_btn"' in loc
+        assert '"summary.recreate_game_btn"' in loc
         assert '"admin.recreate_toast"' in loc
+        assert '"admin.recreate_game_toast"' in loc
 
 
 def test_application_dialog_component_and_pwa_popups() -> None:

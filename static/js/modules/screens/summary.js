@@ -341,10 +341,14 @@ export function renderSummaryContent(summary) {
     playAgainBtn.classList.toggle("hidden", Boolean(isChallenge || !state.lastMatchConfig));
   }
 
+  const canRecreate = Boolean((!isChallenge || summary.is_concluded) && state.auth?.role === "creator");
+  const recreateI18nKey = isChallenge ? "summary.recreate_challenge_btn" : "summary.recreate_game_btn";
+
   const recreateChallengeBtn = document.getElementById("summary-recreate-challenge-btn");
   if (recreateChallengeBtn) {
-    const canRecreate = Boolean(isChallenge && summary.is_concluded && state.auth?.role === "creator");
     recreateChallengeBtn.classList.toggle("hidden", !canRecreate);
+    recreateChallengeBtn.setAttribute("data-i18n", recreateI18nKey);
+    recreateChallengeBtn.textContent = `🔄 ${t(recreateI18nKey)}`;
     recreateChallengeBtn.onclick = () => {
       recreateChallenge(summary);
     };
@@ -352,8 +356,9 @@ export function renderSummaryContent(summary) {
 
   const replayRecreateBtn = document.getElementById("replay-recreate-challenge-btn");
   if (replayRecreateBtn) {
-    const canRecreate = Boolean(isChallenge && summary.is_concluded && state.auth?.role === "creator");
     replayRecreateBtn.classList.toggle("hidden", !canRecreate);
+    replayRecreateBtn.setAttribute("data-i18n", recreateI18nKey);
+    replayRecreateBtn.textContent = `🔄 ${t(recreateI18nKey)}`;
     replayRecreateBtn.onclick = () => {
       recreateChallenge(summary);
     };
@@ -601,7 +606,9 @@ export function buildUnifiedSummary({
     libraries:
       challengeData?.libraries ||
       challengeData?.config?.libraries ||
+      replayData?.libraries ||
       replayData?.config?.libraries ||
+      summaryData?.libraries ||
       summaryData?.config?.libraries ||
       [],
     location_mode: challengeData ? (challengeData.location_mode !== false) : (replayData?.location_mode ?? summaryData?.location_mode ?? true),
