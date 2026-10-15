@@ -3161,5 +3161,16 @@ def test_application_dialog_component_and_pwa_popups() -> None:
     assert 'showConfirmDialog' in app_js
     assert 'initDialogModal()' in app_js
 
-    # 6. Router supports asynchronous navigation guards
+    # 6. Router supports asynchronous navigation guards with replace on popstate
     assert 'await guardRes' in router_js
+    assert 'navigate(newPath, { force: true, replace: true })' in router_js
+
+    # 7. Alert dialog respects non-error icons and game settings normalizes rounds
+    game_settings_js = (JS_DIR / 'modules' / 'game_settings.js').read_text(encoding='utf-8')
+    assert 'icon !== "info" && icon !== "success"' in dialog_js
+    assert 'source.rounds' in game_settings_js
+
+    # 8. Dedicated in-game exit/restart messages used consistently
+    assert 'game.abandon_exit_message' in common_js
+    assert 'game.abandon_exit_message' in setup_js
+    assert 'game.abandon_exit_message' in app_js

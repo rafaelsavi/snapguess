@@ -261,7 +261,9 @@ export function showAlertDialog(options) {
     _currentResolver = () => resolve();
     _currentMode = "alert";
 
-    const isError = icon === "error" || /error|fail|falha|erro/i.test(message);
+    const isError =
+      icon === "error" ||
+      (icon !== "info" && icon !== "success" && /error|fail|falha|erro/i.test(message));
     const resolvedTitle = title || (isError ? t("dialog.error_title") : t("dialog.alert_title"));
     const resolvedOk = okText || t("common.ok");
     const resolvedIcon = icon || (isError ? "error" : "info");

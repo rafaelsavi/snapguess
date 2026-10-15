@@ -498,23 +498,8 @@ bindGlobalShortcuts({
     toggleLanguage();
     refreshActiveScreenLanguage();
   },
-  onReturnToLobby: async () => {
-    if (challenge.isActive()) {
-      const confirmed = await showConfirmDialog({
-        title: t("game.abandon_title"),
-        message: t("game.abandon_confirm", t("game.abandon_exit")),
-        confirmText: t("game.abandon_exit_action"),
-        cancelText: t("common.cancel"),
-        isDanger: true,
-        icon: "danger",
-      });
-      if (confirmed) {
-        challenge.reset();
-        returnToSetup();
-      }
-      return;
-    }
-    if (isGameActive()) {
+  onReturnToLobby: () => {
+    if (challenge.isActive() || isGameActive()) {
       handleAbandonGame("exit");
     } else if (!el.summaryCard.classList.contains("hidden") || (el.challengeCard && !el.challengeCard.classList.contains("hidden"))) {
       returnToSetup();
@@ -825,42 +810,27 @@ function initHomeCard() {
       showShareToast(msg);
       return false;
     }
-    if (fromRoute.type === RouteType.GAME_ACTIVE && isGameActive()) {
-      if (toRoute.path !== fromRoute.path) {
-        const label = t("game.abandon_exit");
-        const confirmed = await showConfirmDialog({
-          title: t("game.abandon_title"),
-          message: t("game.abandon_confirm", label),
-          confirmText: t("game.abandon_exit_action"),
-          cancelText: t("common.cancel"),
-          isDanger: true,
-          icon: "danger",
-        });
-        if (confirmed) {
-          clearTimer();
-          clearActiveMatchSession();
-          return true;
-        }
-        return false;
-      }
-    } else if (fromRoute.type === RouteType.CHALLENGE && challenge.isGameActive()) {
-      if (toRoute.path !== fromRoute.path) {
-        const label = t("game.abandon_exit");
-        const confirmed = await showConfirmDialog({
-          title: t("game.abandon_title"),
-          message: t("game.abandon_confirm", label),
-          confirmText: t("game.abandon_exit_action"),
-          cancelText: t("common.cancel"),
-          isDanger: true,
-          icon: "danger",
-        });
-        if (confirmed) {
-          clearTimer();
+    const isStandardGame = fromRoute.type === RouteType.GAME_ACTIVE && isGameActive();
+    const isChallengeGame = fromRoute.type === RouteType.CHALLENGE && challenge.isGameActive();
+    if ((isStandardGame || isChallengeGame) && toRoute.path !== fromRoute.path) {
+      const confirmed = await showConfirmDialog({
+        title: t("game.abandon_title"),
+        message: t("game.abandon_exit_message"),
+        confirmText: t("game.abandon_exit_btn"),
+        cancelText: t("common.cancel"),
+        isDanger: true,
+        icon: "danger",
+      });
+      if (confirmed) {
+        clearTimer();
+        if (isChallengeGame) {
           challenge.reset();
-          return true;
+        } else {
+          clearActiveMatchSession();
         }
-        return false;
+        return true;
       }
+      return false;
     }
     return true;
   });

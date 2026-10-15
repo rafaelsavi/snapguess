@@ -290,7 +290,7 @@ export function initRouter(handler) {
       if (!allowed) {
         return;
       }
-      navigate(newPath, { force: true });
+      navigate(newPath, { force: true, replace: true });
       return;
     }
 

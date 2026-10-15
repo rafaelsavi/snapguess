@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Match Header Subtitle Wrapping on Mobile**: Eliminated awkward 3-line metadata wrapping and orphaned leading bullets in mobile Game Results and Match Replay headers.
 - **Accurate Player Profile Match Ranks**: Fixed the recent matches table on player profile views displaying 1st place medals for non-winning challenge entries and solo local games. Ranks now accurately reflect actual standings across challenge participants, and solo games display a neutral dash.
 - **Accurate Unshuffle Match Target Metadata**: Fixed match specifications on summary and challenge cards always displaying "Pins & Timeline" for Unshuffle games even when configured for Location only or Date only. Target badges now uniformly show "Location & Date", "Location only", or "Date only" across both Pinpoint and Unshuffle modes.
+- **In-Game Browser Back Navigation**: Fixed an issue where confirming to exit an active game using the browser back button appended redundant history entries, allowing smooth and predictable back navigation to the home lobby.
+- **Challenge Recreation Round Count Accuracy**: Recreating a challenge now accurately preserves custom round counts (e.g. 5 rounds) instead of reverting to the lobby default.
 
 ### Removed
 

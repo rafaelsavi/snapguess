@@ -273,8 +273,8 @@ export async function handleAbandonGame(action) {
   if (challenge && challenge.isActive()) {
     const confirmed = await showConfirmDialog({
       title: t("game.abandon_title"),
-      message: t("game.abandon_confirm", t("game.abandon_exit")),
-      confirmText: t("game.abandon_exit_action"),
+      message: t("game.abandon_exit_message"),
+      confirmText: t("game.abandon_exit_btn"),
       cancelText: t("common.cancel"),
       isDanger: true,
       icon: "danger",
