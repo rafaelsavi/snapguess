@@ -821,7 +821,7 @@ def test_supporting_dataclasses_validation() -> None:
     import pytest
 
     from src.config import AppSettings, ConfigError
-    from src.immich.client import AssetAnswer
+    from src.models import AssetAnswer
     from src.storage.metadata import AssetFilterCriteria
 
     # AppSettings port & decay validations
@@ -1130,7 +1130,7 @@ def test_reusable_base_models_and_pinpoint_structures() -> None:
 def test_round_data_and_question_state_delegation() -> None:
     from datetime import date, datetime, timezone
 
-    from src.immich.client import AssetAnswer
+    from src.models import AssetAnswer
     from src.storage.session import QuestionState, RoundAsset, RoundData
 
     ans = AssetAnswer(

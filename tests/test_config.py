@@ -338,6 +338,10 @@ def test_app_settings_dataclass_defaults() -> None:
     assert settings.auto_sync_on_startup is True
     assert settings.auto_delta_sync_interval_hours == 6
     assert settings.auto_full_sync_interval_hours == 120
+    assert 'openstreetmap.org' in settings.tile_url_streets
+    assert 'World_Imagery' in settings.tile_url_satellite
+    assert 'World_Boundaries_and_Places' in settings.tile_url_hybrid_boundaries
+    assert 'World_Transportation' in settings.tile_url_hybrid_roads
 
 
 def test_app_settings_dataclass_validations() -> None:
@@ -429,3 +433,42 @@ def test_exclude_flagged_assets_parsing(monkeypatch: pytest.MonkeyPatch, raw: st
     monkeypatch.setenv('EXCLUDE_FLAGGED_ASSETS', raw)
     settings = load_settings()
     assert settings.exclude_flagged_assets is expected
+
+
+def test_custom_tile_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv('IMMICH_SERVER_URL', 'https://example.test/api')
+    monkeypatch.setenv('IMMICH_LIBRARIES', '{"family": "token"}')
+    monkeypatch.setenv('TILE_URL_STREETS', 'https://tiles.example.com/{z}/{x}/{y}.png')
+    monkeypatch.setenv('TILE_ATTRIBUTION_STREETS', 'Custom Attribution')
+    monkeypatch.setenv('TILE_URL_SATELLITE', 'https://sat.example.com/{z}/{x}/{y}.png')
+    settings = load_settings()
+    assert settings.tile_url_streets == 'https://tiles.example.com/{z}/{x}/{y}.png'
+    assert settings.tile_attribution_streets == 'Custom Attribution'
+    assert settings.tile_url_satellite == 'https://sat.example.com/{z}/{x}/{y}.png'
+
+
+def test_tile_configuration_strips_quotes_and_whitespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv('IMMICH_SERVER_URL', 'https://example.test/api')
+    monkeypatch.setenv('IMMICH_LIBRARIES', '{"family": "token"}')
+    monkeypatch.setenv('TILE_URL_STREETS', '  "https://tiles.example.com/{z}/{x}/{y}.png"  ')
+    monkeypatch.setenv('TILE_ATTRIBUTION_STREETS', " 'Custom Attribution with quotes' ")
+    settings = load_settings()
+    assert settings.tile_url_streets == 'https://tiles.example.com/{z}/{x}/{y}.png'
+    assert settings.tile_attribution_streets == 'Custom Attribution with quotes'
+
+
+def test_tile_url_invalid_protocol(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv('IMMICH_SERVER_URL', 'https://example.test/api')
+    monkeypatch.setenv('IMMICH_LIBRARIES', '{"family": "token"}')
+    monkeypatch.setenv('TILE_URL_STREETS', 'ftp://tiles.example.com/{z}/{x}/{y}.png')
+    with pytest.raises(ConfigError, match='TILE_URL_STREETS must be a valid HTTP/HTTPS URL template'):
+        load_settings()
+
+
+def test_tile_url_empty_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    with pytest.raises(ConfigError, match='TILE_URL_STREETS cannot be empty'):
+        AppSettings(
+            immich_server_url='https://example.test/api',
+            immich_libraries={'family': 'token'},
+            tile_url_streets='',
+        )

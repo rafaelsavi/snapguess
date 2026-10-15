@@ -58,10 +58,7 @@ export function getMatchMetaCategories(data) {
   const dateMode = data.date_mode !== undefined ? data.date_mode : filterConfig.date_mode;
   let targetsLabel = "";
   let targetsIcon = "🧭";
-  if (isShuffle) {
-    targetsLabel = tOr("meta.targets_shuffle", "Pins & Timeline");
-    targetsIcon = "🗂️";
-  } else if (locMode && dateMode) {
+  if (locMode && dateMode) {
     targetsLabel = tOr("meta.targets_loc_date", "Location & Date");
     targetsIcon = "🧭";
   } else if (locMode) {

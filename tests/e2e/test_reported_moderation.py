@@ -105,9 +105,12 @@ async def test_reported_asset_moderation_workflow(page: Page) -> None:
     await expect(page.locator('.reported-item-card')).to_have_count(2)
 
     # 8. Resolve asset-mod-1
-    page.on('dialog', lambda dialog: dialog.accept())
+    dialog = page.locator('#app-dialog-modal')
     resolve_btn = inspection_panel.locator('#btn-resolve-current-report')
     await resolve_btn.click()
+    await expect(dialog).to_be_visible()
+    await page.locator('#app-dialog-confirm-btn').click()
+    await expect(dialog).to_be_hidden()
 
     # Asset should be removed from view
     await expect(page.locator('.reported-item-card')).to_have_count(1)
@@ -117,6 +120,9 @@ async def test_reported_asset_moderation_workflow(page: Page) -> None:
 
     # 9. Resolve remaining asset-mod-2 to test empty state
     await resolve_btn.click()
+    await expect(dialog).to_be_visible()
+    await page.locator('#app-dialog-confirm-btn').click()
+    await expect(dialog).to_be_hidden()
     await expect(page.locator('.reported-item-card')).to_have_count(0)
     await expect(page.locator('#reported-items-list .reported-empty-state')).to_be_visible()
     await expect(page.locator('#reported-items-list .reported-empty-state h3')).to_have_text('No Reported Photos')

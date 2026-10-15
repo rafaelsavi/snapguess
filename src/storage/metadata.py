@@ -9,8 +9,8 @@ from typing import Any
 
 from src.app_logging import LOGGER_STORAGE, get_logger
 from src.config import AppSettings
-from src.immich.client import AssetAnswer
 from src.models import (
+    AssetAnswer,
     BaseGameConfig,
     CityOption,
     DateRangeOption,
@@ -250,6 +250,21 @@ class MetadataStore:
                   )
                 """
             )
+
+        # Safeguard: Purge legacy VIDEO assets and their junction rows if any exist
+        has_videos = self._db.fetch_val("SELECT 1 FROM assets WHERE file_type = 'VIDEO' LIMIT 1")
+        if has_videos:
+            with self._db.connection() as conn:
+                conn.execute(
+                    "DELETE FROM asset_people WHERE asset_id IN (SELECT id FROM assets WHERE file_type = 'VIDEO')"
+                )
+                conn.execute(
+                    "DELETE FROM asset_albums WHERE asset_id IN (SELECT id FROM assets WHERE file_type = 'VIDEO')"
+                )
+                conn.execute(
+                    "DELETE FROM asset_tags WHERE asset_id IN (SELECT id FROM assets WHERE file_type = 'VIDEO')"
+                )
+                conn.execute("DELETE FROM assets WHERE file_type = 'VIDEO'")
 
     def has_synced_assets(self, libraries: list[str] | tuple[str, ...] | None = None) -> bool:
         """Check if any photo assets are indexed for the given libraries (or across all if None)."""
@@ -561,6 +576,9 @@ class MetadataStore:
         asset_ids = []
         for a in assets:
             aid = a['id']
+            ftype = str(a.get('file_type', 'IMAGE')).upper()
+            if ftype != 'IMAGE':
+                continue
             asset_ids.append(aid)
             country_val = a.get('country')
             state_val = a.get('state')
@@ -581,7 +599,7 @@ class MetadataStore:
                     library_name,
                     a.get('is_shared', 0),
                     a.get('is_partner', 0),
-                    a.get('file_type', 'IMAGE'),
+                    'IMAGE',
                     a.get('latitude'),
                     a.get('longitude'),
                     country_clean,
@@ -591,6 +609,9 @@ class MetadataStore:
                     a.get('immich_updated_at'),
                 )
             )
+
+        if not asset_rows:
+            return
 
         with self._db.connection() as conn:
             conn.executemany(
@@ -708,8 +729,8 @@ class MetadataStore:
         ignore_location_mode: bool = False,
         ignore_date_mode: bool = False,
     ) -> tuple[str, list[Any]]:
-        """Construct unified SQL WHERE clauses and parameters matching exact quiz filter semantics."""
-        clauses: list[str] = ["a.file_type != 'VIDEO'"]
+        """Construct unified SQL WHERE clauses and parameters matching exact game filter semantics."""
+        clauses: list[str] = []
         params: list[Any] = []
         if criteria.library_names:
             placeholders = ', '.join('?' for _ in criteria.library_names)
@@ -899,7 +920,7 @@ class MetadataStore:
                 )
                 params.extend(resolved_album_ids)
 
-        where_sql = ' AND '.join(f'({c})' for c in clauses)
+        where_sql = ' AND '.join(f'({c})' for c in clauses) if clauses else '1=1'
         return where_sql, params
 
     def count_eligible_assets(self, criteria: AssetFilterCriteria) -> int:
@@ -1002,13 +1023,13 @@ class MetadataStore:
         """
         libs = [str(lib).strip() for lib in libraries if str(lib).strip()] if libraries else []
 
-        clauses: list[str] = ["a.file_type != 'VIDEO'"]
+        clauses: list[str] = []
         params: list[Any] = []
         if libs:
             placeholders = ', '.join('?' for _ in libs)
             clauses.append(f'a.library_name IN ({placeholders})')
             params.extend(libs)
-        base_where = ' AND '.join(f'({c})' for c in clauses)
+        base_where = ' AND '.join(f'({c})' for c in clauses) if clauses else '1=1'
 
         # 1. Countries
         country_rows = self._db.fetch_all(

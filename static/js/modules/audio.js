@@ -13,7 +13,7 @@ export function hasUserActivation() {
 
 function getInitialAudioPreference() {
   try {
-    const stored = localStorage.getItem("immich_quiz_audio");
+    const stored = localStorage.getItem("snapguess_audio");
     if (stored === null) return true;
     return stored === "1";
   } catch (_) {
@@ -308,7 +308,7 @@ export function toggleAudio() {
     unlockAudioContext();
   }
   state.audioEnabled = !state.audioEnabled;
-  localStorage.setItem("immich_quiz_audio", state.audioEnabled ? "1" : "0");
+  localStorage.setItem("snapguess_audio", state.audioEnabled ? "1" : "0");
   updateAudioUi();
   if (state.audioEnabled && hasUserActivation()) {
     playTone(600, "sine", 0.08, 0.1);

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
 from typing import Any
@@ -15,6 +16,28 @@ from src.scoring import SCORE_MAX_POINTS
 # ---------------------------------------------------------------------------
 # Enums and Shared Primitives
 # ---------------------------------------------------------------------------
+
+
+@dataclass
+class AssetAnswer:
+    """Ground truth geographic and temporal metadata for an indexed or candidate photo asset."""
+
+    latitude: float | None
+    longitude: float | None
+    capture_datetime: datetime | None = None
+    city: str | None = None
+    state: str | None = None
+    country: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.latitude is not None and not (-90.0 <= self.latitude <= 90.0):
+            raise ValueError(f'latitude must be between -90.0 and 90.0, got {self.latitude}')
+        if self.longitude is not None and not (-180.0 <= self.longitude <= 180.0):
+            raise ValueError(f'longitude must be between -180.0 and 180.0, got {self.longitude}')
+
+    @property
+    def capture_date(self) -> date | None:
+        return self.capture_datetime.date() if self.capture_datetime is not None else None
 
 
 class RoundLength(str, Enum):
@@ -811,6 +834,8 @@ class MatchSummaryPlayer(BaseModel):
     accuracy_pct: float = Field(ge=0.0, le=100.0)
     rank: int = Field(ge=1)
     is_winner: bool
+    completed_rounds: int | None = Field(default=None, ge=0)
+    is_finished: bool | None = None
 
 
 class MatchSummaryResponse(BaseModel):
@@ -826,6 +851,8 @@ class MatchSummaryResponse(BaseModel):
     finished: bool
     winners: list[str]
     players: list[MatchSummaryPlayer]
+    challenge_id: str | None = None
+    is_concluded: bool | None = None
     filter_summary: str | None = None
     filter_tooltip: str | None = None
     is_custom_filtered: bool = False
@@ -1070,6 +1097,7 @@ class MatchReplayResponse(BaseModel):
     challenge_id: str | None = None
     challenge_title: str | None = None
     challenge_creator: str | None = None
+    is_concluded: bool | None = None
     winners: list[str] = Field(default_factory=list)
     players: list[MatchSummaryPlayer] = Field(default_factory=list)
     rounds_data: list[MatchReplayRound] = Field(default_factory=list)
@@ -1414,3 +1442,28 @@ class ChallengeDeactivateResponse(BaseModel):
 
     success: bool
     challenge_id: str
+
+
+class TileConfig(BaseModel):
+    """Configuration for client map tile providers."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    streets_url: str
+    streets_attribution: str
+    satellite_url: str
+    hybrid_boundaries_url: str
+    hybrid_roads_url: str
+    satellite_attribution: str
+
+
+class UiConfigResponse(BaseModel):
+    """Runtime frontend configuration and capability payload."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    language: str
+    score_max_points: int
+    version: str
+    immich_web_url: str
+    tile_config: TileConfig

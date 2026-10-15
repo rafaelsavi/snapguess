@@ -7,7 +7,7 @@
 import { t } from "./i18n.js";
 import { el } from "./state.js";
 
-const THEME_STORAGE_KEY = "immich_quiz_theme";
+const THEME_STORAGE_KEY = "snapguess_theme";
 const VALID_THEMES = ["light", "dark"];
 
 export const THEME_ICONS = {

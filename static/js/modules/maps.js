@@ -6,20 +6,56 @@ import { playPinDropSound } from "./audio.js";
 let journeySpiderLines = {}; // pinLabel -> L.polyline connector line
 let journeyTrueCoords = {};  // pinLabel -> { lat, lng } original coordinates
 
-export function createBaseTileLayers() {
-  const streets = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: "&copy; OpenStreetMap",
-  });
-  const satellite = L.tileLayer(
-    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    {
-      maxZoom: 19,
-      attribution:
-        "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS User Community",
+export const MAP_LAYER_STORAGE_KEY = "snapguess_preferred_map_layer";
+
+export function getPreferredMapLayer() {
+  try {
+    const pref = localStorage.getItem(MAP_LAYER_STORAGE_KEY);
+    return pref === "hybrid" ? "hybrid" : "streets";
+  } catch (_) {
+    return "streets";
+  }
+}
+
+export function setPreferredMapLayer(layerName) {
+  try {
+    if (layerName === "hybrid" || layerName === "streets") {
+      localStorage.setItem(MAP_LAYER_STORAGE_KEY, layerName);
     }
-  );
-  return { streets, satellite };
+  } catch (_) {}
+}
+
+export function createBaseTileLayers() {
+  const cfg = state.tileConfig || {};
+  const streetsUrl = cfg.streets_url || "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  const streetsAttr = cfg.streets_attribution || "&copy; OpenStreetMap";
+  const satUrl = cfg.satellite_url || "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+  const satAttr =
+    cfg.satellite_attribution ||
+    "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS User Community";
+  const boundariesUrl =
+    cfg.hybrid_boundaries_url ||
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
+  const transportationUrl =
+    cfg.hybrid_roads_url ||
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}";
+
+  const streets = L.tileLayer(streetsUrl, {
+    maxZoom: 19,
+    attribution: streetsAttr,
+  });
+  const satImagery = L.tileLayer(satUrl, {
+    maxZoom: 19,
+    attribution: satAttr,
+  });
+  const boundaries = L.tileLayer(boundariesUrl, {
+    maxZoom: 19,
+  });
+  const transportation = L.tileLayer(transportationUrl, {
+    maxZoom: 19,
+  });
+  const hybrid = L.layerGroup([satImagery, boundaries, transportation]);
+  return { streets, hybrid };
 }
 
 export function addLayerControl(map, baseLayers) {
@@ -36,14 +72,26 @@ export function addLayerControl(map, baseLayers) {
   if (!base) return null;
   map._baseLayers = base;
 
+  const hybridLayer = base.hybrid || base.satellite;
   const control = L.control
     .layers({
       [t("map.layer_streets")]: base.streets,
-      [t("map.layer_satellite")]: base.satellite,
+      [t("map.layer_hybrid")]: hybridLayer,
     })
     .addTo(map);
 
   map._layerControl = control;
+
+  if (!map._hasLayerChangeListener) {
+    map._hasLayerChangeListener = true;
+    map.on("baselayerchange", (e) => {
+      if (e.layer === hybridLayer) {
+        setPreferredMapLayer("hybrid");
+      } else if (e.layer === base.streets) {
+        setPreferredMapLayer("streets");
+      }
+    });
+  }
 
   if (control._container) {
     const toggleBtn = control._container.querySelector(".leaflet-control-layers-toggle");
@@ -56,7 +104,7 @@ export function addLayerControl(map, baseLayers) {
     const spans = control._container.querySelectorAll(".leaflet-control-layers-base label span");
     if (spans.length >= 2) {
       spans[0].setAttribute("data-i18n", "map.layer_streets");
-      spans[1].setAttribute("data-i18n", "map.layer_satellite");
+      spans[1].setAttribute("data-i18n", "map.layer_hybrid");
     }
 
     const updateActiveLabels = () => {
@@ -288,7 +336,7 @@ export function refreshMapsLanguage() {
       const spans = map._layerControl._container.querySelectorAll(".leaflet-control-layers-base label span");
       if (spans.length >= 2) {
         spans[0].textContent = ` ${t("map.layer_streets")}`;
-        spans[1].textContent = ` ${t("map.layer_satellite")}`;
+        spans[1].textContent = ` ${t("map.layer_hybrid")}`;
       }
     }
 
@@ -355,12 +403,14 @@ export function createStandardMap(containerOrEl, options = {}) {
   const initialMinZoom = Math.max(1, Math.ceil(Math.log2(containerHeight / 256)));
 
   const base = createBaseTileLayers();
+  const prefLayer = getPreferredMapLayer();
+  const activeBaseLayer = prefLayer === "hybrid" ? base.hybrid : base.streets;
   const mapOptions = {
     worldCopyJump: true,
     zoomControl: false,
     minZoom: initialMinZoom,
     maxBounds: [[-85.05112878, -Infinity], [85.05112878, Infinity]],
-    layers: [base.streets],
+    layers: [activeBaseLayer],
     ...options.leafletOptions,
   };
 
@@ -822,7 +872,7 @@ export function renderJourneyMap(roundHistory, locationMode = true, options = {}
       _trueLabel: pin.label,
     })
       .addTo(mapInstance)
-      .bindPopup(pin.popupText);
+      .bindPopup(pin.popupText, { autoPan: false, closeOnClick: false });
     layersArr.push(marker);
   });
 
@@ -1092,9 +1142,23 @@ export function resetMapZoom(map) {
     const maxZoom = (map._regionalOptions && map._regionalOptions.maxZoom !== undefined) ? map._regionalOptions.maxZoom : 6;
     fitMapToBounds(map, map._regionalBounds, { padding, maxZoom });
   } else if (map._lastFitBounds && typeof map._lastFitBounds.isValid === "function" && map._lastFitBounds.isValid()) {
-    const padding = (map._lastFitOptions && map._lastFitOptions.padding) || [50, 50];
-    const maxZoom = (map._lastFitOptions && map._lastFitOptions.maxZoom !== undefined) ? map._lastFitOptions.maxZoom : 15;
-    map.fitBounds(map._lastFitBounds, { padding, maxZoom });
+    const curBounds = typeof map.getBounds === "function" ? map.getBounds() : null;
+    const curZoom = typeof map.getZoom === "function" ? map.getZoom() : 0;
+    const initialZoom = map._initialZoom !== undefined ? map._initialZoom : 2;
+
+    const isFramingPins =
+      curBounds &&
+      curBounds.isValid() &&
+      curBounds.contains(map._lastFitBounds) &&
+      curZoom > initialZoom;
+
+    if (isFramingPins && map._initialCenter) {
+      map.setView(map._initialCenter, initialZoom);
+    } else {
+      const padding = (map._lastFitOptions && map._lastFitOptions.padding) || [50, 50];
+      const maxZoom = (map._lastFitOptions && map._lastFitOptions.maxZoom !== undefined) ? map._lastFitOptions.maxZoom : 15;
+      map.fitBounds(map._lastFitBounds, { padding, maxZoom });
+    }
   } else if (map._initialCenter && map._initialZoom !== undefined) {
     map.setView(map._initialCenter, map._initialZoom);
   } else {

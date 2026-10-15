@@ -176,27 +176,43 @@ export function setNavigationGuard(guard) {
 }
 
 /**
+ * Return the current in-app navigation history depth index.
+ * @returns {number}
+ */
+export function getAppHistoryIndex() {
+  const currentBrowserState = (typeof window !== "undefined" && window.history && window.history.state) || {};
+  return typeof currentBrowserState.appIndex === "number" ? currentBrowserState.appIndex : 0;
+}
+
+/**
  * Navigate to a given path using History API.
  * @param {string} path
- * @param {{ replace?: boolean, state?: any, force?: boolean }} [options]
+ * @param {{ replace?: boolean, state?: any, force?: boolean, silent?: boolean }} [options]
  */
-export function navigate(path, { replace = false, state = null, force = false, silent = false } = {}) {
+export async function navigate(path, { replace = false, state = null, force = false, silent = false } = {}) {
   const targetPath = normalizePath(path);
   const fromRoute = parseRoute(currentPath);
   const toRoute = parseRoute(targetPath);
 
   if (!force && navigationGuardFn && currentPath !== targetPath) {
-    const allowed = navigationGuardFn(toRoute, fromRoute);
+    const guardRes = navigationGuardFn(toRoute, fromRoute);
+    const allowed = guardRes && typeof guardRes.then === "function" ? await guardRes : guardRes;
     if (!allowed) {
       return false;
     }
   }
 
   const currentBrowserPath = window.location.pathname + window.location.search;
+  const currentBrowserState = (window.history && window.history.state) || {};
+  const currentAppIndex = typeof currentBrowserState.appIndex === "number" ? currentBrowserState.appIndex : 0;
+  const baseCustomState = state && typeof state === "object" ? state : {};
+
   if (replace) {
-    history.replaceState(state, "", targetPath);
+    const nextState = { ...currentBrowserState, ...baseCustomState, appIndex: currentAppIndex };
+    history.replaceState(nextState, "", targetPath);
   } else if (currentBrowserPath !== targetPath && window.location.pathname !== targetPath) {
-    history.pushState(state, "", targetPath);
+    const nextState = { ...baseCustomState, appIndex: currentAppIndex + 1 };
+    history.pushState(nextState, "", targetPath);
   }
 
   currentPath = targetPath;
@@ -204,6 +220,32 @@ export function navigate(path, { replace = false, state = null, force = false, s
     dispatchRoute(toRoute);
   }
   return true;
+}
+
+let _isNavigatingBack = false;
+
+/**
+ * Navigate back to the previous page in this application session,
+ * or safely navigate to a fallback route if opened directly without prior in-app history.
+ * @param {string} [fallbackPath="/"] - Target route if no prior in-app history exists.
+ * @returns {boolean} True if native history.back() was invoked, false if fallback navigation occurred.
+ */
+export function navigateBack(fallbackPath = "/") {
+  if (_isNavigatingBack) return false;
+  _isNavigatingBack = true;
+  setTimeout(() => {
+    _isNavigatingBack = false;
+  }, 150);
+
+  const currentBrowserState = (typeof window !== "undefined" && window.history && window.history.state) || {};
+  const currentAppIndex = typeof currentBrowserState.appIndex === "number" ? currentBrowserState.appIndex : 0;
+
+  if (currentAppIndex > 0) {
+    window.history.back();
+    return true;
+  }
+  navigate(fallbackPath, { replace: true });
+  return false;
 }
 
 /**
@@ -224,18 +266,32 @@ export function initRouter(handler) {
   currentRouteHandler = handler;
   currentPath = normalizePath(window.location.pathname);
 
-  window.addEventListener("popstate", (event) => {
+  // Initialize in-app navigation index on cold start if not already present
+  if (typeof window !== "undefined" && window.history) {
+    const currentBrowserState = window.history.state || {};
+    if (typeof currentBrowserState.appIndex !== "number") {
+      try {
+        window.history.replaceState({ ...currentBrowserState, appIndex: 0 }, "", window.location.href);
+      } catch (_) { }
+    }
+  }
+
+  window.addEventListener("popstate", async (event) => {
     const newPath = normalizePath(window.location.pathname);
     const fromRoute = parseRoute(currentPath);
     const toRoute = parseRoute(newPath);
 
     if (navigationGuardFn && currentPath !== newPath) {
-      const allowed = navigationGuardFn(toRoute, fromRoute);
+      // Revert current URL in browser history while awaiting dialog confirmation
+      history.pushState(event.state, "", currentPath);
+
+      const guardRes = navigationGuardFn(toRoute, fromRoute);
+      const allowed = guardRes && typeof guardRes.then === "function" ? await guardRes : guardRes;
       if (!allowed) {
-        // Restore current URL in browser history
-        history.pushState(event.state, "", currentPath);
         return;
       }
+      navigate(newPath, { force: true, replace: true });
+      return;
     }
 
     currentPath = newPath;

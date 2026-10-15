@@ -324,7 +324,7 @@ function renderRevealMap(reveal) {
     zIndexOffset: 1000,
   })
     .addTo(state.revealMap)
-    .bindPopup(t("reveal.popup_actual"));
+    .bindPopup(t("reveal.popup_actual"), { autoPan: false, closeOnClick: false });
   state.revealLayers.push(actualMarker);
 
   const points = [actual];
@@ -400,7 +400,7 @@ function renderRevealMap(reveal) {
           const icon = createPopPinIcon(playerInitial(result.player_name), color);
           const marker = L.marker(guessed, { icon })
             .addTo(state.revealMap)
-            .bindPopup(t("reveal.popup_guess", result.player_name, formatDistance(distance_km)));
+            .bindPopup(t("reveal.popup_guess", result.player_name, formatDistance(distance_km)), { autoPan: false, closeOnClick: false });
           state.revealLayers.push(marker);
         });
       }
@@ -831,7 +831,7 @@ export const pinpointMode = {
         const icon = createPopPinIcon(playerInitial(opponent.player_name), color);
         const marker = L.marker(guessed, { icon })
           .addTo(state.revealMap)
-          .bindPopup(t("reveal.popup_guess", opponent.player_name, formatDistance(op.distance_km)));
+          .bindPopup(t("reveal.popup_guess", opponent.player_name, formatDistance(op.distance_km)), { autoPan: false, closeOnClick: false });
         state.revealLayers.push(marker);
 
         spawnPinPulseEffect(state.revealMap, guessed, color);

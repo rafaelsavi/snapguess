@@ -9,6 +9,7 @@ import { closeAdminModal } from "../admin.js";
 import { challenge } from "../challenge/index.js";
 import { clearTimer } from "../timer.js";
 import { loadLeaderboard } from "../leaderboard.js";
+import { showConfirmDialog } from "../components/dialog.js";
 import {
   playerInput,
   libraryMultiSelect,
@@ -32,6 +33,12 @@ let _ensureLobbyInitializedFn = null;
 
 export function setEnsureLobbyInitializedFn(fn) {
   _ensureLobbyInitializedFn = fn;
+}
+
+export async function ensureLobbyReady() {
+  if (_ensureLobbyInitializedFn) {
+    await _ensureLobbyInitializedFn();
+  }
 }
 
 export async function startMatch(event) {
@@ -259,12 +266,20 @@ export async function restartSameGame() {
   }
 }
 
-export function handleAbandonGame(action) {
+export async function handleAbandonGame(action) {
   if (action === "restart" && challenge && challenge.isActive()) {
     return;
   }
   if (challenge && challenge.isActive()) {
-    if (!confirm(t("game.abandon_confirm", t("game.abandon_exit")))) {
+    const confirmed = await showConfirmDialog({
+      title: t("game.abandon_title"),
+      message: t("game.abandon_exit_message"),
+      confirmText: t("game.abandon_exit_btn"),
+      cancelText: t("common.cancel"),
+      isDanger: true,
+      icon: "danger",
+    });
+    if (!confirmed) {
       return;
     }
     clearTimer();
@@ -272,7 +287,8 @@ export function handleAbandonGame(action) {
     returnToSetup();
     return;
   }
-  if (!confirmAbandonMatch(action)) return;
+  const confirmed = await confirmAbandonMatch(action);
+  if (!confirmed) return;
   if (action === "restart") {
     restartSameGame().catch((err) => showAlert(err.message));
   } else {

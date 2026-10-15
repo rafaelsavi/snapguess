@@ -1,4 +1,4 @@
-export const GAME_SETTINGS_STORAGE_KEY = "immich_quiz_game_settings";
+export const GAME_SETTINGS_STORAGE_KEY = "snapguess_game_settings";
 
 export const DEFAULT_GAME_SETTINGS = Object.freeze({
   game_mode: "pinpoint",
@@ -20,7 +20,10 @@ export function normalizeGameSettings(rawSettings = null) {
     ? source.date_mode
     : DEFAULT_GAME_SETTINGS.date_mode;
 
-  const parsedRoundCount = Number.parseInt(String(source.round_count ?? source.roundCount ?? DEFAULT_GAME_SETTINGS.round_count), 10);
+  const parsedRoundCount = Number.parseInt(
+    String(source.round_count ?? source.roundCount ?? source.rounds ?? DEFAULT_GAME_SETTINGS.round_count),
+    10
+  );
   const roundCount = Number.isFinite(parsedRoundCount) && parsedRoundCount > 0
     ? String(parsedRoundCount)
     : DEFAULT_GAME_SETTINGS.round_count;

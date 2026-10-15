@@ -35,7 +35,7 @@ Response:
 
 ### GET /api/ui-config
 
-Returns frontend configuration parameters and application version:
+Returns frontend configuration parameters, tile layer settings, and application version:
 
 Response:
 
@@ -44,7 +44,15 @@ Response:
   "language": "EN",
   "score_max_points": 100,
   "immich_web_url": "https://immich.example.com",
-  "version": "3.2.1"
+  "version": "3.2.1",
+  "tile_config": {
+    "streets_url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "streets_attribution": "&copy; OpenStreetMap",
+    "satellite_url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    "hybrid_boundaries_url": "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+    "hybrid_roads_url": "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
+    "satellite_attribution": "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS User Community"
+  }
 }
 ```
 
@@ -473,6 +481,8 @@ Response:
   "date_mode": true,
   "game_mode": "pinpoint",
   "finished": true,
+  "challenge_id": "ch_98765",
+  "is_concluded": true,
   "winners": ["Alice"],
   "players": [
     {
@@ -1244,6 +1254,7 @@ Response (`200 OK`):
   "challenge_id": "ch_98765",
   "challenge_title": "Summer Roadtrip 2026",
   "challenge_creator": "Host",
+  "is_concluded": true,
   "players": ["Player", "Alice", "Bob"],
   "rounds_data": [
     {

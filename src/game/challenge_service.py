@@ -12,8 +12,8 @@ from fastapi import HTTPException
 from src.app_logging import LOGGER_MATCH, get_logger
 from src.config import AppSettings
 from src.game.selector import calculate_match_bounds, generate_batch_pins, is_asset_valid_for_batch
-from src.immich.client import AssetAnswer
 from src.models import (
+    AssetAnswer,
     BatchPhotoItem,
     BatchPinItem,
     BatchRevealItem,

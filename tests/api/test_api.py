@@ -8,7 +8,7 @@ from conftest import FakeImmichClient, build_client, make_asset, setup_payload
 from fastapi.testclient import TestClient
 
 from src.game.selector import calculate_match_bounds, is_asset_valid_for_batch
-from src.immich.client import AssetAnswer
+from src.models import AssetAnswer
 from src.storage.metadata import MetadataStore
 from src.storage.session import RoundAsset
 
@@ -90,6 +90,11 @@ def test_ui_config_exposes_layout_parameters(client: TestClient) -> None:
     assert body['score_max_points'] == 100
     assert 'immich_web_url' in body
     assert body['immich_web_url'] == 'https://placeholder.example.com'
+    assert 'tile_config' in body
+    assert 'streets_url' in body['tile_config']
+    assert 'satellite_url' in body['tile_config']
+    assert 'hybrid_boundaries_url' in body['tile_config']
+    assert 'hybrid_roads_url' in body['tile_config']
 
 
 def test_answer_response_hides_the_solution(client: TestClient) -> None:

@@ -6,7 +6,7 @@
 import { state, el } from "../state.js";
 import { t, tOr, formatDateTime } from "../i18n.js";
 import { showCard } from "./common.js";
-import { navigate } from "../router.js";
+import { navigate, navigateBack } from "../router.js";
 import { escapeHtml, playerColor, playerInitial } from "../formatters.js";
 import { showMatchSummaryByMatchId, refreshSummaryLanguage } from "./summary.js";
 import { copyToClipboard } from "../summary/share.js";
@@ -24,16 +24,19 @@ export function initReplay() {
 
   const backBtn = document.getElementById("replay-back-btn");
   if (backBtn) {
-    backBtn.addEventListener("click", () => {
-      navigate("/replays");
+    backBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      navigateBack("/replays");
     });
   }
 
-
   const errBackBtn = document.getElementById("replay-error-back-btn");
   if (errBackBtn) {
-    errBackBtn.addEventListener("click", () => {
-      navigate("/replays");
+    errBackBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      navigateBack("/replays");
     });
   }
 

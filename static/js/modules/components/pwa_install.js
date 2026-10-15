@@ -6,7 +6,7 @@
 
 import { activateFocusTrap, deactivateFocusTrap } from "./focus_trap.js";
 
-const DISMISS_KEY = "immich_quiz_pwa_dismissed";
+const DISMISS_KEY = "snapguess_pwa_dismissed";
 const DISMISS_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 
 let _deferredPrompt = null;

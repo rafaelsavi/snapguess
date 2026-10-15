@@ -53,7 +53,7 @@ When `AUTH_MODE=cloudflare`:
 
 1. **Seamless Defaulting**:
    - When launching challenges or local matches, the player input field automatically defaults to the user's verified identity name (`state.auth.name`) or email prefix.
-   - For guests or unauthenticated users, the last used player name is persisted to browser storage (`immich_quiz_last_player_name`) and restored on return.
+   - For guests or unauthenticated users, the last used player name is persisted to browser storage (`snapguess_last_player_name`) and restored on return.
 2. **Whitespace Normalization**:
    - Player names are automatically sanitized across frontend and backend, stripping leading/trailing whitespace and collapsing multiple inner spaces (e.g. `"  Alice   Smith  "` → `"Alice Smith"`).
 3. **Strict Identity Enforcement (`CF_LOCK_PLAYER_NAME=true`)**:

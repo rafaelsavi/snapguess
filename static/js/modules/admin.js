@@ -9,7 +9,7 @@ import { state, el } from "./state.js";
 import { api } from "./api.js";
 import { t, tOr, formatDateTime } from "./i18n.js";
 import { showShareToast, copyToClipboard } from "./summary/share.js";
-import { startMatch } from "./screens/setup.js";
+import { startMatch, returnToSetup, ensureLobbyReady } from "./screens/setup.js";
 import {
   libraryMultiSelect,
   albumMultiSelect,
@@ -20,6 +20,13 @@ import {
   getSelectedPeopleMode,
   getActiveFilterSummary,
   playerInput,
+  onLibrariesChanged,
+  restoreFilters,
+  restoreGameSettings,
+  saveCurrentFilters,
+  saveGameSettings,
+  updateFiltersSummaryBadge,
+  triggerPreflightDebounced,
 } from "./setup_filters.js";
 import { loadChallengesList } from "./screens/challenges.js";
 import { getActiveMode } from "./modes/index.js";
@@ -193,8 +200,12 @@ export function initAdminModal() {
 
 /**
  * Open Prepare Game Modal with initial tab ("local" or "challenge").
+ * @param {string} [initialTab="local"]
+ * @param {object} [options]
+ * @param {string|null} [options.title=null]
+ * @param {number|null} [options.expirationHours]
  */
-export function openAdminModal(initialTab = "local") {
+export function openAdminModal(initialTab = "local", { title = null, expirationHours = undefined } = {}) {
   if (!_modalEl) initAdminModal();
   if (!_modalEl) return;
 
@@ -214,12 +225,17 @@ export function openAdminModal(initialTab = "local") {
     }
   }
 
-  // Pre-fill challenge title with automatic value
-  if (_titleInput) {
-    _titleInput.value = generateAutoChallengeTitle();
+  resetCreateForm(title);
+
+  if (_expirationSelect && expirationHours !== undefined) {
+    if (expirationHours === 1) _expirationSelect.value = "1h";
+    else if (expirationHours === 6) _expirationSelect.value = "6h";
+    else if (expirationHours === 24) _expirationSelect.value = "24h";
+    else if (expirationHours === 48) _expirationSelect.value = "48h";
+    else if (expirationHours === 168) _expirationSelect.value = "7d";
+    else if (expirationHours === null) _expirationSelect.value = "never";
   }
 
-  resetCreateForm();
   switchTab(initialTab);
 
   _modalEl.classList.remove("hidden");
@@ -435,8 +451,9 @@ function displayShareResult(challengeData) {
 
 /**
  * Reset form back to create view.
+ * @param {string|null} [customTitle=null]
  */
-function resetCreateForm() {
+function resetCreateForm(customTitle = null) {
   if (_formViewEl) _formViewEl.classList.remove("hidden");
   if (_shareBoxEl) _shareBoxEl.classList.add("hidden");
   if (_shareBoxController) {
@@ -458,7 +475,12 @@ function resetCreateForm() {
   if (_modalChallengeFooter && _tabChallengeBtn?.classList.contains("active")) {
     _modalChallengeFooter.classList.remove("hidden");
   }
-  if (_titleInput) _titleInput.value = generateAutoChallengeTitle();
+  if (_titleInput) {
+    _titleInput.value =
+      customTitle !== null && customTitle !== undefined && customTitle.trim()
+        ? customTitle.trim()
+        : generateAutoChallengeTitle();
+  }
   if (_generateBtn) _generateBtn.disabled = false;
 }
 
@@ -492,3 +514,95 @@ export function syncCreatorName() {
     _creatorSingleInput.syncFromAuth();
   }
 }
+
+/**
+ * Recreate an existing challenge:
+ * Restores the game mode and library selection (and all associated filters & settings)
+ * into the setup lobby, navigates to Setup, and opens the Prepare Game modal.
+ * Supports both challenge recreation and local game mode recreation.
+ *
+ * @param {object} challengeData - Challenge or match object containing config, game_mode, libraries, etc.
+ */
+export async function recreateChallenge(challengeData) {
+  if (!challengeData) return;
+
+  const isChallenge = Boolean(
+    challengeData.is_challenge ||
+      challengeData.play_mode === "challenge" ||
+      challengeData.challenge_id
+  );
+
+  // Defensive guard: do not recreate if challenge is still active/running
+  const isConcluded =
+    !isChallenge ||
+    (challengeData.is_concluded ??
+      (challengeData.is_active === false ||
+        (challengeData.expires_at && new Date(challengeData.expires_at).getTime() <= Date.now())));
+
+  if (isConcluded === false) {
+    return;
+  }
+
+  const config = challengeData.config || {};
+  const gameMode = challengeData.game_mode || config.game_mode || "pinpoint";
+  const libraries = challengeData.libraries || config.libraries || [];
+  const title = challengeData.title || challengeData.challenge_title || config.title || "";
+  const expiresInHours = challengeData.expires_in_hours ?? config.expires_in_hours ?? 24;
+
+  // 1. Switch back to setup lobby
+  returnToSetup({ updateUrl: true });
+  await ensureLobbyReady();
+
+  // 2. Restore library selection and fetch library metadata
+  if (libraryMultiSelect) {
+    libraryMultiSelect.setSelectedIds(libraries);
+  }
+  await onLibrariesChanged(false);
+
+  // 3. Restore filters with challenge/match config
+  restoreFilters({
+    ...config,
+    libraries,
+  });
+
+  // 4. Restore game mode and rules
+  restoreGameSettings({
+    ...config,
+    game_mode: gameMode,
+  });
+
+  // 5. Restore players if available for local match setup
+  if (playerInput && Array.isArray(challengeData.players) && challengeData.players.length > 0) {
+    const names = challengeData.players
+      .map((p) => (typeof p === "string" ? p : p?.player_name))
+      .filter(Boolean);
+    if (names.length > 0) {
+      playerInput.setPlayers(names);
+    }
+  }
+
+  // 6. Persist restored state to storage & refresh preflight
+  saveCurrentFilters();
+  saveGameSettings();
+  updateFiltersSummaryBadge();
+  triggerPreflightDebounced();
+
+  // 7. Open Prepare Game modal directly on appropriate tab
+  if (isChallenge) {
+    openAdminModal("challenge", {
+      title,
+      expirationHours: expiresInHours,
+    });
+  } else {
+    openAdminModal("local", {
+      title,
+      expirationHours: expiresInHours,
+    });
+  }
+
+  // 8. Show toast notification
+  showShareToast(isChallenge ? t("admin.recreate_toast") : t("admin.recreate_game_toast"));
+}
+
+export const recreateGame = recreateChallenge;
+

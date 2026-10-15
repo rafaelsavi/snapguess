@@ -47,11 +47,11 @@ class ContextFilter(logging.Filter):
         if not hasattr(record, 'library_name'):
             record.library_name = ctx_library_name.get()
 
-        # Deduce a clean subsystem name from logger name (e.g. 'immich_quiz.match' -> 'match')
+        # Deduce a clean subsystem name from logger name (e.g. 'snapguess.match' -> 'match')
         if not hasattr(record, 'subsystem'):
             name = record.name
-            if name.startswith('immich_quiz.'):
-                record.subsystem = name.removeprefix('immich_quiz.')
+            if name.startswith('snapguess.'):
+                record.subsystem = name.removeprefix('snapguess.')
             elif name.startswith('src.'):
                 record.subsystem = name.removeprefix('src.')
             elif name == 'uvicorn.access':
