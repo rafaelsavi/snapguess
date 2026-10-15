@@ -2998,3 +2998,39 @@ def test_summary_actions_invite_and_home_button_cleanup() -> None:
     # 5. When challenge is concluded, handleNextRound advances to Grand Reveal directly
     assert 'this.showGrandReveal()' in ch_index_js
     assert 'this.renderInviteFriendsScreen()' in ch_index_js
+
+
+def test_challenge_status_harmonization_and_landing_differentiation() -> None:
+    """Verify challenge status harmonization across hub, landing, and locale parity."""
+    challenges_page_js = read_challenges_page_js()
+    landing_js = (JS_DIR / 'modules' / 'challenge' / 'landing.js').read_text(encoding='utf-8')
+
+    # 1. challenges.js checks expiration before deactivation
+    assert 'const isExpired = expTime !== null && expTime <= now;' in challenges_page_js
+    exp_pos = challenges_page_js.find('status-expired')
+    deact_pos = challenges_page_js.find('status-deactivated')
+    assert exp_pos != -1 and deact_pos != -1
+    assert exp_pos < deact_pos, 'status-expired must be evaluated before status-deactivated'
+
+    # 2. Filter supports concluded tab alias
+    assert '_statusFilter === "expired" || _statusFilter === "concluded"' in challenges_page_js
+
+    # 3. landing.js differentiates expired vs deactivated challenges
+    assert 'isExpired ? "challenges_page.status_expired" : "challenges_page.status_deactivated"' in landing_js
+    assert 'isExpired ? "challenge.error_expired" : "challenge.error_deactivated"' in landing_js
+
+    # 4. English banner title parity
+    locales_dir = STATIC_DIR.parent / 'locales'
+    en_json = json.loads((locales_dir / 'en-US.json').read_text(encoding='utf-8'))
+    pt_json = json.loads((locales_dir / 'pt-BR.json').read_text(encoding='utf-8'))
+
+    assert en_json['challenge.concluded_solo_title'] == 'Challenge Concluded'
+    assert pt_json['challenge.concluded_solo_title'] == 'Desafio Concluído'
+    assert 'challenge.error_deactivated' in en_json
+    assert 'challenge.error_deactivated' in pt_json
+    assert en_json['challenges_page.status_deactivated'] == 'Deactivated'
+    assert pt_json['challenges_page.status_deactivated'] == 'Desativado'
+    assert en_json['challenges_page.deactivate_btn'] == 'Deactivate'
+    assert pt_json['challenges_page.deactivate_btn'] == 'Desativar'
+    assert en_json['challenges_page.filter_expired'] == 'Concluded'
+    assert pt_json['challenges_page.filter_expired'] == 'Concluídos'

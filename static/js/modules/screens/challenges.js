@@ -324,7 +324,7 @@ export function renderChallenges() {
   // 2. Status filter
   if (_statusFilter === "active") {
     filtered = filtered.filter(isChallengeActive);
-  } else if (_statusFilter === "expired") {
+  } else if (_statusFilter === "expired" || _statusFilter === "concluded") {
     filtered = filtered.filter((ch) => !isChallengeActive(ch));
   }
 
@@ -410,17 +410,16 @@ export function renderChallenges() {
 
     // Status pill
     let statusPillHtml = "";
+    const expTime = ch.expires_at ? new Date(ch.expires_at).getTime() : null;
+    const isExpired = expTime !== null && expTime <= now;
 
-    if (!ch.is_active) {
+    if (isExpired) {
+      statusPillHtml = `<span class="challenge-status-pill status-expired"><span class="status-dot"></span>${t("challenges_page.status_expired")}</span>`;
+    } else if (!ch.is_active) {
       statusPillHtml = `<span class="challenge-status-pill status-deactivated"><span class="status-dot"></span>${t("challenges_page.status_deactivated")}</span>`;
-    } else if (ch.expires_at) {
-      const expTime = new Date(ch.expires_at).getTime();
+    } else if (expTime !== null) {
       const diffMs = expTime - now;
-      if (diffMs > 0) {
-        statusPillHtml = `<span class="challenge-status-pill status-active"><span class="status-dot pulse"></span>${t("challenges_page.status_active")} • ${formatRelativeTime(diffMs, false)}</span>`;
-      } else {
-        statusPillHtml = `<span class="challenge-status-pill status-expired"><span class="status-dot"></span>${t("challenges_page.status_expired")}</span>`;
-      }
+      statusPillHtml = `<span class="challenge-status-pill status-active"><span class="status-dot pulse"></span>${t("challenges_page.status_active")} • ${formatRelativeTime(diffMs, false)}</span>`;
     } else {
       statusPillHtml = `<span class="challenge-status-pill status-active"><span class="status-dot pulse"></span>${t("challenges_page.status_active")}</span>`;
     }
