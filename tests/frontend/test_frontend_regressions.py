@@ -2285,7 +2285,6 @@ def test_match_meta_unique_emojis_and_mobile_responsive_labels() -> None:
 
     # 1. Targets (Guess) field has its own unique emojis, no longer hardcoded to 🎯
     assert 'targetsIcon = "🧭"' in match_meta_js
-    assert 'targetsIcon = "🗂️"' in match_meta_js
     assert 'targetsIcon = "📍"' in match_meta_js
     assert 'targetsIcon = "📅"' in match_meta_js
     assert 'type: "targets",\n      icon: targetsIcon,' in match_meta_js
@@ -3034,3 +3033,30 @@ def test_challenge_status_harmonization_and_landing_differentiation() -> None:
     assert pt_json['challenges_page.deactivate_btn'] == 'Desativar'
     assert en_json['challenges_page.filter_expired'] == 'Concluded'
     assert pt_json['challenges_page.filter_expired'] == 'Concluídos'
+
+
+def test_match_meta_unified_target_modes_and_locale_removal() -> None:
+    """Verify that match_meta.js uniformly evaluates location_mode and date_mode
+    for both pinpoint and unshuffle without hardcoded mode overrides,
+    and meta.targets_shuffle is pruned across all locale files.
+    """
+    match_meta_js = (JS_DIR / 'modules' / 'components' / 'match_meta.js').read_text(encoding='utf-8')
+    assert 'meta.targets_shuffle' not in match_meta_js
+    assert 'if (locMode && dateMode)' in match_meta_js
+    assert 'meta.targets_loc_date' in match_meta_js
+    assert 'meta.targets_loc_only' in match_meta_js
+    assert 'meta.targets_date_only' in match_meta_js
+
+    # Verify pruned from all 4 locale files
+    locales_dir = STATIC_DIR.parent / 'locales'
+    for loc_file in [
+        locales_dir / 'en-US.json',
+        locales_dir / 'pt-BR.json',
+        JS_DIR / 'modules' / 'locales' / 'en_US.js',
+        JS_DIR / 'modules' / 'locales' / 'pt_BR.js',
+    ]:
+        content = loc_file.read_text(encoding='utf-8')
+        assert 'meta.targets_shuffle' not in content
+        assert 'meta.targets_loc_date' in content
+        assert 'meta.targets_loc_only' in content
+        assert 'meta.targets_date_only' in content

@@ -423,7 +423,6 @@ export default {
   "meta.targets_loc_date": "Local e Data",
   "meta.targets_loc_only": "Apenas Local",
   "meta.targets_date_only": "Apenas Data",
-  "meta.targets_shuffle": "Pinos e Linha do Tempo",
   "meta.time_unlimited": "Sem limite",
   "meta.library_label": "Biblioteca",
   "meta.libraries_label": "Bibliotecas",
