@@ -1376,47 +1376,44 @@ class LeaderboardStore:
                 ch_config = json.loads(ch_row['config_json'])
 
         if challenge_id:
-            raw_entries = self._db.fetch_all(
-                """
-                SELECT * FROM match_entries
-                WHERE match_id IN (SELECT match_id FROM challenge_sessions WHERE challenge_id = ?)
-                ORDER BY total_score DESC, accuracy_pct DESC, player_name ASC
-                """,
-                (challenge_id,),
-            )
-            seen_p: set[str] = set()
-            entry_rows: list[dict[str, Any]] = []
-            for r in raw_entries:
-                p_name = r['player_name']
-                if p_name not in seen_p:
-                    seen_p.add(p_name)
-                    entry_rows.append(r)
-            for rank_idx, r in enumerate(entry_rows, start=1):
-                r['rank'] = rank_idx
-            top_score = max((r['total_score'] for r in entry_rows), default=0)
-            winners = [r['player_name'] for r in entry_rows if r['total_score'] == top_score and top_score > 0]
-            for r in entry_rows:
-                r['is_winner'] = 1 if r['player_name'] in winners else 0
+            standings = self.get_challenge_standings(challenge_id)
+            players = [
+                MatchSummaryPlayer(
+                    player_name=s.player_name,
+                    location_score=s.location_score,
+                    date_score=s.date_score,
+                    total_score=s.total_score,
+                    max_possible_score=s.max_possible_score,
+                    accuracy_pct=s.accuracy_pct,
+                    rank=s.rank,
+                    is_winner=s.is_winner,
+                    completed_rounds=s.completed_rounds,
+                    is_finished=s.is_finished,
+                )
+                for s in standings
+            ]
+            winners = [s.player_name for s in standings if s.is_winner]
         else:
             entry_rows = self._db.fetch_all(
                 'SELECT * FROM match_entries WHERE match_id = ? ORDER BY rank ASC, player_name ASC',
                 (match_id,),
             )
             winners = [r['player_name'] for r in entry_rows if r['is_winner']]
-
-        players = [
-            MatchSummaryPlayer(
-                player_name=r['player_name'],
-                location_score=r['location_score'],
-                date_score=r['date_score'],
-                total_score=r['total_score'],
-                max_possible_score=r['max_possible_score'],
-                accuracy_pct=r['accuracy_pct'],
-                rank=r['rank'],
-                is_winner=bool(r['is_winner']),
-            )
-            for r in entry_rows
-        ]
+            players = [
+                MatchSummaryPlayer(
+                    player_name=r['player_name'],
+                    location_score=r['location_score'],
+                    date_score=r['date_score'],
+                    total_score=r['total_score'],
+                    max_possible_score=r['max_possible_score'],
+                    accuracy_pct=r['accuracy_pct'],
+                    rank=r['rank'],
+                    is_winner=bool(r['is_winner']),
+                    completed_rounds=int(match_row['rounds']),
+                    is_finished=True,
+                )
+                for r in entry_rows
+            ]
 
         if challenge_id:
             guess_rows = self._db.fetch_all(
@@ -3135,37 +3132,30 @@ class LeaderboardStore:
         challenge_creator: str | None = None
         ch_config: dict[str, Any] = {}
 
-        if ch_row:
+        if ch_row and challenge_id:
             challenge_title = ch_row.get('title')
             challenge_creator = ch_row.get('creator_name')
             if ch_row.get('config_json'):
                 with contextlib.suppress(Exception):
                     ch_config = json.loads(ch_row['config_json'])
 
-            raw_entries = self._db.fetch_all(
-                """
-                SELECT * FROM match_entries
-                WHERE match_id IN (SELECT match_id FROM challenge_sessions WHERE challenge_id = ?)
-                ORDER BY total_score DESC, accuracy_pct DESC, player_name ASC
-                """,
-                (challenge_id,),
-            )
-            seen_p: set[str] = set()
-            entry_rows: list[dict[str, Any]] = []
-            for r in raw_entries:
-                p_name = r['player_name']
-                if p_name not in seen_p:
-                    seen_p.add(p_name)
-                    entry_rows.append(r)
-
-            # Re-compute ranks for challenge entries
-            for rank_idx, r in enumerate(entry_rows, start=1):
-                r['rank'] = rank_idx
-
-            top_score = max((r['total_score'] for r in entry_rows), default=0)
-            winners = [r['player_name'] for r in entry_rows if r['total_score'] == top_score and top_score > 0]
-            for r in entry_rows:
-                r['is_winner'] = 1 if r['player_name'] in winners else 0
+            standings = self.get_challenge_standings(challenge_id)
+            players = [
+                MatchSummaryPlayer(
+                    player_name=s.player_name,
+                    location_score=s.location_score,
+                    date_score=s.date_score,
+                    total_score=s.total_score,
+                    max_possible_score=s.max_possible_score,
+                    accuracy_pct=s.accuracy_pct,
+                    rank=s.rank,
+                    is_winner=s.is_winner,
+                    completed_rounds=s.completed_rounds,
+                    is_finished=s.is_finished,
+                )
+                for s in standings
+            ]
+            winners = [s.player_name for s in standings if s.is_winner]
 
             guess_rows = self._db.fetch_all(
                 """
@@ -3188,6 +3178,21 @@ class LeaderboardStore:
                 (match_id,),
             )
             winners = [r['player_name'] for r in entry_rows if r['is_winner']]
+            players = [
+                MatchSummaryPlayer(
+                    player_name=r['player_name'],
+                    location_score=r['location_score'],
+                    date_score=r['date_score'],
+                    total_score=r['total_score'],
+                    max_possible_score=r['max_possible_score'],
+                    accuracy_pct=r['accuracy_pct'],
+                    rank=r['rank'],
+                    is_winner=bool(r['is_winner']),
+                    completed_rounds=int(match_row['rounds']),
+                    is_finished=True,
+                )
+                for r in entry_rows
+            ]
             guess_rows = self._db.fetch_all(
                 """
                 SELECT * FROM match_round_guesses
@@ -3207,20 +3212,6 @@ class LeaderboardStore:
         rounds_by_player_and_idx: dict[tuple[str, int], dict[str, Any]] = {
             (r['player_name'], int(r['round_index'])): r for r in round_rows
         }
-
-        players = [
-            MatchSummaryPlayer(
-                player_name=r['player_name'],
-                location_score=r['location_score'],
-                date_score=r['date_score'],
-                total_score=r['total_score'],
-                max_possible_score=r['max_possible_score'],
-                accuracy_pct=r['accuracy_pct'],
-                rank=r['rank'],
-                is_winner=bool(r['is_winner']),
-            )
-            for r in entry_rows
-        ]
 
         cumulative_scores: dict[str, int] = {p.player_name: 0 for p in players}
         rounds_by_idx: dict[int, list[dict[str, Any]]] = {}

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Concluded Challenge Outcome Banners**: Added dedicated summary banners on the Grand Reveal and Match Review screens when a challenge concludes with no winning scores or with a solo participant, providing clear confirmation of the final result.
+- **Concluded Challenge Status Indicator**: Concluded challenges now display a neutral, non-pulsing status badge and dot on match review screens, distinguishing completed events from actively running multiplayer lobbies.
+
 ### Changed
 
 - **Photo-Only Discovery & Trivia**: Streamlined library synchronization and gameplay to focus exclusively on photos and still memories, optimizing question selection, preview loading speeds, and overall responsiveness.
@@ -14,13 +19,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Interactive Hybrid Map Layer**: Replaced the pure satellite basemap with a high-contrast Hybrid map layer combining aerial satellite photography with crisp road networks, bridges, administrative borders, and geographic labels for improved navigation and landmark identification.
 - **Replay Map Viewport-Aware Navigation**: Enhanced replay and match review maps so clicking any empty map region smoothly centers the view, photo tab switching no longer pulls the camera away if the pin is already visible on-screen, and the reset zoom button toggles smoothly between round pin framing and a full world overview.
 - **Context-Aware Back Navigation**: Replay viewers, challenge results, and player profile screens now return to the exact page you arrived from (such as a player profile or the home screen) rather than redirecting to the catalog, preserving scroll position and active filters.
+- **Unified Match Review & Replay Outcomes**: Challenge match replays and live post-game review screens now share a unified outcome pipeline, ensuring consistent winner banners, podium presentations, and concluded participant tallies across both active and archived matches.
 - **Unified Screen Header Architecture**: Standardized header lockups across Match Replays, Game Results, and Player Profiles with consistent top-left back navigation, concise minute-level timestamps, and uniform multi-tier subtitle metadata for challenge and local matches.
+- **Challenges Hub Sharing Scope**: In the Challenges Hub, the quick-share drawer button is now strictly shown for active challenges, preventing dead invitation links from being shared for expired events.
 
 ### Fixed
 
+- **Replay and Summary Standings Parity**: Fixed a disparity where viewing a challenge match through replay showed inaccurate round counts (e.g. 20/20 instead of 2/20), reversed player rankings, and false winner awards when players had not completed all rounds. Replay and review screens now display identical standings, progress tallies, and outcome banners.
+- **Challenge Invite Visibility on Ended Events**: Fixed an issue where the "Invite Friends" button and drawer continued to appear on Game Results review screens for challenges that had already concluded or expired.
+- **Provisional Results Banner on Concluded Challenges**: Fixed an issue where the "Results are provisional" banner remained indefinitely on the Grand Reveal and Match Review screens after a challenge had concluded.
 - **Free Map Panning During Match Reviews**: Fixed an issue where selecting a photo or having its marker popup open prevented panning the map away by locking the viewport to the pin. Popups now stay anchored to their pins without preventing free exploration, and clicking empty map areas keeps the selected photo active.
 - **Match Header Subtitle Wrapping on Mobile**: Eliminated awkward 3-line metadata wrapping and orphaned leading bullets in mobile Game Results and Match Replay headers.
 - **Accurate Player Profile Match Ranks**: Fixed the recent matches table on player profile views displaying 1st place medals for non-winning challenge entries and solo local games. Ranks now accurately reflect actual standings across challenge participants, and solo games display a neutral dash.
+
+### Removed
+
+- **Redundant Home Button on Summary Screen**: Removed the redundant "Return to Home" button from the match summary actions footer, keeping the screen focused on primary game actions (Play Again, Share Results) alongside the standardized top back button and persistent navigation bar.
 
 ## [4.0.0] - 2026-10-04
 

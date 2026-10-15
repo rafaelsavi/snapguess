@@ -80,12 +80,12 @@ export const challengeSummary = {
       const hasUnfinishedPlayers = (data.leaderboard || []).some(
         (p) => !p.is_finished && p.completed_rounds < totalRoundsCount
       );
-      const isSettled = finishedPlayers.length >= 2;
       const isConcluded = Boolean(
         data.is_concluded ||
         challengeSession.challengeData?.is_active === false ||
         (challengeSession.challengeData?.expires_at && new Date() > new Date(challengeSession.challengeData.expires_at))
       );
+      const isSettled = finishedPlayers.length >= 2 || isConcluded;
 
       const callerCompletedRound =
         typeof data.up_to_round === "number"
@@ -244,10 +244,11 @@ export const challengeSummary = {
     const hasUnfinishedPlayers = data.leaderboard.some(
       (p) => !p.is_finished && p.completed_rounds < totalRoundsCount
     );
+    const isConcluded = Boolean(data.is_concluded);
     const wasSettled = oldLeaderboard.filter(
       (p) => p.is_finished || p.completed_rounds >= totalRoundsCount
-    ).length >= 2;
-    const isSettled = finishedPlayers.length >= 2;
+    ).length >= 2 || Boolean(prevData?.is_concluded);
+    const isSettled = finishedPlayers.length >= 2 || isConcluded;
 
     const updatedPlayers = [];
 
@@ -304,9 +305,19 @@ export const challengeSummary = {
     const statusEl = document.getElementById("grand-reveal-live-status");
     const pillEl = document.getElementById("grand-reveal-live-pill");
     if (statusEl && pillEl) {
+      const dotEl = pillEl.querySelector(".live-poll-dot");
       const prevTally = statusEl.textContent;
-      const newTally = t("challenge.live_finished_tally", finishedPlayers.length, data.leaderboard.length);
+      const newTally = isConcluded
+        ? t("challenge.live_concluded_tally", finishedPlayers.length, data.leaderboard.length)
+        : t("challenge.live_finished_tally", finishedPlayers.length, data.leaderboard.length);
       statusEl.textContent = newTally;
+      if (isConcluded) {
+        pillEl.classList.add("is-finished");
+        if (dotEl) dotEl.classList.add("is-finished");
+      } else {
+        pillEl.classList.remove("is-finished");
+        if (dotEl) dotEl.classList.remove("is-finished");
+      }
       if (!isInitial && prevTally && prevTally !== newTally) {
         pillEl.classList.remove("bump");
         void pillEl.offsetWidth;
@@ -314,56 +325,94 @@ export const challengeSummary = {
       }
     }
 
-    // 3. Dynamic Provisional-to-Podium Transition
+    // 3. Dynamic Provisional-to-Outcome Transition
     if (!wasSettled && isSettled) {
-      const provisionalCard = document.getElementById("grand-reveal-provisional");
       const summaryWinner = document.getElementById("summary-winner");
-      if (provisionalCard && summaryWinner) {
-        summaryWinner.innerHTML = `
-          <div class="grand-reveal-podium-wrap" id="grand-reveal-podium-section">
-            <div id="grand-reveal-podium" class="summary-winner"></div>
-          </div>
-        `;
-        const podiumEl = document.getElementById("grand-reveal-podium") || summaryWinner;
-        const winners = finishedPlayers.filter((p) => p.is_winner).map((p) => p.player_name);
-        renderPodium(
-          {
-            players: finishedPlayers,
-            winners: winners.length > 0 ? winners : [finishedPlayers[0]?.player_name].filter(Boolean),
-            is_concluded: Boolean(data.is_concluded),
-          },
-          podiumEl
-        );
+      if (summaryWinner) {
+        const qualifiedWinners = finishedPlayers.filter((p) => p.is_winner && (p.total_score || 0) > 0).map((p) => p.player_name);
+        const topScorer = finishedPlayers[0]?.total_score > 0 ? finishedPlayers[0].player_name : null;
+        const winners = qualifiedWinners.length > 0 ? qualifiedWinners : (topScorer ? [topScorer] : []);
 
-        const playerStats = this.buildPlayerStats(data);
-        renderAwards(
-          {
-            game_mode: data.game_mode,
-            location_mode: challengeSession.challengeData?.location_mode !== false,
-            date_mode: challengeSession.challengeData?.date_mode !== false,
-            players: data.leaderboard,
-          },
-          playerStats,
-          summaryWinner,
-          podiumEl
-        );
+        if (isConcluded && winners.length === 0) {
+          summaryWinner.innerHTML = `
+            <div class="challenge-outcome-banner banner-no-winners" id="grand-reveal-no-winners">
+              <div class="outcome-banner-header">
+                <span class="outcome-banner-icon" aria-hidden="true">🏁</span>
+                <h3 class="outcome-banner-title">${escapeHtml(t("challenge.concluded_no_winners_title"))}</h3>
+              </div>
+              <p class="outcome-banner-desc">${escapeHtml(t("challenge.concluded_no_winners_desc"))}</p>
+            </div>
+          `;
+        } else if (isConcluded && finishedPlayers.length === 1 && winners.length === 1) {
+          const winnerName = winners[0];
+          const soloScore = finishedPlayers[0]?.total_score || 0;
+          summaryWinner.innerHTML = `
+            <div class="challenge-outcome-banner banner-solo-winner" id="grand-reveal-solo-winner">
+              <div class="outcome-banner-header">
+                <span class="outcome-banner-icon" aria-hidden="true">🏆</span>
+                <h3 class="outcome-banner-title">${escapeHtml(t("challenge.concluded_solo_title"))}</h3>
+              </div>
+              <p class="outcome-banner-desc">${escapeHtml(t("challenge.concluded_solo_desc", winnerName, soloScore))}</p>
+            </div>
+          `;
+          launchGoldConfetti();
+          playVictoryFanfare();
+        } else {
+          summaryWinner.innerHTML = `
+            <div class="grand-reveal-podium-wrap" id="grand-reveal-podium-section">
+              <div id="grand-reveal-podium" class="summary-winner"></div>
+            </div>
+          `;
+          const podiumEl = document.getElementById("grand-reveal-podium") || summaryWinner;
+          renderPodium(
+            {
+              players: finishedPlayers,
+              winners: winners,
+              is_concluded: isConcluded,
+            },
+            podiumEl
+          );
 
-        launchGoldConfetti();
-        playVictoryFanfare();
+          const playerStats = this.buildPlayerStats(data);
+          renderAwards(
+            {
+              game_mode: data.game_mode,
+              location_mode: challengeSession.challengeData?.location_mode !== false,
+              date_mode: challengeSession.challengeData?.date_mode !== false,
+              players: data.leaderboard,
+            },
+            playerStats,
+            summaryWinner,
+            podiumEl
+          );
+
+          launchGoldConfetti();
+          playVictoryFanfare();
+        }
       }
     } else if (isSettled) {
       const podiumEl = document.getElementById("grand-reveal-podium");
       if (podiumEl && updatedPlayers.length > 0) {
-        const winners = finishedPlayers.filter((p) => p.is_winner).map((p) => p.player_name);
+        const qualifiedWinners = finishedPlayers.filter((p) => p.is_winner && (p.total_score || 0) > 0).map((p) => p.player_name);
+        const topScorer = finishedPlayers[0]?.total_score > 0 ? finishedPlayers[0].player_name : null;
+        const winners = qualifiedWinners.length > 0 ? qualifiedWinners : (topScorer ? [topScorer] : []);
         renderPodium(
           {
             players: finishedPlayers,
-            winners: winners.length > 0 ? winners : [finishedPlayers[0]?.player_name].filter(Boolean),
-            is_concluded: Boolean(data.is_concluded),
+            winners: winners,
+            is_concluded: isConcluded,
           },
           podiumEl
         );
       }
+    }
+
+    if (isConcluded) {
+      challengeSession.stopPolling();
+      const inviteBtn = document.getElementById("challenge-invite-btn");
+      const inviteDrawer = document.getElementById("summary-invite-drawer");
+      if (inviteBtn) inviteBtn.classList.add("hidden");
+      if (inviteDrawer) inviteDrawer.classList.add("hidden");
     }
 
     // 4. Update Unified Standings Table Rows & Flash

@@ -48,6 +48,7 @@ DYNAMIC_IDS = frozenset(
         'grand-reveal-live-pill',
         'grand-reveal-live-status',
         'grand-reveal-meta-tally',
+        'grand-reveal-no-winners',
         'grand-reveal-podium',
         'grand-reveal-podium-section',
         'grand-reveal-provisional',
@@ -56,6 +57,7 @@ DYNAMIC_IDS = frozenset(
         'grand-reveal-replay-section',
         'grand-reveal-share-btn',
         'grand-reveal-share-summary-btn',
+        'grand-reveal-solo-winner',
         'grand-reveal-table',
         'journey-map',
         'journey-map-fullscreen',
@@ -2921,3 +2923,78 @@ def test_general_back_button_strategy_and_router_history_tracking() -> None:
     assert 'id="profile-hero-name"' in index_html
     assert 'id="summary-back-btn"' in index_html
     assert '<div id="review-header-summary" class="summary-page-header replay-page-header">' in index_html
+
+
+def test_challenge_concluded_banners_and_live_poll_dot_finished_styling() -> None:
+    """Verify concluded challenge outcome banners, settled state resolution, and finished live-poll-dot styles."""
+    challenge_css = (STATIC_DIR / 'css' / 'components' / 'challenge.css').read_text(encoding='utf-8')
+    summary_js = (JS_DIR / 'modules' / 'screens' / 'summary.js').read_text(encoding='utf-8')
+    ch_summary_js = (JS_DIR / 'modules' / 'challenge' / 'summary.js').read_text(encoding='utf-8')
+
+    # 1. Stylesheet contains .live-poll-dot.is-finished with static display and no animation
+    assert '.live-poll-dot.is-finished {' in challenge_css
+    assert 'animation: none;' in challenge_css
+    assert '.challenge-live-pill.is-finished {' in challenge_css
+
+    # 2. Stylesheet defines .challenge-outcome-banner (.banner-no-winners and .banner-solo-winner)
+    assert '.challenge-outcome-banner {' in challenge_css
+    assert '.challenge-outcome-banner.banner-no-winners {' in challenge_css
+    assert '.challenge-outcome-banner.banner-solo-winner {' in challenge_css
+
+    # 3. summary.js settles concluded challenges even with < 2 finishers
+    assert 'finishedPlayers.length >= 2 || isConcluded' in summary_js
+    assert 'finishedPlayers.length >= 2 || isConcluded' in ch_summary_js
+
+    # 4. summary.js renders #grand-reveal-no-winners when concluded without winners
+    assert 'id="grand-reveal-no-winners"' in summary_js
+    assert 'challenge.concluded_no_winners_title' in summary_js
+    assert 'challenge.concluded_no_winners_desc' in summary_js
+
+    # 5. summary.js renders #grand-reveal-solo-winner for single-player finishes in concluded events
+    assert 'id="grand-reveal-solo-winner"' in summary_js
+    assert 'challenge.concluded_solo_title' in summary_js
+    assert 'challenge.concluded_solo_desc' in summary_js
+
+    # 6. Live poll pill and dot receive .is-finished when concluded
+    assert 'livePill.classList.add("is-finished")' in summary_js
+    assert 'dotEl.classList.add("is-finished")' in summary_js
+    assert 'pillEl.classList.add("is-finished")' in ch_summary_js
+    assert 'dotEl.classList.add("is-finished")' in ch_summary_js
+    assert 'challenge.live_concluded_tally' in summary_js
+    assert 'challenge.live_concluded_tally' in ch_summary_js
+
+
+def test_summary_actions_invite_and_home_button_cleanup() -> None:
+    """Verify that redundant summary-home-btn is removed and challenge-invite-btn
+    is strictly hidden when a challenge has concluded, and share button in challenges hub
+    is only rendered for active challenges.
+    """
+    index_html = (STATIC_DIR / 'index.html').read_text(encoding='utf-8')
+    state_js = (JS_DIR / 'modules' / 'state.js').read_text(encoding='utf-8')
+    app_js = (STATIC_DIR / 'js' / 'app.js').read_text(encoding='utf-8')
+    summary_js = (JS_DIR / 'modules' / 'screens' / 'summary.js').read_text(encoding='utf-8')
+    ch_summary_js = (JS_DIR / 'modules' / 'challenge' / 'summary.js').read_text(encoding='utf-8')
+    challenges_page_js = read_challenges_page_js()
+    ch_index_js = (JS_DIR / 'modules' / 'challenge' / 'index.js').read_text(encoding='utf-8')
+
+    # 1. summary-home-btn is completely removed
+    assert 'id="summary-home-btn"' not in index_html
+    assert 'summaryHomeBtn' not in state_js
+    assert 'summaryHomeBtn' not in app_js
+    assert 'summary-home-btn' not in summary_js
+
+    # 2. challenge-invite-btn in summary-actions is conditioned on !isConcluded
+    assert 'isChallenge && _currentMode !== "replay" && !isConcluded' in summary_js
+
+    # 3. Live polling conclusion in ch_summary_js hides challenge-invite-btn and summary-invite-drawer
+    assert 'inviteBtn.classList.add("hidden")' in ch_summary_js
+    assert 'inviteDrawer.classList.add("hidden")' in ch_summary_js
+
+    # 4. In challenges hub, btn-share-challenge-hub and share drawer are conditioned on isActive
+    assert 'isActive' in challenges_page_js
+    assert 'btn-share-challenge-hub' in challenges_page_js
+    assert 'challenge-hub-share-drawer' in challenges_page_js
+
+    # 5. When challenge is concluded, handleNextRound advances to Grand Reveal directly
+    assert 'this.showGrandReveal()' in ch_index_js
+    assert 'this.renderInviteFriendsScreen()' in ch_index_js

@@ -300,9 +300,6 @@ export const el = {
   get summaryPlayAgainBtn() {
     return document.getElementById("summary-play-again-btn");
   },
-  get summaryHomeBtn() {
-    return document.getElementById("summary-home-btn");
-  },
   get challengeInviteBtn() {
     return document.getElementById("challenge-invite-btn");
   },

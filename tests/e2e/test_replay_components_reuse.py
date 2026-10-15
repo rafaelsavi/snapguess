@@ -255,6 +255,53 @@ async def test_replay_header_challenge_vs_local(page: Page) -> None:
     await expect(page.locator('#replay-heading-title')).to_have_text('Match Replay')
     await expect(page.locator('#replay-match-title .replay-challenge-title')).to_have_text('Summer Roadtrip 2026')
     await expect(page.locator('#replay-match-title .replay-challenge-host')).to_contain_text('Rafael')
+    await expect(page.locator('#replay-match-title .challenge-live-pill')).to_have_class(re.compile(r'\bis-finished\b'))
+    await expect(page.locator('#grand-reveal-podium-section')).to_be_visible()
+    await expect(page.locator('#grand-reveal-provisional')).not_to_be_visible()
+
+    # 3. Solo challenge replay should render solo-winner banner, not provisional
+    mock_solo_challenge_replay = dict(mock_challenge_replay)
+    mock_solo_challenge_replay.update(
+        {
+            'match_id': 'ch-match-solo',
+            'players': [
+                {
+                    'player_name': 'SoloPlayer',
+                    'total_score': 5000,
+                    'rank': 1,
+                    'is_winner': True,
+                    'is_finished': True,
+                    'completed_rounds': 2,
+                }
+            ],
+            'winners': ['SoloPlayer'],
+            'rounds_data': [
+                {
+                    'round_number': 1,
+                    'asset_id': 'asset-reuse-1',
+                    'player_guesses': [
+                        {
+                            'player_name': 'SoloPlayer',
+                            'cumulative_score': 5000,
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    async def handle_solo_replay(route):
+        await route.fulfill(
+            status=200,
+            content_type='application/json',
+            body=json.dumps(mock_solo_challenge_replay),
+        )
+
+    await page.route('**/api/match/ch-match-solo/replay', handle_solo_replay)
+    await page.goto('/game/ch-match-solo/replay')
+    await expect(page.locator('#summary-card')).to_be_visible()
+    await expect(page.locator('#grand-reveal-solo-winner')).to_be_visible()
+    await expect(page.locator('#grand-reveal-provisional')).not_to_be_visible()
 
 
 @pytest.mark.asyncio
@@ -494,3 +541,133 @@ async def test_review_deck_journey_map_autozooms_on_first_open(page: Page) -> No
     assert map_state['zoom'] >= 10, f'Expected autozoom >= 10, got {map_state["zoom"]}'
     assert abs(map_state['lat'] - 48.859) < 0.5, f'Center lat should be near Paris, got {map_state["lat"]}'
     assert abs(map_state['lng'] - 2.297) < 0.5, f'Center lng should be near Paris, got {map_state["lng"]}'
+
+
+@pytest.mark.asyncio
+async def test_replay_challenge_incomplete_concluded_matches(page: Page) -> None:
+    """Verify concluded challenge replays with incomplete player sessions render exact parity with summary:
+
+    - Shows #grand-reveal-no-winners when no player completed the challenge.
+    - Shows in-progress hourglass rounds badge (e.g. ⏳ 2/20).
+    - Accurately ranks players using time taken as tie-breaker.
+    - Displays neutral concluded live tally (e.g. 0/2 finished).
+    """
+    mock_incomplete_challenge_replay = {
+        'match_id': 'ch_test_incomplete',
+        'played_at': '2026-10-04T06:53:20.000000+00:00',
+        'play_mode': 'challenge',
+        'game_mode': 'unshuffle',
+        'rounds': 20,
+        'round_length': 'unlimited',
+        'location_mode': True,
+        'date_mode': True,
+        'challenge_id': 'ch_test_incomplete',
+        'challenge_title': 'Incomplete Unshuffle Challenge',
+        'challenge_creator': 'Ivana',
+        'winners': [],
+        'players': [
+            {
+                'player_name': 'Thresa',
+                'location_score': 133,
+                'date_score': 73,
+                'total_score': 206,
+                'max_possible_score': 4000,
+                'accuracy_pct': 5.2,
+                'rank': 1,
+                'is_winner': False,
+                'completed_rounds': 2,
+                'is_finished': False,
+            },
+            {
+                'player_name': 'Host',
+                'location_score': 133,
+                'date_score': 73,
+                'total_score': 206,
+                'max_possible_score': 4000,
+                'accuracy_pct': 5.2,
+                'rank': 2,
+                'is_winner': False,
+                'completed_rounds': 2,
+                'is_finished': False,
+            },
+        ],
+        'rounds_data': [
+            {
+                'round_number': 1,
+                'game_mode': 'unshuffle',
+                'player_guesses': [
+                    {
+                        'player_name': 'Host',
+                        'cumulative_score': 72,
+                        'round_score': 72,
+                        'location_score': 33,
+                        'date_score': 39,
+                        'time_taken_seconds': 22.8,
+                    },
+                    {
+                        'player_name': 'Thresa',
+                        'cumulative_score': 72,
+                        'round_score': 72,
+                        'location_score': 33,
+                        'date_score': 39,
+                        'time_taken_seconds': 4.0,
+                    },
+                ],
+            },
+            {
+                'round_number': 2,
+                'game_mode': 'unshuffle',
+                'player_guesses': [
+                    {
+                        'player_name': 'Host',
+                        'cumulative_score': 206,
+                        'round_score': 134,
+                        'location_score': 100,
+                        'date_score': 34,
+                        'time_taken_seconds': 25.0,
+                    },
+                    {
+                        'player_name': 'Thresa',
+                        'cumulative_score': 206,
+                        'round_score': 134,
+                        'location_score': 100,
+                        'date_score': 34,
+                        'time_taken_seconds': 10.2,
+                    },
+                ],
+            },
+        ],
+    }
+
+    async def handle_replay(route):
+        await route.fulfill(
+            status=200,
+            content_type='application/json',
+            body=json.dumps(mock_incomplete_challenge_replay),
+        )
+
+    await page.route('**/api/match/ch_test_incomplete/replay', handle_replay)
+    await page.goto('/game/ch_test_incomplete/replay')
+    await expect(page.locator('#summary-card')).to_be_visible()
+
+    # 1. Shows no-winners outcome banner instead of provisional card or podium
+    await expect(page.locator('#grand-reveal-no-winners')).to_be_visible()
+    await expect(page.locator('#grand-reveal-provisional')).not_to_be_visible()
+    await expect(page.locator('#grand-reveal-podium-section')).not_to_be_visible()
+
+    # 2. Concluded live status tally shows 0/2 finished
+    pill = page.locator('#replay-match-title .challenge-live-pill')
+    await expect(pill).to_be_visible()
+    pill_text = await pill.text_content()
+    assert '0/2' in pill_text
+
+    # 3. Standings table renders ⏳ 2/20 and accurate rank order (Thresa #1, Host #2)
+    rows = page.locator('#summary-table tbody tr')
+    await expect(rows).to_have_count(2)
+    row0_text = await rows.nth(0).text_content()
+    row1_text = await rows.nth(1).text_content()
+
+    assert 'Thresa' in row0_text
+    assert '2/20' in row0_text
+    assert 'Host' in row1_text
+    assert '2/20' in row1_text

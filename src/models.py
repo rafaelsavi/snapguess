@@ -834,6 +834,8 @@ class MatchSummaryPlayer(BaseModel):
     accuracy_pct: float = Field(ge=0.0, le=100.0)
     rank: int = Field(ge=1)
     is_winner: bool
+    completed_rounds: int | None = Field(default=None, ge=0)
+    is_finished: bool | None = None
 
 
 class MatchSummaryResponse(BaseModel):

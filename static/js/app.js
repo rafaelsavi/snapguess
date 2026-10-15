@@ -394,10 +394,6 @@ bindClick(el.summaryPlayAgainBtn, () => {
   restartSameGame();
 });
 
-bindClick(el.summaryHomeBtn, () => {
-  returnToSetup();
-});
-
 bindClick(el.langToggleBtn, () => {
   toggleLanguage();
   refreshActiveScreenLanguage();
