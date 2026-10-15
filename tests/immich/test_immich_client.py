@@ -5,8 +5,9 @@ from datetime import date
 import httpx
 import pytest
 
-from src.immich.client import ImmichClient, ImmichClientError
 from src.models import PeopleMode
+from src.providers.immich import ImmichClientError
+from src.providers.immich import ImmichPhotoProvider as ImmichClient
 
 
 def build_client(handler) -> ImmichClient:

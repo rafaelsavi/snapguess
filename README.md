@@ -102,7 +102,7 @@ The official Docker image is published to GitHub Container Registry (GHCR):
 |----------------------|------------------------------------------------------------|-----------------------------------------------------|
 | `:latest`            | Latest official stable release (multi-arch: amd64 / arm64) | `docker pull ghcr.io/rafaelsavi/snapguess:latest` |
 | `:rc`                | Latest Release Candidate build                             | `docker pull ghcr.io/rafaelsavi/snapguess:rc`     |
-| `:v3.2.1` / `:3.2.1` | Specific semantic release version                          | `docker pull ghcr.io/rafaelsavi/snapguess:v3.2.1` |
+| `:v4.2.0` / `:4.2.0` | Specific semantic release version                          | `docker pull ghcr.io/rafaelsavi/snapguess:v4.2.0` |
 | `:<sha>`             | Exact commit hash build                                    | `docker pull ghcr.io/rafaelsavi/snapguess:<sha>`  |
 
 ### Quick Start
@@ -116,6 +116,7 @@ Use the example files:
 
 | Variable                         | Required | Default       | Notes                                                                                                                                                                                                            |
 |----------------------------------|----------|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `PHOTO_PROVIDER`                 | No       | `immich`      | Photo source backend architecture (default: `immich`)                                                                                                                                                            |
 | `IMMICH_SERVER_URL`              | Yes      | —             | Full URL to the Immich API, e.g. `https://photos.example.com/api`                                                                                                                                                |
 | `IMMICH_LIBRARIES`               | Yes      | —             | JSON object mapping display names to API keys, e.g. `{"Family": "key123"}`                                                                                                                                       |
 | `APP_HOST`                       | No       | `127.0.0.1`   | Set to `0.0.0.0` in Docker so the port is reachable from the host                                                                                                                                                |

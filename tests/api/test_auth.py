@@ -153,7 +153,7 @@ def test_auth_me_endpoint_disabled_mode(tmp_path: Path) -> None:
         auth_mode='disabled',
     )
     app = create_app(settings=settings)
-    app.state.immich_client = FakeImmichClient()
+    app.state.photo_provider = FakeImmichClient()
 
     with TestClient(app) as client:
         resp = client.get('/api/auth/me')
@@ -178,7 +178,7 @@ def test_auth_me_and_route_rbac_cloudflare_mode(tmp_path: Path) -> None:
         cf_user_emails=frozenset({user_email}),
     )
     app = create_app(settings=settings)
-    app.state.immich_client = FakeImmichClient()
+    app.state.photo_provider = FakeImmichClient()
 
     with TestClient(app) as client:
         # 1. Unauthenticated / Guest request (no header)
@@ -385,7 +385,7 @@ def test_auth_me_lock_player_name(tmp_path: Path) -> None:
         cf_lock_player_name=True,
     )
     app = create_app(settings=settings)
-    app.state.immich_client = FakeImmichClient()
+    app.state.photo_provider = FakeImmichClient()
 
     with TestClient(app) as client:
         # 1. Unauthenticated guest -> lock_player_name is False

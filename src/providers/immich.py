@@ -633,7 +633,3 @@ class ImmichPhotoProvider(BasePhotoProvider):
             raise ImmichClientError(f'Immich API error {res.status_code} at {path}: {res.text[:300]}')
 
         return res
-
-
-# Backward-compatible alias
-ImmichClient = ImmichPhotoProvider

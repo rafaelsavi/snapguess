@@ -75,17 +75,9 @@ def get_session_store(request: Request) -> SessionStore:
 def get_photo_provider(request: Request) -> BasePhotoProvider:
     """FastAPI dependency yielding the configured photo provider."""
     provider: BasePhotoProvider | None = getattr(request.app.state, 'photo_provider', None)
-    immich: BasePhotoProvider | None = getattr(request.app.state, 'immich_client', None)
-    if immich is not None and immich is not provider:
-        return immich
-    active = provider or immich
-    if active is None:
+    if provider is None:
         raise RuntimeError('Photo provider is not initialized on app state')
-    return active
-
-
-# Backward-compatible alias
-get_immich_client = get_photo_provider
+    return provider
 
 
 def get_leaderboard_store(request: Request) -> LeaderboardStore:

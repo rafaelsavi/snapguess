@@ -8,9 +8,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.config import AppSettings
-from src.immich.client import ImmichClientError
 from src.main import create_app
 from src.models import CityOption, PeopleMode, SyncMode, SyncStage, SyncStatus
+from src.providers.immich import ImmichClientError
 from src.storage.db import DatabaseManager
 from src.storage.metadata import AssetFilterCriteria, MetadataStore
 from src.storage.sync import SyncCooldownError, SyncEngine
@@ -569,8 +569,8 @@ def test_api_sync_and_filters_endpoints(tmp_path: Path) -> None:
 
     app = create_app(settings=settings)
     fake_client = FakeImmichClient()
-    app.state.immich_client = fake_client
-    app.state.sync_engine._immich = fake_client
+    app.state.photo_provider = fake_client
+    app.state.sync_engine._provider = fake_client
     app.state.sync_engine.trigger_sync_all = lambda *args, **kwargs: None
 
     async def mock_get_asset_bytes(library_name: str, asset_id: str) -> tuple[bytes, str]:
@@ -2186,16 +2186,16 @@ async def test_sync_engine_end_to_end_album_sharing_and_multi_library_isolation(
     """
     from unittest.mock import AsyncMock
 
-    from src.immich.client import ImmichClient
+    from src.providers.immich import ImmichPhotoProvider
 
     db_mgr = DatabaseManager(tmp_path / 'sync_test.db')
     meta_store = MetadataStore(db_mgr)
 
-    mock_immich = AsyncMock(spec=ImmichClient)
+    mock_immich = AsyncMock(spec=ImmichPhotoProvider)
     mock_immich._library_key.side_effect = lambda lib: f'key-{lib}'
     mock_immich.get_asset_count.return_value = 1
-    mock_immich._extract_asset_items.side_effect = ImmichClient._extract_asset_items
-    mock_immich._extract_total_assets.side_effect = ImmichClient._extract_total_assets
+    mock_immich._extract_asset_items.side_effect = ImmichPhotoProvider._extract_asset_items
+    mock_immich._extract_total_assets.side_effect = ImmichPhotoProvider._extract_total_assets
 
     # User IDs for each library
     user_ids = {

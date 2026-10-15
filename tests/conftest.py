@@ -358,11 +358,8 @@ def build_client(
     )
     app = create_app(settings=settings)
     app.state.photo_provider = immich
-    app.state.immich_client = immich
     if hasattr(app.state, 'sync_engine'):
-        app.state.sync_engine._immich = immich
-    if hasattr(app.state, 'game_service'):
-        app.state.game_service._immich = immich
+        app.state.sync_engine._provider = immich
     if auto_seed and hasattr(app.state, 'metadata_store'):
         for lib in settings.immich_libraries:
             seed_test_metadata(app.state.metadata_store, lib, immich)

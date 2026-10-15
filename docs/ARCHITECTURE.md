@@ -15,9 +15,9 @@
 ```
 snapguess/
 ├── src/
-│   ├── main.py          App factory and lifespan. Creates ImmichClient,
+│   ├── main.py          App factory and lifespan. Creates photo provider,
 │   │                    SessionStore, MetadataStore, and LeaderboardStore;
-│   │                    validates Immich access on startup; mounts static files and routes;
+│   │                    validates library access on startup; mounts static files and routes;
 │   │                    schedules periodic background delta sync tasks.
 │   ├── config.py        AppSettings dataclass. Parses and validates all env
 │   │                    vars at startup; raises ConfigError on bad input.
@@ -221,7 +221,7 @@ POST /api/question
 
 GET /api/media/{asset_id}
   └── routes.py verifies asset_id was issued in a live match (rejects any other)
-  └── Calls ImmichClient.get_asset_bytes → proxies preview thumbnail bytes
+  └── Calls BasePhotoProvider.get_asset_bytes → proxies preview thumbnail bytes
   └── If asset fails to load, marks asset invalid in SQLite metadata index
   └── Browser never contacts Immich directly
 
@@ -326,10 +326,10 @@ date) in-memory and never exposes it through the question or answer responses.
 
 ## Startup Validation
 
-`main.py` calls `ImmichClient.validate_access` for every configured library
-key during the lifespan startup phase. Keys that fail are excluded from
+`main.py` calls `provider.validate_access` for every configured library
+during the lifespan startup phase. Libraries that fail are excluded from
 `/api/libraries` and reported in the `unavailable` field; the app continues
-with the remaining keys rather than refusing to start.
+with the remaining libraries rather than refusing to start.
 
 ---
 

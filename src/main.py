@@ -187,7 +187,6 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.session_store = session_store
     app.state.photo_provider = photo_provider
-    app.state.immich_client = photo_provider
     app.state.metadata_db_manager = metadata_db_manager
     app.state.leaderboard_db_manager = leaderboard_db_manager
     app.state.metadata_store = metadata_store
