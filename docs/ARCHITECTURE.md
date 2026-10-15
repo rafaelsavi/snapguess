@@ -168,7 +168,7 @@ snapguess/
     │   └── test_unshuffle_gameplay.py Photo card reordering and multi-pin placement.
     ├── frontend/        Frontend regression and component tests (test_frontend_regressions.py, test_setup_card_bento_regression.py, test_multi_select.py, test_player_input.py, test_range_slider.py).
     ├── game/            Match selection, candidate pools, and diversity tests (test_diversity.py).
-    ├── immich/          Immich client adapter tests (test_immich_client.py).
+    ├── providers/       Photo provider subsystem tests (test_providers.py, test_immich_provider.py).
     ├── storage/         Storage subsystem tests (test_challenge_storage.py, test_leaderboard.py, test_metadata_storage.py).
     ├── test_adaptive_scoring.py Adaptive scoring calibration tests.
     ├── test_config.py   Settings parsing and validation tests.

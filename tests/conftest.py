@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from src.config import AppSettings
 from src.main import create_app
 from src.models import SyncStatus
+from src.providers.base import BasePhotoProvider
 from src.storage.metadata import MetadataStore
 
 
@@ -71,7 +72,7 @@ def setup_payload(**overrides: Any) -> dict[str, Any]:
     return payload
 
 
-class FakeImmichClient:
+class FakeImmichClient(BasePhotoProvider):
     def __init__(
         self,
         assets: list[dict[str, Any]] | None = None,
