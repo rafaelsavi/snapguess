@@ -1,6 +1,6 @@
 function getInitialLanguagePreference() {
   try {
-    const stored = localStorage.getItem("immich_quiz_language");
+    const stored = localStorage.getItem("snapguess_language");
     if (stored) {
       const s = String(stored).trim().toLowerCase().replace("_", "-");
       if (s.startsWith("pt")) return "pt-BR";
@@ -23,6 +23,7 @@ export const state = {
   players: [],
   language: getInitialLanguagePreference(),
   immichWebUrl: null,
+  tileConfig: null,
   audioEnabled: true,
   scoreMaxPoints: 100,
   auth: {
@@ -299,8 +300,11 @@ export const el = {
   get summaryPlayAgainBtn() {
     return document.getElementById("summary-play-again-btn");
   },
-  get summaryHomeBtn() {
-    return document.getElementById("summary-home-btn");
+  get summaryRecreateChallengeBtn() {
+    return document.getElementById("summary-recreate-challenge-btn");
+  },
+  get replayRecreateChallengeBtn() {
+    return document.getElementById("replay-recreate-challenge-btn");
   },
   get challengeInviteBtn() {
     return document.getElementById("challenge-invite-btn");
@@ -340,7 +344,7 @@ export const el = {
   gameEndedLobbyBtn: document.getElementById("game-ended-lobby-btn"),
 };
 
-const SESSION_STORAGE_KEY = "immich_quiz_active_match";
+const SESSION_STORAGE_KEY = "snapguess_active_match";
 
 export function saveActiveMatchSession() {
   if (!state.matchId || state.matchFinished) {

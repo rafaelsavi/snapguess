@@ -1,6 +1,6 @@
 """Asset selection, diversity sampling, and map bounding box calculations.
 
-This module provides the core asset selection engine for the quiz game, including:
+This module provides the core asset selection engine for the trivia game, including:
 - **Pool Ingestion & Caching**: Loading candidate assets per match from the fast indexed SQLite
   metadata store (`MetadataStore`) or falling back to the Immich Search API.
 - **Smart Map Bounds**: Calculating match-wide geographic bounding boxes with anti-spoiler guards.
@@ -19,8 +19,7 @@ from datetime import date
 from typing import Any
 
 from src.app_logging import LOGGER_MATCH, get_logger
-from src.immich.client import AssetAnswer, ImmichClient
-from src.models import MapBounds
+from src.models import AssetAnswer, MapBounds
 from src.scoring import calculate_date_decay, calculate_location_decay, haversine_km
 from src.storage.metadata import AssetFilterCriteria, MetadataStore
 from src.storage.session import MatchState, RoundAsset
@@ -329,7 +328,6 @@ def generate_batch_pins(
 
 async def _select_diverse_assets(
     state: MatchState,
-    immich: ImmichClient,
     count: int,
     client_excluded: set[str],
     min_capture_date: date | None = None,
@@ -343,7 +341,7 @@ async def _select_diverse_assets(
 
     Selection Workflow:
     1. Filters out previously played match asset IDs and client-excluded IDs.
-    2. If candidates < `count`, attempts to reload the match pool (via metadata store or Immich).
+    2. If candidates < `count`, attempts to reload the match pool (via metadata store).
     3. **Primary pass**: Shuffles candidate IDs and greedily picks up to `count` assets that satisfy
        both distance and time diversity constraints relative to previously played match assets
        and any assets already selected in the current round/batch.
@@ -352,7 +350,6 @@ async def _select_diverse_assets(
 
     Args:
         state: Active match state.
-        immich: Immich API client for pool fetching fallback.
         count: Number of assets required for the round or batch.
         client_excluded: Set of asset IDs excluded by the client.
         min_capture_date: Minimum capture date boundary.
@@ -433,7 +430,6 @@ async def _select_diverse_assets(
 
 async def select_pinpoint_round_asset(
     state: MatchState,
-    immich: ImmichClient,
     client_excluded: set[str],
     min_capture_date: date | None = None,
     max_capture_date: date | None = None,
@@ -448,7 +444,6 @@ async def select_pinpoint_round_asset(
 
     Args:
         state: Active match state.
-        immich: Immich client for pool reloading if required.
         client_excluded: Set of asset IDs reported as played or excluded by the client.
         min_capture_date: Minimum capture date boundary.
         max_capture_date: Maximum capture date boundary.
@@ -464,7 +459,6 @@ async def select_pinpoint_round_asset(
     """
     assets = await _select_diverse_assets(
         state,
-        immich,
         count=1,
         client_excluded=client_excluded,
         min_capture_date=min_capture_date,
@@ -479,7 +473,6 @@ async def select_pinpoint_round_asset(
 
 async def select_batch_round_assets(
     state: MatchState,
-    immich: ImmichClient,
     count: int,
     client_excluded: set[str],
     min_capture_date: date | None = None,
@@ -497,7 +490,6 @@ async def select_batch_round_assets(
 
     Args:
         state: Active match state.
-        immich: Immich API client for pool fetching fallback.
         count: Number of assets required for the batch.
         client_excluded: Set of asset IDs excluded by the client.
         min_capture_date: Minimum capture date boundary.
@@ -515,7 +507,6 @@ async def select_batch_round_assets(
     """
     assets = await _select_diverse_assets(
         state,
-        immich,
         count=count,
         client_excluded=client_excluded,
         min_capture_date=min_capture_date,

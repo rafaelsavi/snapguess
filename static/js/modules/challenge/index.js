@@ -182,7 +182,18 @@ export const challenge = {
    */
   handleNextRound() {
     return challengeReveal.handleNextRound(
-      () => this.renderInviteFriendsScreen(),
+      () => {
+        const isConcluded = Boolean(
+          challengeSession.cachedLeaderboardData?.is_concluded ||
+          challengeSession.challengeData?.is_active === false ||
+          (challengeSession.challengeData?.expires_at && new Date() > new Date(challengeSession.challengeData.expires_at))
+        );
+        if (isConcluded) {
+          this.showGrandReveal();
+        } else {
+          this.renderInviteFriendsScreen();
+        }
+      },
       (nextRoundIdx) => this.loadRound(nextRoundIdx)
     );
   },

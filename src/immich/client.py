@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
 from datetime import date, datetime
 from types import TracebackType
 from typing import Any
@@ -11,35 +10,13 @@ from typing import Any
 import httpx
 
 from src.app_logging import LOGGER_IMMICH, get_logger
-from src.models import PeopleMode
+from src.models import AssetAnswer, PeopleMode
 
 logger = get_logger(LOGGER_IMMICH)
 
 
 class ImmichClientError(RuntimeError):
     """Raised when an error occurs communicating with or authenticating to the Immich server."""
-
-
-@dataclass
-class AssetAnswer:
-    """Ground truth geographic and temporal metadata for an indexed or candidate photo asset."""
-
-    latitude: float | None
-    longitude: float | None
-    capture_datetime: datetime | None = None
-    city: str | None = None
-    state: str | None = None
-    country: str | None = None
-
-    def __post_init__(self) -> None:
-        if self.latitude is not None and not (-90.0 <= self.latitude <= 90.0):
-            raise ValueError(f'latitude must be between -90.0 and 90.0, got {self.latitude}')
-        if self.longitude is not None and not (-180.0 <= self.longitude <= 180.0):
-            raise ValueError(f'longitude must be between -180.0 and 180.0, got {self.longitude}')
-
-    @property
-    def capture_date(self) -> date | None:
-        return self.capture_datetime.date() if self.capture_datetime is not None else None
 
 
 class ImmichClient:
@@ -121,15 +98,28 @@ class ImmichClient:
     async def validate_access(self, library_name: str) -> None:
         """Verify API key validity and access permissions for a specific library."""
         key = self._library_key(library_name)
-        if await self.supports_search_v2():
-            payload: dict[str, Any] = {
-                'size': 1,
-                'filter': {'trashedAt': {'eq': None}},
-                'withExif': True,
-            }
-        else:
-            payload = {'size': 1, 'page': 1, 'withExif': True}
-        await self._request_json('POST', '/search/metadata', key, json=payload)
+        version = await self.get_server_version()
+        if version is not None and version < (3, 2, 0):
+            raise ImmichClientError(
+                f'Immich server version {version[0]}.{version[1]}.{version[2]} is unsupported. '
+                'SnapGuess requires Immich >= 3.2.0 (Search API v2).'
+            )
+        payload: dict[str, Any] = {
+            'size': 1,
+            'filter': {
+                'trashedAt': {'eq': None},
+                'type': {'eq': 'IMAGE'},
+            },
+            'withExif': True,
+        }
+        try:
+            await self._request_json('POST', '/search/metadata', key, json=payload)
+        except ImmichClientError as exc:
+            if version is None and ('400' in str(exc) or '404' in str(exc)):
+                raise ImmichClientError(
+                    f'Immich Search API v2 query failed ({exc}). SnapGuess requires Immich >= 3.2.0 (Search API v2).'
+                ) from exc
+            raise
 
     async def list_albums(self, library_name: str, include_shared: bool = False) -> list[dict[str, str]]:
         """Fetch and return all albums for a library, optionally filtering out shared albums."""
@@ -178,27 +168,25 @@ class ImmichClient:
         return items
 
     async def get_asset_count(self, library_name: str) -> int | None:
-        """Retrieve total photo/video asset count from Immich statistics endpoint."""
+        """Retrieve total photo asset count from Immich statistics endpoint."""
         key = self._library_key(library_name)
         try:
             stats = await self._request_json('POST', '/search/statistics', key, json={})
             if isinstance(stats, dict):
+                images = stats.get('images')
+                if images is None:
+                    images = stats.get('photos')
+                if isinstance(images, int) and images >= 0:
+                    logger.info('get_asset_count(%s): reported %d photo asset(s)', library_name, images)
+                    return images
                 total = stats.get('total')
                 if isinstance(total, int) and total >= 0:
-                    logger.info('get_asset_count(%s): reported %d total asset(s)', library_name, total)
-                    return total
-                images = stats.get('images') or stats.get('photos') or 0
-                videos = stats.get('videos') or 0
-                if isinstance(images, int) and isinstance(videos, int) and (images + videos) >= 0:
-                    combined = images + videos
                     logger.info(
-                        'get_asset_count(%s): reported %d asset(s) (%d photos, %d videos)',
+                        'get_asset_count(%s): reported %d total asset(s) (photo breakdown unavailable)',
                         library_name,
-                        combined,
-                        images,
-                        videos,
+                        total,
                     )
-                    return combined
+                    return total
             logger.warning(
                 'Unexpected response structure from Immich /search/statistics for %s: %s',
                 library_name,
@@ -363,8 +351,9 @@ class ImmichClient:
         tag_blacklist: frozenset[str] = frozenset(),
     ) -> bool:
         """Check whether an asset satisfies location, date, and whitelist/blacklist constraints."""
-        # 1. Reject videos
-        if asset.get('type') == 'VIDEO':
+        # 1. Reject non-image assets (videos, audio, etc.)
+        asset_type = str(asset.get('type', 'IMAGE')).upper()
+        if asset_type != 'IMAGE':
             return False
 
         # 2. Location mode check (valid non-zero lat/lng)

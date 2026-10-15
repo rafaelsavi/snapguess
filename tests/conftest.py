@@ -102,10 +102,10 @@ class FakeImmichClient:
         return [{'id': 'album-1', 'name': 'Holidays'}]
 
     async def get_server_version(self) -> tuple[int, int, int] | None:
-        return None
+        return (3, 2, 0)
 
     async def supports_search_v2(self) -> bool:
-        return False
+        return True
 
     async def get_asset_bytes(self, library_name: str, asset_id: str) -> tuple[bytes, str]:
         return b'fake-jpg', 'image/jpeg'

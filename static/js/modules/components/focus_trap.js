@@ -13,18 +13,24 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ');
 
-let _activeTrap = null;
+const _trapStack = [];
 
 /**
  * Activate a focus trap on a container element.
+ * Supports nesting: if a dialog opens on top of an existing modal,
+ * the parent trap is paused and automatically resumed when the dialog closes.
+ *
  * @param {HTMLElement} containerEl - The modal or dialog container.
  * @param {HTMLElement|null} [initialFocusEl] - Optional specific element to receive initial focus.
  */
 export function activateFocusTrap(containerEl, initialFocusEl = null) {
   if (!containerEl) return;
 
-  // Deactivate any existing trap first
-  deactivateFocusTrap();
+  // Pause parent trap listener if any
+  if (_trapStack.length > 0) {
+    const parentTrap = _trapStack[_trapStack.length - 1];
+    parentTrap.containerEl.removeEventListener('keydown', parentTrap.handleKeyDown);
+  }
 
   const previouslyFocused = document.activeElement;
 
@@ -73,20 +79,33 @@ export function activateFocusTrap(containerEl, initialFocusEl = null) {
     }
   });
 
-  _activeTrap = {
+  _trapStack.push({
     containerEl,
     handleKeyDown,
     previouslyFocused,
-  };
+  });
 }
 
 /**
- * Deactivate the currently active focus trap and restore previous focus.
+ * Deactivate the currently active focus trap (or specific container) and restore previous focus.
+ * @param {HTMLElement|null} [targetContainerEl] - Optional specific container to remove from stack.
  */
-export function deactivateFocusTrap() {
-  if (!_activeTrap) return;
+export function deactivateFocusTrap(targetContainerEl = null) {
+  if (_trapStack.length === 0) return;
 
-  const { containerEl, handleKeyDown, previouslyFocused } = _activeTrap;
+  let trap = null;
+  if (targetContainerEl) {
+    const idx = _trapStack.findIndex((t) => t.containerEl === targetContainerEl);
+    if (idx !== -1) {
+      [trap] = _trapStack.splice(idx, 1);
+    }
+  }
+  if (!trap) {
+    trap = _trapStack.pop();
+  }
+  if (!trap) return;
+
+  const { containerEl, handleKeyDown, previouslyFocused } = trap;
   containerEl.removeEventListener('keydown', handleKeyDown);
 
   if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
@@ -95,5 +114,9 @@ export function deactivateFocusTrap() {
     }
   }
 
-  _activeTrap = null;
+  // Resume parent trap keydown listener if any
+  if (_trapStack.length > 0) {
+    const parentTrap = _trapStack[_trapStack.length - 1];
+    parentTrap.containerEl.addEventListener('keydown', parentTrap.handleKeyDown);
+  }
 }

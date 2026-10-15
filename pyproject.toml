@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "snapguess"
-version = "4.0.0"
-description = "Trivia game powered by Immich libraries"
+version = "4.1.0"
+description = "Game of guessing where and when your photos were taken"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

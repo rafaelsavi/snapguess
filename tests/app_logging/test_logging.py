@@ -110,7 +110,7 @@ def test_context_filter_injects_into_record() -> None:
     filt = ContextFilter()
     with bind_match_context('8f2a1b3c4d', player_name='Bob'), bind_request_context('req_9876'):
         record = logging.LogRecord(
-            name='immich_quiz.scoring',
+            name='snapguess.scoring',
             level=logging.INFO,
             pathname='scoring.py',
             lineno=10,
@@ -133,7 +133,7 @@ def test_context_filter_injects_into_record() -> None:
 def test_console_formatter_plain() -> None:
     formatter = ConsoleLogFormatter(use_colors=False)
     record = logging.LogRecord(
-        name='immich_quiz.match',
+        name='snapguess.match',
         level=logging.INFO,
         pathname='test.py',
         lineno=1,
@@ -153,7 +153,7 @@ def test_console_formatter_plain() -> None:
 def test_console_formatter_with_library_context() -> None:
     formatter = ConsoleLogFormatter(use_colors=False)
     record = logging.LogRecord(
-        name='immich_quiz.sync',
+        name='snapguess.sync',
         level=logging.WARNING,
         pathname='sync.py',
         lineno=1,

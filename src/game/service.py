@@ -15,7 +15,6 @@ from src.config import AppSettings
 from src.game.modes import GameModeRegistry, default_game_mode_registry
 from src.game.selector import calculate_match_bounds, load_asset_pool
 from src.i18n import SupportedLanguage
-from src.immich.client import ImmichClient
 from src.models import (
     AnswerRequest,
     AnswerResponse,
@@ -290,7 +289,6 @@ class GameService:
         self,
         session_store: SessionStore,
         metadata_store: MetadataStore,
-        immich_client: ImmichClient,
         leaderboard_store: LeaderboardStore,
         settings: AppSettings,
         registry: GameModeRegistry | None = None,
@@ -298,7 +296,6 @@ class GameService:
         """Initialize GameService with required storage backends and settings."""
         self.store = session_store
         self.metadata_store = metadata_store
-        self.immich = immich_client
         self.leaderboard_store = leaderboard_store
         self.settings = settings
         self.registry = registry or default_game_mode_registry
@@ -491,7 +488,6 @@ class GameService:
             payload.played_asset_ids,
             self.settings,
             self.store,
-            self.immich,
             metadata_store=self.metadata_store,
         )
         logger.info(

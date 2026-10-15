@@ -10,14 +10,6 @@
   border-bottom: 1px solid var(--border-color, #e2e8f0);
 }
 
-.replay-header-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  width: 100%;
-}
 
 .replay-header-controls {
   display: flex;
@@ -91,15 +83,21 @@
 .replay-header-main {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
   gap: 1rem;
   width: 100%;
+}
+
+.replay-header-main .replay-back-btn {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
 }
 
 .replay-title-block {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .replay-main-heading {
@@ -136,6 +134,30 @@
   user-select: none;
 }
 
+.replay-meta-primary,
+.replay-meta-secondary {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
+.replay-meta-date-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+@media (max-width: 760px) {
+  .replay-meta-break {
+    display: none;
+  }
+  .replay-meta-primary,
+  .replay-meta-secondary {
+    width: 100%;
+  }
+}
+
 .replay-match-meta .replay-challenge-title {
   font-weight: 600;
   color: var(--text-color, #0f172a);
@@ -159,8 +181,21 @@
     margin-bottom: 1rem;
   }
 
-  .replay-header-top {
-    gap: 0.5rem;
+  .replay-header-main {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .replay-header-main .replay-back-btn {
+    order: 1;
+    margin-top: 0;
+  }
+
+  .replay-title-block {
+    order: 2;
+    flex: 1 1 100%;
+    width: 100%;
   }
 
   .replay-back-btn {

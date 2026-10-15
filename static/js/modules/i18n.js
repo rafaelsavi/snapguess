@@ -71,7 +71,7 @@ export function formatDate(dateInput, options) {
 /**
  * Locale-aware date & time formatter using active language.
  */
-export function formatDateTime(dateInput, options) {
+export function formatDateTime(dateInput, options = { dateStyle: "short", timeStyle: "short" }) {
   if (!dateInput) return "";
   const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
   if (isNaN(d.getTime())) return "";
@@ -257,17 +257,35 @@ export function translateError(msg) {
     return t("error.unknown_album");
   }
 
+  if (str.includes("SnapGuess requires Immich >= 3.2.0") || str.includes("is unsupported")) {
+    return t("error.unsupported_immich_version");
+  }
+
   return str;
 }
 
+let _alertDialogHandler = null;
+
+export function registerAlertDialogHandler(handler) {
+  _alertDialogHandler = handler;
+}
+
 export function showAlert(msg) {
-  if (!msg) return;
-  alert(translateError(msg));
+  if (!msg) return Promise.resolve();
+  const translated = translateError(msg);
+  if (typeof _alertDialogHandler === "function") {
+    return _alertDialogHandler(translated);
+  }
+  return import("./components/dialog.js")
+    .then(({ showAlertDialog }) => showAlertDialog({ message: translated }))
+    .catch(() => {
+      alert(translated);
+    });
 }
 
 export function getInitialLanguagePreference() {
   try {
-    const stored = localStorage.getItem("immich_quiz_language");
+    const stored = localStorage.getItem("snapguess_language");
     const normalized = normalizeLanguage(stored);
     if (normalized) return normalized;
   } catch (_) { }
@@ -304,7 +322,7 @@ export function toggleLanguage(onLanguageChanged) {
   const current = getLocale();
   state.language = current === "pt-BR" ? "en-US" : "pt-BR";
   try {
-    localStorage.setItem("immich_quiz_language", state.language);
+    localStorage.setItem("snapguess_language", state.language);
   } catch (_) { }
   updateLanguageUi();
   applyLanguage();

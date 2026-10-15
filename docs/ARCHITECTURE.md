@@ -72,13 +72,14 @@ snapguess/
     ├── css/             Modular CSS stylesheets:
     │   ├── style.css    Master entrypoint (@importing base, components, modes).
     │   ├── base/        Design tokens (variables.css), resets (reset.css), app shell (layout.css).
-    │   ├── components/  UI components (auth.css, avatar.css, buttons.css, cards.css, maps.css, leaderboard.css, challenge.css, modals.css, multi_select.css, player_input.css, range_slider.css, reported.css, filters.css, timer.css, toolbar.css, hub_header.css, stats.css, round_stage.css, reveal_table.css, replay.css, review_deck.css, summary.css).
+    │   ├── components/  UI components (auth.css, avatar.css, buttons.css, cards.css, dialog.css, maps.css, leaderboard.css, challenge.css, modals.css, multi_select.css, player_input.css, range_slider.css, reported.css, filters.css, timer.css, toolbar.css, hub_header.css, stats.css, round_stage.css, reveal_table.css, replay.css, review_deck.css, summary.css).
     │   └── modes/       Game mode styles (pinpoint.css, unshuffle.css).
     ├── js/app.js        Main application coordinator and match lifecycle state machine.
     ├── js/audio-playground.js Playground controller & visualizer logic.
     └── js/modules/      Modular ES modules:
         ├── components/  Reusable UI components:
         │   ├── activity_toast.js Glassmorphic activity toast notifications for real-time multiplayer.
+        │   ├── dialog.js    Accessible Promise-based alert, confirm, and prompt dialog component with focus trapping, sequential queuing, touch standards, and dark mode.
         │   ├── focus_trap.js Accessible modal focus trap utility (Tab / Shift+Tab) restoring focus.
         │   ├── hub_search.js Standardized hub search component managing search inputs, clear button visibility, debouncing, and Escape/Enter triggers.
         │   ├── hub_toolbar.js Standardized hub toolbar controller orchestrating search, segmented tabs, dropdown selects, and counter badges.
@@ -134,7 +135,7 @@ snapguess/
         ├── i18n.js      Multi-language translation engine (EN/PT), live switcher, and locale-aware date formatting with Today/Yesterday labels.
         ├── leaderboard.js Leaderboard UI rendering and filtering.
         ├── maps.js      Leaflet map wrapper, marker placement, auto-zoom, and updateSubmitState.
-        ├── router.js    Client-side History API router (normalizePath, parseRoute, setNavigationGuard).
+        ├── router.js    Client-side History API router (normalizePath, parseRoute, navigateBack, setNavigationGuard).
         ├── setup_filters.js Setup filter controls, dependent cities, persistence, and live preflight.
         ├── game_settings.js Normalizes and persists game mode, guess modes, round count, and round length in localStorage.
         ├── shortcuts.js Global keyboard navigation (<kbd>Space</kbd> / <kbd>Enter</kbd>).
@@ -407,6 +408,21 @@ Player names in match and challenge result standings link to `/players/{playerNa
 
 - Top-level sub-pages (Challenges Hub, Players Directory, Match Replays, Moderation Dashboard) share the standardized `.hub-page-header` component (`hub_header.css`).
 - On mobile (`<= 760px`), sub-pages with a back button wrap into a structured 2-row layout: back button and badge/action controls share row 1, while the page title and subtitle expand across row 2 with 100% width.
+
+### Match Review & Replay Headers (`.replay-page-header`)
+
+- Match Replay (`#review-header-replay`) and Game / Challenge Summary (`#review-header-summary`) share a standardized layout (`replay.css`, `summary.css`):
+  - Top-left contextual back button (`.page-back-btn`) utilizing `navigateBack()` with fallback routing (`/replays` or `/challenges`).
+  - Left-aligned title block with mode icon, page heading, and metadata row (game mode badge, live poll indicator `#grand-reveal-live-pill` if active, and host/date text).
+  - Compact match specification container (`.replay-match-meta-container` / `.summary-meta-items`).
+
+### Player Directory vs Profile Headers (`.stats-page-header`)
+
+- **Directory Mode (`/players`)**: Displays `.stats-page-title-group` with the `PLAYERS` badge, directory heading, descriptive subtitle, and directory refresh action.
+- **Profile Mode (`/players/:name`)**: Hides `.stats-page-title-group` completely to eliminate title and player name redundancy. Displays a unified hero lockup (`.stats-profile-hero`):
+  - Top-left contextual back button (`#profile-back-to-hub-btn`) utilizing `navigateBack("/players")`.
+  - Circular avatar (`#profile-hero-avatar`), player name heading (`#profile-hero-name`), and activity badges (`#profile-hero-badges`: `You`, `Verified`, `Active since...`, `Last played...`).
+  - Refresh button (`#stats-page-refresh-btn`) dynamically reloading the active player profile.
 
 ### Mobile Viewport Guarantee
 

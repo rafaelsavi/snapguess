@@ -14,12 +14,12 @@ if TYPE_CHECKING:
     from src.config import AppSettings
 
 # Subsystem logger names
-LOGGER_MATCH = 'immich_quiz.match'
-LOGGER_SCORING = 'immich_quiz.scoring'
-LOGGER_SYNC = 'immich_quiz.sync'
-LOGGER_IMMICH = 'immich_quiz.immich'
-LOGGER_API = 'immich_quiz.api'
-LOGGER_STORAGE = 'immich_quiz.storage'
+LOGGER_MATCH = 'snapguess.match'
+LOGGER_SCORING = 'snapguess.scoring'
+LOGGER_SYNC = 'snapguess.sync'
+LOGGER_IMMICH = 'snapguess.immich'
+LOGGER_API = 'snapguess.api'
+LOGGER_STORAGE = 'snapguess.storage'
 
 
 def _parse_level(level_name: str | None, default: int = logging.INFO) -> int:
@@ -99,6 +99,6 @@ def setup_logging(settings: AppSettings | None = None) -> None:
 
 def get_logger(name: str) -> logging.Logger:
     """Return a namespaced application logger."""
-    if not name.startswith('immich_quiz.') and not name.startswith('src.'):
-        return logging.getLogger(f'immich_quiz.{name}')
+    if not name.startswith('snapguess.') and not name.startswith('src.'):
+        return logging.getLogger(f'snapguess.{name}')
     return logging.getLogger(name)

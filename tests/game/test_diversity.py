@@ -11,8 +11,7 @@ from src.game.selector import (
     select_batch_round_assets,
     select_pinpoint_round_asset,
 )
-from src.immich.client import AssetAnswer
-from src.models import GameSetupRequest, RoundLength
+from src.models import AssetAnswer, GameSetupRequest, RoundLength
 from src.storage.session import SessionStore
 
 
@@ -136,12 +135,9 @@ async def test_selector_prioritizes_diversity_with_graceful_fallback() -> None:
     state.asset_pool = {'id-1': a1, 'id-2': a2_clustered, 'id-3': a3_diverse}
     state.played_asset_ids = {'id-1'}
 
-    immich = FakeImmichClient([])
-
     # 1. When a diverse asset exists (id-3), it must be prioritized over the clustered id-2
     selected = await select_pinpoint_round_asset(
         state,
-        immich,
         client_excluded=set(),
         min_capture_date=None,
         max_capture_date=None,
@@ -153,7 +149,6 @@ async def test_selector_prioritizes_diversity_with_graceful_fallback() -> None:
     state.played_asset_ids = {'id-1', 'id-3'}
     selected_fallback = await select_pinpoint_round_asset(
         state,
-        immich,
         client_excluded=set(),
         min_capture_date=None,
         max_capture_date=None,
@@ -165,7 +160,6 @@ async def test_selector_prioritizes_diversity_with_graceful_fallback() -> None:
     state.played_asset_ids = {'id-1', 'id-2', 'id-3'}
     selected_empty = await select_pinpoint_round_asset(
         state,
-        immich,
         client_excluded=set(),
         min_capture_date=None,
         max_capture_date=None,
@@ -177,7 +171,6 @@ async def test_selector_prioritizes_diversity_with_graceful_fallback() -> None:
     state.played_asset_ids = set()
     batch_res = await select_batch_round_assets(
         state,
-        immich,
         count=2,
         client_excluded=set(),
         min_capture_date=None,
@@ -191,7 +184,6 @@ async def test_selector_prioritizes_diversity_with_graceful_fallback() -> None:
     # 5. Batch selection requesting more than total unplayed candidates returns None
     batch_too_many = await select_batch_round_assets(
         state,
-        immich,
         count=4,
         client_excluded=set(),
         min_capture_date=None,

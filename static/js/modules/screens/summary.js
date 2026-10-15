@@ -17,7 +17,7 @@
 import { state, el, clearActiveMatchSession } from "../state.js";
 import { api } from "../api.js";
 import { t, getLocale, formatDateTime } from "../i18n.js";
-import { navigate } from "../router.js";
+import { navigate, navigateBack } from "../router.js";
 import { playVictoryFanfare } from "../audio.js";
 import { loadLeaderboard } from "../leaderboard.js";
 import { clearTimer } from "../timer.js";
@@ -30,6 +30,7 @@ import { renderMatchMeta } from "../components/match_meta.js";
 import { escapeHtml, playerColor } from "../formatters.js";
 import { renderShareUrlContainerHtml, setupShareBox } from "../components/share_box.js";
 import { challengeSession } from "../challenge/session.js";
+import { recreateChallenge } from "../admin.js";
 
 let _reviewDeck = null;
 let _currentMode = "summary";
@@ -40,47 +41,70 @@ export function renderReplayTitleHeader(data = null) {
   const titleEl = document.getElementById("replay-match-title");
   if (!titleEl || !data) return;
 
+  if (headingTitleEl) {
+    headingTitleEl.setAttribute("data-i18n", "replay.title");
+    headingTitleEl.textContent = t("replay.title");
+  }
+
   const isChallenge =
     data.play_mode === "challenge" ||
-    Boolean(data.challenge_id || data.challenge_title || data.challenge_creator);
+    Boolean(data.challenge_id || data.challenge_title || data.challenge_creator || data.is_challenge);
+
+  const dateText = data.played_at ? formatDateTime(data.played_at) : "";
 
   if (isChallenge) {
     const challengeTitle =
       data.challenge_title ||
+      data.title ||
       (data.challenge_creator ? `${data.challenge_creator}'s Challenge` : t("challenge.badge"));
-    const hostText = data.challenge_creator
-      ? t("challenges_page.host_label", data.challenge_creator)
+    const hostText = data.challenge_creator || data.creator_name
+      ? t("challenges_page.host_label", data.challenge_creator || data.creator_name)
       : "";
-    const dateText = formatDateTime(data.played_at);
 
-    if (headingTitleEl) {
-      headingTitleEl.removeAttribute("data-i18n");
-      headingTitleEl.textContent = challengeTitle;
+    const primaryParts = [
+      `<span class="badge-tag badge-type badge-type-challenge">⚔️ ${t("replay.play_mode_challenge")}</span>`,
+    ];
+
+    const participants = data.players || [];
+    const totalRounds = data.rounds || data.total_rounds || 1;
+    const finishedCount = participants.filter(
+      (p) => p.is_finished || (p.completed_rounds >= totalRounds)
+    ).length;
+
+    if (participants.length > 0) {
+      primaryParts.push(
+        `<span class="challenge-live-pill is-finished"><span class="live-poll-dot is-finished" aria-hidden="true"></span><span>${escapeHtml(t("challenge.live_concluded_tally", finishedCount, participants.length))}</span></span>`
+      );
     }
 
-    const parts = [
-      `<span class="badge-tag badge-type badge-type-challenge">⚔️ ${t("replay.play_mode_challenge")}</span>`,
-      `<span class="replay-challenge-title">${escapeHtml(challengeTitle)}</span>`,
-    ];
+    const detailParts = [];
+    if (challengeTitle) {
+      detailParts.push(`<span class="replay-challenge-title">${escapeHtml(challengeTitle)}</span>`);
+    }
     if (hostText) {
-      parts.push(`<span class="replay-challenge-host">${escapeHtml(hostText)}</span>`);
+      detailParts.push(`<span class="replay-challenge-host">${escapeHtml(hostText)}</span>`);
     }
     if (dateText) {
-      parts.push(`<span class="replay-match-date">${escapeHtml(dateText)}</span>`);
+      detailParts.push(`<span class="replay-match-date">${escapeHtml(dateText)}</span>`);
     }
-    titleEl.innerHTML = parts.join(` <span class="meta-separator" aria-hidden="true">•</span> `);
+
+    const primaryHtml = `<span class="replay-meta-primary">${primaryParts.join(` <span class="meta-separator" aria-hidden="true">•</span> `)}</span>`;
+    const secondaryHtml = detailParts.length > 0
+      ? `<span class="replay-meta-secondary">${detailParts.join(` <span class="meta-separator" aria-hidden="true">•</span> `)}</span>`
+      : "";
+
+    titleEl.innerHTML = secondaryHtml
+      ? `${primaryHtml} <span class="meta-separator replay-meta-break" aria-hidden="true">•</span> ${secondaryHtml}`
+      : primaryHtml;
 
   } else {
-    if (headingTitleEl) {
-      headingTitleEl.setAttribute("data-i18n", "replay.title");
-      headingTitleEl.textContent = t("replay.title");
+    const primaryParts = [
+      `<span class="badge-tag badge-type badge-type-local">🕹️ ${t("replay.play_mode_local")}</span>`,
+    ];
+    if (dateText) {
+      primaryParts.push(`<span class="replay-match-date">${escapeHtml(dateText)}</span>`);
     }
-    const dateText = formatDateTime(data.played_at);
-    titleEl.innerHTML = `
-      <span class="badge-tag badge-type badge-type-local">🕹️ ${t("replay.play_mode_local")}</span>
-      <span class="meta-separator" aria-hidden="true">•</span>
-      <span class="replay-match-date">${escapeHtml(dateText)}</span>
-    `;
+    titleEl.innerHTML = `<span class="replay-meta-primary">${primaryParts.join(` <span class="meta-separator" aria-hidden="true">•</span> `)}</span>`;
   }
 }
 
@@ -89,6 +113,8 @@ export function renderSummaryTitleHeader(data = null) {
   const livePill = el.grandRevealLivePill || document.getElementById("grand-reveal-live-pill");
   const liveStatus = el.grandRevealLiveStatus || document.getElementById("grand-reveal-live-status");
   const headingEl = el.summaryHeading || document.getElementById("summary-heading");
+  const headingIcon = document.getElementById("summary-heading-icon");
+  const backBtn = document.getElementById("summary-back-btn");
 
   if (!data) return;
 
@@ -100,40 +126,127 @@ export function renderSummaryTitleHeader(data = null) {
     data.challenge_creator
   );
 
+  if (backBtn) {
+    backBtn.setAttribute("data-fallback", isChallenge ? "/challenges" : "/");
+    if (!backBtn.dataset.listenerAttached) {
+      backBtn.dataset.listenerAttached = "true";
+      backBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const fallback = backBtn.getAttribute("data-fallback") || "/challenges";
+        navigateBack(fallback);
+      });
+    }
+  }
+
+  // Heading is consistently "Game Results" (t("summary.heading"))
+  if (headingIcon) {
+    headingIcon.textContent = "🏆";
+  }
+  if (headingEl) {
+    headingEl.setAttribute("data-i18n", "summary.heading");
+    headingEl.textContent = t("summary.heading");
+  }
+
+  const playedAt = data.played_at || _currentMatchData?.played_at;
+  const dateText = playedAt ? formatDateTime(playedAt) : "";
+
+  const localDateWrap = document.getElementById("summary-local-date-wrap");
+  const localDateEl = document.getElementById("summary-local-match-date");
+
+  const secondaryEl = document.getElementById("summary-meta-secondary");
+  const titleEl = document.getElementById("summary-challenge-title");
+  const hostSep = document.getElementById("summary-host-sep");
+  const hostEl = document.getElementById("summary-challenge-host");
+  const dateSep = document.getElementById("summary-date-sep");
+  const dateEl = document.getElementById("summary-match-date");
+  const metaBreak = document.getElementById("summary-meta-break");
+
   if (isChallenge) {
     if (badgeEl) {
       badgeEl.className = "badge-tag badge-type badge-type-challenge";
       badgeEl.innerHTML = `⚔️ ${t("replay.play_mode_challenge")}`;
     }
-    if (headingEl) {
-      headingEl.removeAttribute("data-i18n");
-      headingEl.textContent =
-        data.challenge_title ||
-        data.title ||
-        (data.challenge_creator || data.creator_name
-          ? `${data.challenge_creator || data.creator_name}'s Challenge`
-          : t("challenge.badge"));
-    }
+
     const totalRounds = data.rounds_played || data.total_rounds || 1;
-    const participants = (data.players || data.leaderboard || []);
+    const participants = data.players || data.leaderboard || [];
+    const isConcluded = Boolean(data.is_concluded);
     if (livePill && liveStatus) {
       livePill.classList.remove("hidden");
+      const dotEl = livePill.querySelector(".live-poll-dot");
       const finishedCount = participants.filter(
         (p) => p.is_finished || (p.completed_rounds >= totalRounds)
       ).length;
-      liveStatus.textContent = t("challenge.live_finished_tally", finishedCount, participants.length);
+      if (isConcluded) {
+        livePill.classList.add("is-finished");
+        if (dotEl) dotEl.classList.add("is-finished");
+        liveStatus.textContent = t("challenge.live_concluded_tally", finishedCount, participants.length);
+      } else {
+        livePill.classList.remove("is-finished");
+        if (dotEl) dotEl.classList.remove("is-finished");
+        liveStatus.textContent = t("challenge.live_finished_tally", finishedCount, participants.length);
+      }
     }
+
+    if (localDateWrap) localDateWrap.classList.add("hidden");
+
+    const challengeTitle =
+      data.challenge_title ||
+      data.title ||
+      (data.challenge_creator || data.creator_name
+        ? `${data.challenge_creator || data.creator_name}'s Challenge`
+        : t("challenge.badge"));
+    const hostText = data.challenge_creator || data.creator_name
+      ? t("challenges_page.host_label", data.challenge_creator || data.creator_name)
+      : "";
+
+    if (titleEl) {
+      titleEl.textContent = challengeTitle;
+    }
+    if (hostEl) {
+      if (hostText) {
+        hostEl.textContent = hostText;
+        hostEl.classList.remove("hidden");
+        if (hostSep) hostSep.classList.remove("hidden");
+      } else {
+        hostEl.classList.add("hidden");
+        if (hostSep) hostSep.classList.add("hidden");
+      }
+    }
+    if (dateEl) {
+      if (dateText) {
+        dateEl.textContent = dateText;
+        dateEl.classList.remove("hidden");
+        if (dateSep) dateSep.classList.remove("hidden");
+      } else {
+        dateEl.classList.add("hidden");
+        if (dateSep) dateSep.classList.add("hidden");
+      }
+    }
+
+    if (secondaryEl) secondaryEl.classList.remove("hidden");
+    if (metaBreak) metaBreak.classList.remove("hidden");
 
   } else {
     if (badgeEl) {
       badgeEl.className = "badge-tag badge-type badge-type-local";
       badgeEl.innerHTML = `🕹️ ${t("replay.play_mode_local")}`;
     }
-    if (headingEl) {
-      headingEl.setAttribute("data-i18n", "summary.heading");
-      headingEl.textContent = t("summary.heading");
+    if (livePill) {
+      livePill.classList.add("hidden");
     }
-    if (livePill) livePill.classList.add("hidden");
+
+    if (localDateWrap && localDateEl) {
+      if (dateText) {
+        localDateEl.textContent = dateText;
+        localDateWrap.classList.remove("hidden");
+      } else {
+        localDateWrap.classList.add("hidden");
+      }
+    }
+
+    if (secondaryEl) secondaryEl.classList.add("hidden");
+    if (metaBreak) metaBreak.classList.add("hidden");
   }
 }
 
@@ -141,7 +254,9 @@ export function renderSummaryContent(summary) {
   if (!summary) return;
 
   // 1. Header (Badge, Title, Meta tally)
-  renderSummaryTitleHeader(summary);
+  if (_currentMode !== "replay") {
+    renderSummaryTitleHeader(summary);
+  }
 
   const isChallenge = Boolean(
     summary.is_challenge ||
@@ -149,8 +264,21 @@ export function renderSummaryContent(summary) {
     summary.challenge_id
   );
   const isSettled = summary.is_settled !== false;
+  const isConcluded = Boolean(
+    summary.is_concluded ||
+    summary.challenge_status === "completed" ||
+    summary.challenge_status === "concluded" ||
+    summary.is_active === false ||
+    (summary.expires_at && new Date() > new Date(summary.expires_at)) ||
+    (challengeSession?.challengeData?.is_active === false) ||
+    (challengeSession?.challengeData?.expires_at && new Date() > new Date(challengeSession.challengeData.expires_at))
+  );
+  const finishedPlayers = (summary.players || []).filter(
+    (p) => p.is_finished || (typeof summary.total_rounds === "number" && p.completed_rounds >= summary.total_rounds)
+  );
+  const winners = Array.isArray(summary.winners) ? summary.winners : [];
 
-  // 2. Outcome Hero (Podium or Provisional Card)
+  // 2. Outcome Hero (Podium, Provisional Card, or Concluded Banners)
   const winnerEl = document.getElementById("summary-winner");
   if (winnerEl) {
     if (isChallenge && !isSettled) {
@@ -165,6 +293,29 @@ export function renderSummaryContent(summary) {
             <span aria-hidden="true">🏆</span>
             <span>${escapeHtml(t("challenge.single_player_podium_hint"))}</span>
           </div>
+        </div>
+      `;
+    } else if (isChallenge && isConcluded && winners.length === 0) {
+      winnerEl.innerHTML = `
+        <div class="challenge-outcome-banner banner-no-winners" id="grand-reveal-no-winners">
+          <div class="outcome-banner-header">
+            <span class="outcome-banner-icon" aria-hidden="true">🏁</span>
+            <h3 class="outcome-banner-title">${escapeHtml(t("challenge.concluded_no_winners_title"))}</h3>
+          </div>
+          <p class="outcome-banner-desc">${escapeHtml(t("challenge.concluded_no_winners_desc"))}</p>
+        </div>
+      `;
+    } else if (isChallenge && isConcluded && finishedPlayers.length === 1 && winners.length === 1) {
+      const winnerName = winners[0];
+      const soloPlayer = finishedPlayers[0] || {};
+      const score = soloPlayer.total_score || 0;
+      winnerEl.innerHTML = `
+        <div class="challenge-outcome-banner banner-solo-winner" id="grand-reveal-solo-winner">
+          <div class="outcome-banner-header">
+            <span class="outcome-banner-icon" aria-hidden="true">🏆</span>
+            <h3 class="outcome-banner-title">${escapeHtml(t("challenge.concluded_solo_title"))}</h3>
+          </div>
+          <p class="outcome-banner-desc">${escapeHtml(t("challenge.concluded_solo_desc", winnerName, score))}</p>
         </div>
       `;
     } else {
@@ -186,12 +337,31 @@ export function renderSummaryContent(summary) {
 
   // 4. Action buttons in summary footer
   const playAgainBtn = document.getElementById("summary-play-again-btn");
-  const homeBtn = document.getElementById("summary-home-btn");
   if (playAgainBtn) {
     playAgainBtn.classList.toggle("hidden", Boolean(isChallenge || !state.lastMatchConfig));
   }
-  if (homeBtn) {
-    homeBtn.classList.remove("hidden");
+
+  const canRecreate = Boolean((!isChallenge || summary.is_concluded) && state.auth?.role === "creator");
+  const recreateI18nKey = isChallenge ? "summary.recreate_challenge_btn" : "summary.recreate_game_btn";
+
+  const recreateChallengeBtn = document.getElementById("summary-recreate-challenge-btn");
+  if (recreateChallengeBtn) {
+    recreateChallengeBtn.classList.toggle("hidden", !canRecreate);
+    recreateChallengeBtn.setAttribute("data-i18n", recreateI18nKey);
+    recreateChallengeBtn.textContent = `🔄 ${t(recreateI18nKey)}`;
+    recreateChallengeBtn.onclick = () => {
+      recreateChallenge(summary);
+    };
+  }
+
+  const replayRecreateBtn = document.getElementById("replay-recreate-challenge-btn");
+  if (replayRecreateBtn) {
+    replayRecreateBtn.classList.toggle("hidden", !canRecreate);
+    replayRecreateBtn.setAttribute("data-i18n", recreateI18nKey);
+    replayRecreateBtn.textContent = `🔄 ${t(recreateI18nKey)}`;
+    replayRecreateBtn.onclick = () => {
+      recreateChallenge(summary);
+    };
   }
 
   // 5. Challenge Invite Friends Action & Drawer
@@ -199,7 +369,7 @@ export function renderSummaryContent(summary) {
   const inviteDrawer = document.getElementById("summary-invite-drawer");
   const inviteBox = document.getElementById("summary-invite-share-box");
 
-  if (isChallenge) {
+  if (isChallenge && _currentMode !== "replay" && !isConcluded) {
     if (inviteBtn) {
       inviteBtn.classList.remove("hidden");
       inviteBtn.onclick = () => {
@@ -228,66 +398,243 @@ export function renderSummaryContent(summary) {
   }
 }
 
-export function replayToSummary(replayData) {
-  const lastRound = replayData.rounds_data && replayData.rounds_data.length > 0
-    ? replayData.rounds_data[replayData.rounds_data.length - 1]
-    : null;
-  const guesses = lastRound ? (lastRound.player_guesses || []) : [];
+/**
+ * Normalizes match and challenge review data from any source
+ * (active challenge session, backend summary response, or historical replay payload)
+ * into a single unified summary data model.
+ */
+export function buildUnifiedSummary({
+  matchId = null,
+  mode = "summary",
+  challengeData = null,
+  replayData = null,
+  summaryData = null,
+} = {}) {
+  const isReplay = mode === "replay";
+  const isChallenge = Boolean(
+    challengeData ||
+    summaryData?.is_challenge ||
+    summaryData?.play_mode === "challenge" ||
+    summaryData?.challenge_id ||
+    replayData?.play_mode === "challenge" ||
+    replayData?.challenge_id
+  );
 
-  let playersList = [];
-  if (Array.isArray(replayData.players) && replayData.players.length > 0) {
-    playersList = replayData.players.map((p, idx) => ({
-      player_name: typeof p === "string" ? p : p.player_name,
-      total_score: (typeof p === "object" && p.total_score != null) ? p.total_score : 0,
+  const totalRounds =
+    challengeData?.total_rounds ||
+    summaryData?.total_rounds ||
+    summaryData?.rounds_played ||
+    replayData?.rounds ||
+    (replayData?.rounds_data ? replayData.rounds_data.length : null) ||
+    challengeSession?.totalRounds ||
+    1;
+
+  // 1. Resolve raw players list
+  let rawPlayers = [];
+  if (challengeData?.leaderboard && challengeData.leaderboard.length > 0) {
+    rawPlayers = challengeData.leaderboard;
+  } else if (summaryData?.players && summaryData.players.length > 0) {
+    rawPlayers = summaryData.players;
+  } else if (replayData?.players && replayData.players.length > 0) {
+    rawPlayers = replayData.players;
+  } else if (replayData?.rounds_data && replayData.rounds_data.length > 0) {
+    const rounds = replayData.rounds_data;
+    const lastRound = rounds[rounds.length - 1];
+    const guesses = lastRound?.player_guesses || [];
+    const playerTotals = new Map();
+    rounds.forEach((r) => {
+      (r.player_guesses || []).forEach((g) => {
+        const cur = playerTotals.get(g.player_name) || { location: 0, date: 0, time: 0 };
+        cur.location += (g.location_score || 0);
+        cur.date += (g.date_score || 0);
+        cur.time += (g.time_taken_seconds || 0);
+        playerTotals.set(g.player_name, cur);
+      });
+    });
+    const sorted = [...guesses].sort((a, b) => {
+      const scoreDiff = (b.cumulative_score || 0) - (a.cumulative_score || 0);
+      if (scoreDiff !== 0) return scoreDiff;
+      const tA = playerTotals.get(a.player_name)?.time ?? 0;
+      const tB = playerTotals.get(b.player_name)?.time ?? 0;
+      if (tA !== tB) return tA - tB;
+      return a.player_name.localeCompare(b.player_name);
+    });
+
+    const isUnshuffle = (replayData?.game_mode || "").toLowerCase().includes("unshuffle");
+    const activeGoals = (replayData?.location_mode !== false ? 1 : 0) + (replayData?.date_mode !== false ? 1 : 0);
+    const roundMaxScore = isUnshuffle ? (activeGoals * 100) : (activeGoals * 5000);
+    const computedMaxScore = Math.max(1, totalRounds * roundMaxScore);
+
+    rawPlayers = sorted.map((g, idx) => {
+      const totals = playerTotals.get(g.player_name) || { location: g.location_score, date: g.date_score };
+      const isFin = rounds.length >= totalRounds;
+      const totScore = g.cumulative_score || 0;
+      const acc = computedMaxScore > 0 ? Math.round((totScore / computedMaxScore) * 1000) / 10 : 0;
+      return {
+        player_name: g.player_name,
+        total_score: totScore,
+        location_score: totals.location,
+        date_score: totals.date,
+        rank: idx + 1,
+        completed_rounds: rounds.length,
+        is_finished: isFin,
+        is_winner: idx === 0 && totScore > 0 && isFin,
+        max_possible_score: computedMaxScore,
+        accuracy_pct: acc,
+      };
+    });
+  }
+
+  // 2. Normalize player entries
+  const players = rawPlayers.map((p, idx) => {
+    const name = typeof p === "string" ? p : p.player_name;
+    const score = (typeof p === "object" && p.total_score != null) ? p.total_score : 0;
+    const isFinished = (typeof p === "object" && p.is_finished != null)
+      ? Boolean(p.is_finished)
+      : (isChallenge
+          ? Boolean(p.completed_rounds != null && p.completed_rounds >= totalRounds)
+          : true);
+    const completedRounds = (typeof p === "object" && p.completed_rounds != null)
+      ? p.completed_rounds
+      : (isFinished ? totalRounds : (replayData?.rounds_data?.length || 0));
+
+    return {
+      player_name: name,
+      total_score: score,
       location_score: typeof p === "object" ? p.location_score : null,
       date_score: typeof p === "object" ? p.date_score : null,
       rank: (typeof p === "object" && p.rank) ? p.rank : (idx + 1),
-      max_possible_score: (replayData.rounds || 1) * 10000,
-      accuracy_percentage: typeof p === "object" ? p.accuracy_percentage : null,
-      avatar_color: typeof p === "object" ? (p.avatar_color || playerColor(p.player_name)) : playerColor(p),
-      completed_rounds: typeof p === "object" ? p.completed_rounds : null,
-      is_finished: typeof p === "object" ? p.is_finished : null,
-    }));
-  } else if (guesses.length > 0) {
-    const sortedGuesses = [...guesses].sort((a, b) => (b.cumulative_score || 0) - (a.cumulative_score || 0));
-    playersList = sortedGuesses.map((g, idx) => ({
-      player_name: g.player_name,
-      total_score: g.cumulative_score || 0,
-      location_score: g.location_score,
-      date_score: g.date_score,
-      rank: idx + 1,
-      max_possible_score: (replayData.rounds || (replayData.rounds_data ? replayData.rounds_data.length : 1)) * 10000,
-      avatar_color: playerColor(g.player_name),
-    }));
+      max_possible_score: (typeof p === "object" && p.max_possible_score) ? p.max_possible_score : (totalRounds * 10000),
+      accuracy_pct: typeof p === "object" ? (p.accuracy_pct ?? p.accuracy_percentage ?? null) : null,
+      accuracy_percentage: typeof p === "object" ? (p.accuracy_pct ?? p.accuracy_percentage ?? null) : null,
+      avatar_color: typeof p === "object" ? (p.avatar_color || playerColor(name)) : playerColor(name),
+      completed_rounds: completedRounds,
+      is_finished: isFinished,
+      is_winner: Boolean(typeof p === "object" && p.is_winner),
+    };
+  });
+
+  const finishedPlayers = players.filter((p) => p.is_finished || p.completed_rounds >= totalRounds);
+
+  // 3. Determine concluded & settled states
+  // Local matches are concluded once finished.
+  // Challenges check backend conclusion, active status, and expiration flags.
+  let isConcluded = false;
+  if (isChallenge) {
+    if (challengeData) {
+      isConcluded = Boolean(
+        challengeData.is_concluded ||
+        challengeData.is_active === false ||
+        (challengeData.expires_at && new Date() > new Date(challengeData.expires_at)) ||
+        challengeSession?.challengeData?.is_active === false ||
+        (challengeSession?.challengeData?.expires_at && new Date() > new Date(challengeSession.challengeData.expires_at))
+      );
+    } else if (replayData?.is_concluded !== undefined && replayData?.is_concluded !== null) {
+      isConcluded = Boolean(replayData.is_concluded);
+    } else if (isReplay) {
+      isConcluded = true;
+    } else if (summaryData?.is_concluded !== undefined && summaryData?.is_concluded !== null) {
+      isConcluded = Boolean(summaryData.is_concluded);
+    } else if (challengeSession?.challengeData) {
+      isConcluded = Boolean(
+        challengeSession.challengeData.is_active === false ||
+        (challengeSession.challengeData.expires_at && new Date() > new Date(challengeSession.challengeData.expires_at))
+      );
+    } else {
+      isConcluded = false;
+    }
+  } else {
+    isConcluded = true;
   }
 
-  const winners = Array.isArray(replayData.winners) && replayData.winners.length > 0
-    ? replayData.winners
-    : (playersList.length > 0 ? [playersList[0].player_name] : []);
+  const isSettled = finishedPlayers.length >= 2 || isConcluded;
 
-  const totalRounds = replayData.rounds || (replayData.rounds_data ? replayData.rounds_data.length : 1);
-  const finishedCount = playersList.filter((p) => p.is_finished || (p.completed_rounds != null && p.completed_rounds >= totalRounds)).length;
-  const isSettled = replayData.play_mode === "challenge" ? finishedCount >= 2 : true;
+  // 4. Resolve qualified winners (>0 points only)
+  let winners = [];
+  const explicitWinners = challengeData?.winners ?? summaryData?.winners ?? replayData?.winners;
+  if (Array.isArray(explicitWinners)) {
+    winners = explicitWinners.filter((wName) => {
+      const pl = players.find((p) => p.player_name === wName);
+      return pl ? pl.total_score > 0 : true;
+    });
+  } else {
+    winners = finishedPlayers
+      .filter((p) => p.is_winner && p.total_score > 0)
+      .map((p) => p.player_name);
+    if (winners.length === 0 && finishedPlayers.length > 0 && isSettled) {
+      const topScorer = [...finishedPlayers].sort((a, b) => b.total_score - a.total_score)[0];
+      if (topScorer && topScorer.total_score > 0) {
+        winners = [topScorer.player_name];
+      }
+    }
+  }
+
+  // Synchronize is_winner flag across players
+  players.forEach((p) => {
+    p.is_winner = winners.includes(p.player_name);
+  });
+
+  const challengeTitle =
+    challengeData?.title ||
+    replayData?.challenge_title ||
+    summaryData?.challenge_title ||
+    (challengeData?.creator_name ? `${challengeData.creator_name}'s Challenge` : null) ||
+    (replayData?.challenge_creator ? `${replayData.challenge_creator}'s Challenge` : null) ||
+    (summaryData?.challenge_creator ? `${summaryData.challenge_creator}'s Challenge` : null) ||
+    challengeSession?.challengeData?.title ||
+    null;
+
+  const challengeCreator =
+    challengeData?.creator_name ||
+    replayData?.challenge_creator ||
+    summaryData?.challenge_creator ||
+    challengeSession?.challengeData?.creator_name ||
+    null;
 
   return {
-    match_id: replayData.match_id,
-    game_mode: replayData.game_mode,
-    play_mode: replayData.play_mode,
-    is_challenge: replayData.play_mode === "challenge",
-    location_mode: replayData.location_mode ?? replayData.config?.location_mode ?? true,
-    date_mode: replayData.date_mode ?? replayData.config?.date_mode ?? true,
+    match_id: matchId || replayData?.match_id || summaryData?.match_id || challengeData?.challenge_id,
+    played_at: replayData?.played_at || summaryData?.played_at || null,
+    is_challenge: isChallenge,
+    play_mode: isChallenge ? "challenge" : (replayData?.play_mode || summaryData?.play_mode || "classic"),
+    challenge_id: challengeData?.challenge_id || replayData?.challenge_id || summaryData?.challenge_id || challengeSession?.challengeData?.challenge_id || null,
+    challenge_title: challengeTitle,
+    challenge_creator: challengeCreator,
+    title: challengeTitle,
+    creator_name: challengeCreator,
+    capability_token: challengeData?.capability_token || summaryData?.capability_token || challengeSession?.challengeData?.capability_token || null,
+    game_mode: challengeData?.game_mode || replayData?.game_mode || summaryData?.game_mode || "pinpoint",
+    libraries:
+      challengeData?.libraries ||
+      challengeData?.config?.libraries ||
+      replayData?.libraries ||
+      replayData?.config?.libraries ||
+      summaryData?.libraries ||
+      summaryData?.config?.libraries ||
+      [],
+    location_mode: challengeData ? (challengeData.location_mode !== false) : (replayData?.location_mode ?? summaryData?.location_mode ?? true),
+    date_mode: challengeData ? (challengeData.date_mode !== false) : (replayData?.date_mode ?? summaryData?.date_mode ?? true),
     rounds_played: totalRounds,
     total_rounds: totalRounds,
     max_possible_score: totalRounds * 10000,
-    players: playersList,
+    players,
     winners,
     is_settled: isSettled,
-    is_concluded: true,
-    round_history: replayData.rounds_data || [],
-    config: replayData.config,
-    challenge_title: replayData.challenge_title,
-    challenge_creator: replayData.challenge_creator,
+    is_concluded: isConcluded,
+    current_player_name: challengeSession?.sessionPlayerName || null,
+    round_history: replayData?.rounds_data || summaryData?.round_history || challengeData?.round_history || [],
+    round_guesses: challengeData?.round_guesses || [],
+    config: challengeData?.config || replayData?.config || summaryData?.config || challengeSession?.challengeData?.config,
+    filter_summary: challengeData?.config?.filter_summary || replayData?.filter_summary || summaryData?.filter_summary || null,
+    filter_tooltip: challengeData?.config?.filter_tooltip || replayData?.filter_tooltip || summaryData?.filter_tooltip || null,
   };
+}
+
+export function replayToSummary(replayData) {
+  return buildUnifiedSummary({
+    matchId: replayData?.match_id,
+    mode: "replay",
+    replayData,
+  });
 }
 
 export async function showMatchSummary() {
@@ -326,15 +673,11 @@ export async function showMatchSummaryByMatchId(
     if (actionsReplay) actionsReplay.classList.remove("hidden");
     state.activeLeaderboardConfig = null;
     if (el.leaderboardCard) el.leaderboardCard.classList.add("hidden");
-    if (el.summaryCard) el.summaryCard.classList.remove("challenge-grand-reveal");
   } else {
     if (headerSummary) headerSummary.classList.remove("hidden");
     if (headerReplay) headerReplay.classList.add("hidden");
     if (actionsSummary) actionsSummary.classList.remove("hidden");
     if (actionsReplay) actionsReplay.classList.add("hidden");
-    if (el.summaryCard) {
-      el.summaryCard.classList.toggle("challenge-grand-reveal", Boolean(isChallenge || challengeData));
-    }
   }
 
   showCard(el.summaryCard);
@@ -343,6 +686,7 @@ export async function showMatchSummaryByMatchId(
   const lang = getLocale();
   let summary = null;
   let replayData = null;
+  let summaryData = null;
 
   if (mode === "replay") {
     if (loadingEl) loadingEl.classList.remove("hidden");
@@ -355,24 +699,23 @@ export async function showMatchSummaryByMatchId(
       _currentMatchData = replayData;
 
       try {
-        summary = await api(`/api/match/${encodeURIComponent(matchId)}/summary?lang=${encodeURIComponent(lang)}`);
+        summaryData = await api(`/api/match/${encodeURIComponent(matchId)}/summary?lang=${encodeURIComponent(lang)}`);
       } catch (_) {}
-      if (!summary || !summary.players || summary.players.length === 0) {
-        summary = replayToSummary(replayData);
-      }
 
-      state.lastSummary = summary;
-      if (replayData.rounds_data) {
-        state.roundHistory = replayData.rounds_data;
-      }
+      summary = buildUnifiedSummary({
+        matchId,
+        mode: "replay",
+        replayData,
+        summaryData,
+      });
 
       if (loadingEl) loadingEl.classList.add("hidden");
       if (reviewContent) reviewContent.classList.remove("hidden");
 
-      renderReplayTitleHeader(replayData);
+      renderReplayTitleHeader(summary);
       const metaContainer = document.getElementById("replay-match-meta-container");
       if (metaContainer) {
-        renderMatchMeta(metaContainer, replayData);
+        renderMatchMeta(metaContainer, replayData || summary);
       }
     } catch (err) {
       console.error("Error loading match replay:", err);
@@ -387,55 +730,6 @@ export async function showMatchSummaryByMatchId(
     }
   } else if (challengeData) {
     // Mode: Challenge Summary
-    const totalRoundsCount = challengeData.total_rounds || challengeSession?.totalRounds || 1;
-    const leaderboard = challengeData.leaderboard || [];
-    const finishedPlayers = leaderboard.filter(
-      (p) => p.is_finished || p.completed_rounds >= totalRoundsCount
-    );
-    const isSettled = finishedPlayers.length >= 2;
-    const isConcluded = Boolean(
-      challengeData.is_concluded ||
-      challengeSession?.challengeData?.is_active === false ||
-      (challengeSession?.challengeData?.expires_at && new Date() > new Date(challengeSession.challengeData.expires_at))
-    );
-    const winners = finishedPlayers.filter((p) => p.is_winner).map((p) => p.player_name);
-
-    summary = {
-      match_id: matchId,
-      is_challenge: true,
-      play_mode: "challenge",
-      challenge_id: challengeData.challenge_id || challengeSession?.challengeData?.challenge_id,
-      challenge_title:
-        challengeData.title ||
-        (challengeData.creator_name
-          ? `${challengeData.creator_name}'s Challenge`
-          : challengeSession?.challengeData?.title || null),
-      challenge_creator: challengeData.creator_name || challengeSession?.challengeData?.creator_name,
-      capability_token:
-        challengeData.capability_token || challengeSession?.challengeData?.capability_token,
-      game_mode: challengeData.game_mode || challengeSession?.challengeData?.game_mode || "pinpoint",
-      location_mode:
-        challengeSession?.challengeData?.location_mode !== false && challengeData.location_mode !== false,
-      date_mode:
-        challengeSession?.challengeData?.date_mode !== false && challengeData.date_mode !== false,
-      rounds_played: totalRoundsCount,
-      total_rounds: totalRoundsCount,
-      max_possible_score: totalRoundsCount * 10000,
-      players: leaderboard,
-      winners: winners.length > 0 ? winners : (finishedPlayers[0] ? [finishedPlayers[0].player_name] : []),
-      is_settled: isSettled,
-      is_concluded: isConcluded,
-      current_player_name: challengeSession?.sessionPlayerName,
-      round_history: challengeData.round_history || [],
-      round_guesses: challengeData.round_guesses || [],
-      config: challengeData.config || challengeSession?.challengeData?.config,
-    };
-
-    state.lastSummary = summary;
-    if (summary.round_history && (!state.roundHistory || state.roundHistory.length === 0)) {
-      state.roundHistory = summary.round_history;
-    }
-
     if (matchId) {
       try {
         const replayRes = await fetch(`/api/match/${encodeURIComponent(matchId)}/replay`);
@@ -446,11 +740,17 @@ export async function showMatchSummaryByMatchId(
       } catch (_) {}
     }
 
+    summary = buildUnifiedSummary({
+      matchId,
+      mode: "summary",
+      challengeData,
+      replayData,
+    });
+
     if (playFanfare) {
       playVictoryFanfare();
     }
 
-    // Show All-Time Leaderboard Card in review only for Creator
     if (el.leaderboardCard) {
       if (state.auth?.role === "creator") {
         el.leaderboardCard.classList.remove("hidden");
@@ -462,10 +762,10 @@ export async function showMatchSummaryByMatchId(
   } else {
     // Mode: Local Match Summary
     try {
-      summary = await api(
+      summaryData = await api(
         `/api/match/${encodeURIComponent(matchId)}/summary?lang=${encodeURIComponent(lang)}`
       );
-      if (summary && !summary.finished) {
+      if (summaryData && !summaryData.finished) {
         showGameEndedCard(
           null,
           t("game_ended.match_in_progress_msg"),
@@ -474,12 +774,7 @@ export async function showMatchSummaryByMatchId(
         );
         return;
       }
-      state.lastSummary = summary;
-      if (summary.round_history && (!state.roundHistory || state.roundHistory.length === 0)) {
-        state.roundHistory = summary.round_history;
-      }
 
-      // Load replay data for the review deck
       try {
         const replayRes = await fetch(`/api/match/${encodeURIComponent(matchId)}/replay`);
         if (replayRes.ok) {
@@ -488,11 +783,17 @@ export async function showMatchSummaryByMatchId(
         }
       } catch (_) {}
 
+      summary = buildUnifiedSummary({
+        matchId,
+        mode: "summary",
+        summaryData,
+        replayData,
+      });
+
       if (playFanfare) {
         playVictoryFanfare();
       }
 
-      // Show All-Time Leaderboard Card in review only for Creator
       if (el.leaderboardCard) {
         if (state.auth?.role === "creator") {
           el.leaderboardCard.classList.remove("hidden");
@@ -511,6 +812,15 @@ export async function showMatchSummaryByMatchId(
       );
       return;
     }
+  }
+
+  if (el.summaryCard) {
+    el.summaryCard.classList.toggle("challenge-grand-reveal", Boolean(summary?.is_challenge));
+  }
+
+  state.lastSummary = summary;
+  if (summary.round_history && summary.round_history.length > 0) {
+    state.roundHistory = summary.round_history;
   }
 
   // Render Outcome Hero (Podium / Provisional, Standings Table, Awards)
@@ -591,7 +901,12 @@ export function refreshSummaryLanguage() {
       const backBtn = document.getElementById("replay-back-btn");
       if (backBtn) {
         const span = backBtn.querySelector("[data-i18n]");
-        if (span) span.textContent = t("replay.exit");
+        if (span) span.textContent = t("common.back");
+      }
+      const sumBackBtn = document.getElementById("summary-back-btn");
+      if (sumBackBtn) {
+        const span = sumBackBtn.querySelector("[data-i18n]");
+        if (span) span.textContent = t("common.back");
       }
     }
   }

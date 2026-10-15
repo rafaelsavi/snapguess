@@ -219,7 +219,7 @@ def test_metadata_store_filter_options(meta_store: MetadataStore, tmp_path: Path
     settings = AppSettings(
         immich_server_url='https://example.com/api',
         immich_libraries={'family': 'token'},
-        app_title='Quiz',
+        app_title='SnapGuess',
         date_lower_bound=None,
         date_upper_bound=None,
         app_host='127.0.0.1',
@@ -308,7 +308,7 @@ def test_metadata_store_filter_options_ownership_filtering(meta_store: MetadataS
     settings = AppSettings(
         immich_server_url='https://example.com/api',
         immich_libraries={'family': 'token'},
-        app_title='Quiz',
+        app_title='SnapGuess',
         date_lower_bound=None,
         date_upper_bound=None,
         app_host='127.0.0.1',
@@ -350,7 +350,7 @@ def test_metadata_store_date_bounds_clamping(meta_store: MetadataStore, tmp_path
     settings_loose_lower = AppSettings(
         immich_server_url='https://example.com/api',
         immich_libraries={'family': 'token'},
-        app_title='Quiz',
+        app_title='SnapGuess',
         date_lower_bound=date(1960, 1, 1),
         date_upper_bound=date(2030, 1, 1),
         app_host='127.0.0.1',
@@ -367,7 +367,7 @@ def test_metadata_store_date_bounds_clamping(meta_store: MetadataStore, tmp_path
     settings_tight_lower = AppSettings(
         immich_server_url='https://example.com/api',
         immich_libraries={'family': 'token'},
-        app_title='Quiz',
+        app_title='SnapGuess',
         date_lower_bound=date(2020, 1, 1),
         date_upper_bound=date(2022, 12, 31),
         app_host='127.0.0.1',
@@ -385,7 +385,7 @@ def test_metadata_store_date_bounds_clamping(meta_store: MetadataStore, tmp_path
     settings_newer_lower = AppSettings(
         immich_server_url='https://example.com/api',
         immich_libraries={'family': 'token'},
-        app_title='Quiz',
+        app_title='SnapGuess',
         date_lower_bound=date(2025, 1, 1),
         date_upper_bound=date(2030, 1, 1),
         app_host='127.0.0.1',
@@ -438,14 +438,23 @@ async def test_sync_engine_flow(tmp_path: Path) -> None:
                 return [{'id': 'p1', 'name': 'Charlie'}]
             if path == '/albums':
                 return [{'id': 'alb-1', 'name': 'Trip 2024', 'isShared': False}]
-            if path == '/albums/alb-1':
-                return {'assets': [{'id': 'asset-sync-1'}]}
+            if path == '/tags':
+                return []
             if path == '/search/metadata':
-                page = json.get('page', 1)
-                if page == 1:
+                filter_obj = (json or {}).get('filter', {})
+                if 'albumIds' in filter_obj:
                     return {
-                        'total': 1,
-                        'assets': [
+                        'assets': {
+                            'items': [{'id': 'asset-sync-1'}],
+                            'nextCursor': None,
+                        }
+                    }
+                cursor = (json or {}).get('cursor')
+                if cursor:
+                    return {'assets': {'items': [], 'nextCursor': None}}
+                return {
+                    'assets': {
+                        'items': [
                             {
                                 'id': 'asset-sync-1',
                                 'type': 'IMAGE',
@@ -460,17 +469,21 @@ async def test_sync_engine_flow(tmp_path: Path) -> None:
                                 'people': [{'id': 'p1'}],
                             }
                         ],
+                        'nextCursor': None,
                     }
-                return {'total': 1, 'assets': []}
+                }
             return {}
 
         async def get_asset_count(self, library_name: str) -> int | None:
             return 1
 
         def _extract_total_assets(self, raw: Any) -> int | None:
-            return raw.get('total')
+            return 1
 
         def _extract_asset_items(self, raw: Any) -> list[dict[str, Any]]:
+            assets = raw.get('assets', {})
+            if isinstance(assets, dict):
+                return assets.get('items', [])
             return raw.get('assets', [])
 
     mock_client = MockImmichClient()
@@ -544,7 +557,7 @@ def test_api_sync_and_filters_endpoints(tmp_path: Path) -> None:
     settings = AppSettings(
         immich_server_url='https://example.com/api',
         immich_libraries={'family': 'token'},
-        app_title='Quiz',
+        app_title='SnapGuess',
         date_lower_bound=None,
         date_upper_bound=None,
         app_host='127.0.0.1',
@@ -691,7 +704,7 @@ def test_null_and_none_sanitization_in_db(db_mgr: DatabaseManager, meta_store: M
     settings = AppSettings(
         immich_server_url='https://example.com/api',
         immich_libraries={'family': 'token'},
-        app_title='Quiz',
+        app_title='SnapGuess',
         date_lower_bound=None,
         date_upper_bound=None,
         app_host='127.0.0.1',
@@ -1277,11 +1290,12 @@ async def test_sync_engine_delta_vs_full_sync(tmp_path: Path) -> None:
                 return []
             if path == '/search/metadata':
                 captured_payloads.append(dict(json or {}))
-                page = (json or {}).get('page', 1)
-                if page == 1:
-                    return {
-                        'total': 1,
-                        'assets': [
+                cursor = (json or {}).get('cursor')
+                if cursor:
+                    return {'assets': {'items': [], 'nextCursor': None}}
+                return {
+                    'assets': {
+                        'items': [
                             {
                                 'id': 'delta-asset-1',
                                 'type': 'IMAGE',
@@ -1296,17 +1310,21 @@ async def test_sync_engine_delta_vs_full_sync(tmp_path: Path) -> None:
                                 },
                             }
                         ],
+                        'nextCursor': None,
                     }
-                return {'total': 1, 'assets': []}
+                }
             return {}
 
         async def get_asset_count(self, library_name: str) -> int | None:
             return 1
 
         def _extract_total_assets(self, raw: Any) -> int | None:
-            return raw.get('total')
+            return 1
 
         def _extract_asset_items(self, raw: Any) -> list[dict[str, Any]]:
+            assets = raw.get('assets', {})
+            if isinstance(assets, dict):
+                return assets.get('items', [])
             return raw.get('assets', [])
 
     mock_client = MockDeltaImmichClient()
@@ -1320,18 +1338,20 @@ async def test_sync_engine_delta_vs_full_sync(tmp_path: Path) -> None:
     assert status1['last_immich_updated_at'] == '2024-05-01T12:00:00Z'
     assert status1['last_sync_duration_seconds'] is not None
     assert status1['last_sync_duration_seconds'] >= 0
-    assert len(captured_payloads) == 2  # page 1 and page 2
-    assert 'updatedAfter' not in captured_payloads[0]
+    assert len(captured_payloads) == 1
+    assert 'updatedAt' not in captured_payloads[0].get('filter', {})
+    assert captured_payloads[0].get('filter', {}).get('type') == {'eq': 'IMAGE'}
 
     captured_payloads.clear()
 
-    # 2. Second sync should run DELTA sync automatically (uses updatedAfter)
+    # 2. Second sync should run DELTA sync automatically (uses structured updatedAt gte)
     await sync_engine.sync_library('family')
     status2 = sync_engine.get_sync_status('family')
     assert status2['sync_status'] == 'idle'
     assert status2['sync_mode'] == SyncMode.delta.value
-    assert len(captured_payloads) == 2
-    assert captured_payloads[0].get('updatedAfter') == '2024-05-01T12:00:00Z'
+    assert len(captured_payloads) == 1
+    assert captured_payloads[0].get('filter', {}).get('updatedAt') == {'gte': '2024-05-01T12:00:00Z'}
+    assert captured_payloads[0].get('filter', {}).get('type') == {'eq': 'IMAGE'}
 
     captured_payloads.clear()
 
@@ -1340,8 +1360,8 @@ async def test_sync_engine_delta_vs_full_sync(tmp_path: Path) -> None:
     status3 = sync_engine.get_sync_status('family')
     assert status3['sync_status'] == 'idle'
     assert status3['sync_mode'] == SyncMode.full.value
-    assert len(captured_payloads) == 2
-    assert 'updatedAfter' not in captured_payloads[0]
+    assert len(captured_payloads) == 1
+    assert 'updatedAt' not in captured_payloads[0].get('filter', {})
 
 
 @pytest.mark.asyncio
@@ -1349,7 +1369,7 @@ async def test_hundreds_of_albums_parallel_and_delta_skip(tmp_path: Path) -> Non
     db_mgr = DatabaseManager(tmp_path / 'albums_perf_test.db')
     meta_store = MetadataStore(db_mgr)
 
-    album_detail_calls: list[str] = []
+    album_search_calls: list[str] = []
 
     class MockAlbumsClient:
         def __init__(self) -> None:
@@ -1377,19 +1397,23 @@ async def test_hundreds_of_albums_parallel_and_delta_skip(tmp_path: Path) -> Non
                     }
                     for i in range(50)
                 ]
-            if path.startswith('/albums/'):
-                album_detail_calls.append(path)
-                alb_id = path.split('/')[-1]
-                return {
-                    'id': alb_id,
-                    'assets': [{'id': f'asset-{alb_id}'}],
-                }
             if path == '/search/metadata':
-                page = (json or {}).get('page', 1)
-                if page == 1:
+                filter_obj = (json or {}).get('filter', {})
+                if 'albumIds' in filter_obj:
+                    alb_id = filter_obj['albumIds']['any'][0]
+                    album_search_calls.append(alb_id)
                     return {
-                        'total': 1,
-                        'assets': [
+                        'assets': {
+                            'items': [{'id': f'asset-{alb_id}'}],
+                            'nextCursor': None,
+                        }
+                    }
+                cursor = (json or {}).get('cursor')
+                if cursor:
+                    return {'assets': {'items': [], 'nextCursor': None}}
+                return {
+                    'assets': {
+                        'items': [
                             {
                                 'id': 'asset-alb-0',
                                 'type': 'IMAGE',
@@ -1397,17 +1421,21 @@ async def test_hundreds_of_albums_parallel_and_delta_skip(tmp_path: Path) -> Non
                                 'updatedAt': '2024-05-01T12:00:00Z',
                             }
                         ],
+                        'nextCursor': None,
                     }
-                return {'total': 1, 'assets': []}
+                }
             return {}
 
         async def get_asset_count(self, library_name: str) -> int | None:
             return 1
 
         def _extract_total_assets(self, raw: Any) -> int | None:
-            return raw.get('total')
+            return 1
 
         def _extract_asset_items(self, raw: Any) -> list[dict[str, Any]]:
+            assets = raw.get('assets', {})
+            if isinstance(assets, dict):
+                return assets.get('items', [])
             return raw.get('assets', [])
 
     mock_client = MockAlbumsClient()
@@ -1415,12 +1443,12 @@ async def test_hundreds_of_albums_parallel_and_delta_skip(tmp_path: Path) -> Non
 
     # 1. Full sync: all 50 albums are fetched in parallel
     await sync_engine.sync_library('family')
-    assert len(album_detail_calls) == 50
-    album_detail_calls.clear()
+    assert len(album_search_calls) == 50
+    album_search_calls.clear()
 
-    # 2. Delta sync with no modified albums: 0 album detail calls made!
+    # 2. Delta sync with no modified albums: 0 album search calls made!
     await sync_engine.sync_library('family')
-    assert len(album_detail_calls) == 0
+    assert len(album_search_calls) == 0
 
 
 def test_sync_stages_telemetry(meta_store: MetadataStore) -> None:
@@ -2206,15 +2234,16 @@ async def test_sync_engine_end_to_end_album_sharing_and_multi_library_isolation(
             return []
         if path == '/albums':
             return [album_data]
-        if path == '/albums/alb-fav':
-            return {'assets': [{'id': 'photo-1'}]}
         if path == '/tags':
             return []
         if path == '/search/metadata':
-            page = kwargs.get('json', {}).get('page', 1)
-            if page == 1:
-                return {'assets': {'items': [asset_data], 'total': 1}}
-            return {'assets': {'items': [], 'total': 1}}
+            body = kwargs.get('json', {})
+            filter_obj = body.get('filter', {})
+            if 'albumIds' in filter_obj:
+                return {'assets': {'items': [{'id': 'photo-1'}], 'nextCursor': None}}
+            if body.get('cursor'):
+                return {'assets': {'items': [], 'nextCursor': None}}
+            return {'assets': {'items': [asset_data], 'nextCursor': None}}
         return {}
 
     mock_immich._request_json.side_effect = fake_request_json
@@ -2376,14 +2405,14 @@ async def test_sync_engine_search_v2_cursor_pagination_and_delta(tmp_path: Path)
     # Check page 1 request payload
     req1 = recorded_searches[0]
     assert 'filter' in req1
-    assert req1['filter'] == {'trashedAt': {'eq': None}}
+    assert req1['filter'] == {'trashedAt': {'eq': None}, 'type': {'eq': 'IMAGE'}}
     assert 'page' not in req1
     assert 'cursor' not in req1
 
     # Check page 2 request payload (cursor traversal)
     req2 = recorded_searches[1]
     assert req2['cursor'] == 'curs_pg2'
-    assert req2['filter'] == {'trashedAt': {'eq': None}}
+    assert req2['filter'] == {'trashedAt': {'eq': None}, 'type': {'eq': 'IMAGE'}}
 
     # Verify both assets stored in SQLite
     crit = AssetFilterCriteria(library_names=('family',), location_mode=True, date_mode=True)
@@ -2478,6 +2507,7 @@ async def test_sync_engine_search_v2_album_fallback(tmp_path: Path) -> None:
     assert len(fallback_searches) == 1
     assert fallback_searches[0]['filter']['albumIds'] == {'any': ['alb-fallback']}
     assert fallback_searches[0]['filter']['trashedAt'] == {'eq': None}
+    assert fallback_searches[0]['filter']['type'] == {'eq': 'IMAGE'}
 
     # Verify asset is linked to album
     crit_album = AssetFilterCriteria(
@@ -2487,3 +2517,27 @@ async def test_sync_engine_search_v2_album_fallback(tmp_path: Path) -> None:
         date_mode=True,
     )
     assert meta_store.count_eligible_assets(crit_album) == 1
+
+
+def test_init_schema_purges_legacy_videos(tmp_path: Path) -> None:
+    db_mgr = DatabaseManager(tmp_path / 'legacy_videos_test.db')
+    meta_store = MetadataStore(db_mgr)
+
+    # Directly insert raw legacy VIDEO rows bypassing upsert_assets_batch
+    with db_mgr.connection() as conn:
+        conn.execute("INSERT INTO assets (id, library_name, file_type) VALUES ('vid-1', 'family', 'VIDEO')")
+        conn.execute("INSERT INTO assets (id, library_name, file_type) VALUES ('img-1', 'family', 'IMAGE')")
+        conn.execute("INSERT INTO people (id, library_name, name) VALUES ('p-1', 'family', 'Person')")
+        conn.execute("INSERT INTO asset_people (asset_id, person_id, library_name) VALUES ('vid-1', 'p-1', 'family')")
+        conn.execute("INSERT INTO asset_people (asset_id, person_id, library_name) VALUES ('img-1', 'p-1', 'family')")
+
+    # Calling init_schema should purge legacy VIDEO assets and their junction rows
+    meta_store.init_schema()
+
+    remaining_assets = db_mgr.fetch_all('SELECT id, file_type FROM assets')
+    assert len(remaining_assets) == 1
+    assert remaining_assets[0]['id'] == 'img-1'
+
+    remaining_junctions = db_mgr.fetch_all('SELECT asset_id FROM asset_people')
+    assert len(remaining_junctions) == 1
+    assert remaining_junctions[0]['asset_id'] == 'img-1'

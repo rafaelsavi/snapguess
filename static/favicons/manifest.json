@@ -1,7 +1,7 @@
 {
   "name": "SnapGuess",
   "short_name": "SnapGuess",
-  "description": "Multiplayer photo quiz game powered by your Immich photos.",
+  "description": "Multiplayer photo trivia game powered by your Immich photos.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

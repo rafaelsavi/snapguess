@@ -35,6 +35,7 @@ from src.models import (
     RoundResultRequest,
     RoundResultResponse,
     SyncStateResponse,
+    UiConfigResponse,
 )
 from src.scoring import SCORE_MAX_POINTS
 from src.storage.challenge import ChallengeStore
@@ -101,7 +102,6 @@ def get_game_service(request: Request) -> GameService:
     return GameService(
         session_store=request.app.state.session_store,
         metadata_store=request.app.state.metadata_store,
-        immich_client=request.app.state.immich_client,
         leaderboard_store=request.app.state.leaderboard_store,
         settings=request.app.state.settings,
     )
@@ -121,7 +121,7 @@ async def health(metadata_store: MetadataStore = Depends(get_metadata_store)) ->
     return {'status': 'ok', 'version': APP_VERSION, 'database': 'connected'}
 
 
-@router.get('/ui-config')
+@router.get('/ui-config', response_model=UiConfigResponse)
 async def ui_config(request: Request) -> dict[str, object]:
     settings = request.app.state.settings
     immich_web_url = settings.immich_server_url.removesuffix('/api')
@@ -130,6 +130,14 @@ async def ui_config(request: Request) -> dict[str, object]:
         'score_max_points': SCORE_MAX_POINTS,
         'version': APP_VERSION,
         'immich_web_url': immich_web_url,
+        'tile_config': {
+            'streets_url': settings.tile_url_streets,
+            'streets_attribution': settings.tile_attribution_streets,
+            'satellite_url': settings.tile_url_satellite,
+            'hybrid_boundaries_url': settings.tile_url_hybrid_boundaries,
+            'hybrid_roads_url': settings.tile_url_hybrid_roads,
+            'satellite_attribution': settings.tile_attribution_satellite,
+        },
     }
 
 

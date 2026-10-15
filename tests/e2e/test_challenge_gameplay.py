@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import httpx
 from playwright.async_api import Page, expect
 
@@ -243,14 +245,11 @@ async def test_challenge_exit_game_button(page: Page, e2e_server: str) -> None:
         assert deact_res.status_code == 200
 
     # Click Exit button on question screen
-    dialog_messages = []
-
-    async def handle_dialog(d):
-        dialog_messages.append(d.message)
-        await d.accept()
-
-    page.on('dialog', handle_dialog)
+    dialog = page.locator('#app-dialog-modal')
     await page.locator('#game-exit-btn').click()
+    await expect(dialog).to_be_visible()
+    await page.locator('#app-dialog-confirm-btn').click()
+    await expect(dialog).to_be_hidden()
 
     await expect(page.locator('#setup-card')).to_be_visible()
     await expect(page.locator('#game-card')).to_be_hidden()
@@ -655,3 +654,102 @@ async def test_challenge_unshuffle_round_gameplay_and_reveal(page: Page, e2e_ser
     await expect(live_pill).to_contain_text('2/2 answered', timeout=8000)
 
     await page2.close()
+
+
+async def test_challenge_concluded_banners_and_finished_dot_e2e(page: Page, e2e_server: str) -> None:
+    """Verify that concluded challenges render solo-winner and no-winners outcome banners with finished dot styling."""
+    async with httpx.AsyncClient(base_url=e2e_server) as client:
+        res = await client.post(
+            '/api/challenge/create',
+            json={
+                'title': 'Concluded Verification Challenge',
+                'creator_name': 'Host',
+                'game_mode': 'pinpoint',
+                'location_mode': True,
+                'date_mode': False,
+                'round_count': 3,
+                'round_length': 'unlimited',
+            },
+        )
+        assert res.status_code == 200
+        token = res.json()['capability_token']
+
+    # Scenario 1: Challenge concluded with a solo finisher
+    async def mock_solo_concluded(route):
+        await route.fulfill(
+            status=200,
+            content_type='application/json',
+            json={
+                'challenge_id': 'mock-ch-solo',
+                'title': 'Concluded Verification Challenge',
+                'game_mode': 'pinpoint',
+                'location_mode': True,
+                'date_mode': False,
+                'total_rounds': 1,
+                'is_game_over': True,
+                'is_concluded': True,
+                'leaderboard': [
+                    {
+                        'player_name': 'SoloChamp',
+                        'is_finished': True,
+                        'completed_rounds': 1,
+                        'total_score': 4500,
+                        'is_winner': True,
+                        'rank': 1,
+                        'accuracy_pct': 90.0,
+                    }
+                ],
+                'rounds': [],
+            },
+        )
+
+    await page.route(f'**/play/api/{token}/leaderboard*', mock_solo_concluded)
+    await page.goto(f'/play/{token}/summary')
+
+    await expect(page.locator('#grand-reveal-solo-winner')).to_be_visible()
+    await expect(page.locator('#grand-reveal-provisional')).not_to_be_visible()
+    await expect(page.locator('#grand-reveal-live-pill')).to_have_class(re.compile(r'\bis-finished\b'))
+    await expect(page.locator('#grand-reveal-live-pill .live-poll-dot')).to_have_class(re.compile(r'\bis-finished\b'))
+    await expect(page.locator('#grand-reveal-live-status')).to_contain_text('Concluded')
+    await expect(page.locator('#challenge-invite-btn')).not_to_be_visible()
+    await expect(page.locator('#summary-home-btn')).not_to_be_attached()
+
+    # Scenario 2: Challenge concluded with 0 winners (e.g. 0 score)
+    async def mock_no_winners_concluded(route):
+        await route.fulfill(
+            status=200,
+            content_type='application/json',
+            json={
+                'challenge_id': 'mock-ch-zero',
+                'title': 'Concluded Verification Challenge',
+                'game_mode': 'pinpoint',
+                'location_mode': True,
+                'date_mode': False,
+                'total_rounds': 1,
+                'is_game_over': True,
+                'is_concluded': True,
+                'leaderboard': [
+                    {
+                        'player_name': 'ZeroScorePlayer',
+                        'is_finished': True,
+                        'completed_rounds': 1,
+                        'total_score': 0,
+                        'is_winner': False,
+                        'rank': 1,
+                        'accuracy_pct': 0.0,
+                    }
+                ],
+                'rounds': [],
+            },
+        )
+
+    await page.route(f'**/play/api/{token}/leaderboard*', mock_no_winners_concluded)
+    await page.reload()
+
+    await expect(page.locator('#grand-reveal-no-winners')).to_be_visible()
+    await expect(page.locator('#grand-reveal-provisional')).not_to_be_visible()
+    await expect(page.locator('#grand-reveal-solo-winner')).not_to_be_visible()
+    await expect(page.locator('#grand-reveal-live-pill')).to_have_class(re.compile(r'\bis-finished\b'))
+    await expect(page.locator('#grand-reveal-live-pill .live-poll-dot')).to_have_class(re.compile(r'\bis-finished\b'))
+    await expect(page.locator('#challenge-invite-btn')).not_to_be_visible()
+    await expect(page.locator('#summary-home-btn')).not_to_be_attached()

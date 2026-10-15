@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -362,8 +362,6 @@ async def test_selector_respects_diversity_on_round_selection() -> None:
     asset2_close = make_filter_asset('a2', latitude=-27.5970, longitude=-48.5495, captured='2024-01-14T10:00:10Z')
     asset3_far = make_filter_asset('a3', latitude=48.8566, longitude=2.3522, captured='2024-06-15T12:00:00Z')
 
-    immich = FakeImmichClient(assets=[asset1, asset2_close, asset3_far])
-
     setup = GameSetupRequest(
         players=['Player 1'],
         round_count=5,
@@ -381,7 +379,6 @@ async def test_selector_respects_diversity_on_round_selection() -> None:
 
     round_asset = await select_pinpoint_round_asset(
         state,
-        cast(ImmichClient, immich),
         client_excluded=set(),
         min_capture_date=None,
         max_capture_date=None,

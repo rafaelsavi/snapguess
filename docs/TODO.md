@@ -6,12 +6,6 @@ This document lists planned features, design ideas, and technical debt items for
 
 ## 🚀 Prioritized TODO List
 
-- [ ] **Add Support for Videos**
-  - [ ] Integrate Immich video streaming adapter using transcoded preview streams (`/api/asset/video/playback/{id}` or `encoded-video`) instead of raw 4K originals.
-  - [ ] Implement in-game video player UI, seamless loop, and poster image fallback.
-  - [ ] Update metadata sync and preflight filter to index video duration and ensure video GPS/date metadata validity.
-  - [ ] Add library filter "Media Type" toggle (*Photos Only*, *Videos Only*, *Photos & Videos*).
-
 - [ ] **Improve Audio Effects & Soundtrack**
   - [ ] Expand runtime Web Audio synthesized procedural background music with game state mood transitions (setup -> tense round -> victory fanfare).
   - [ ] Add transitional sound cues (whoosh screen transitions, high-score chimes, round buzzer variations).

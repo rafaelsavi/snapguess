@@ -10,7 +10,6 @@ from fastapi import HTTPException
 from src.app_logging import LOGGER_MATCH, get_logger
 from src.config import AppSettings
 from src.game.selector import select_batch_round_assets, select_pinpoint_round_asset
-from src.immich.client import ImmichClient, ImmichClientError
 from src.models import (
     AnswerRequest,
     BatchPhotoItem,
@@ -98,7 +97,6 @@ class BaseGameModeEngine(ABC):
         payload_played_asset_ids: list[str],
         settings: AppSettings,
         store: SessionStore,
-        immich: ImmichClient,
         metadata_store: MetadataStore | None = None,
     ) -> QuestionState:
         """Select or retrieve question asset(s) for the current turn."""
@@ -145,24 +143,19 @@ class PinpointEngine(BaseGameModeEngine):
         payload_played_asset_ids: list[str],
         settings: AppSettings,
         store: SessionStore,
-        immich: ImmichClient,
         metadata_store: MetadataStore | None = None,
     ) -> QuestionState:
         round_index = state.current_round_index
         round_data = state.rounds.get(round_index)
         if round_data is None:
-            try:
-                selection = await select_pinpoint_round_asset(
-                    state,
-                    immich,
-                    set(payload_played_asset_ids),
-                    settings.date_lower_bound,
-                    settings.date_upper_bound,
-                    metadata_store=metadata_store,
-                    settings=settings,
-                )
-            except ImmichClientError as exc:
-                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            selection = await select_pinpoint_round_asset(
+                state,
+                set(payload_played_asset_ids),
+                settings.date_lower_bound,
+                settings.date_upper_bound,
+                metadata_store=metadata_store,
+                settings=settings,
+            )
 
             if selection is None:
                 raise HTTPException(status_code=404, detail='No eligible assets available')
@@ -341,26 +334,21 @@ class UnshuffleEngine(BaseGameModeEngine):
         payload_played_asset_ids: list[str],
         settings: AppSettings,
         store: SessionStore,
-        immich: ImmichClient,
         metadata_store: MetadataStore | None = None,
     ) -> QuestionState:
         round_index = state.current_round_index
         round_data = state.rounds.get(round_index)
 
         if round_data is None:
-            try:
-                res = await select_batch_round_assets(
-                    state,
-                    immich,
-                    3,
-                    set(payload_played_asset_ids),
-                    settings.date_lower_bound,
-                    settings.date_upper_bound,
-                    metadata_store=metadata_store,
-                    settings=settings,
-                )
-            except ImmichClientError as exc:
-                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            res = await select_batch_round_assets(
+                state,
+                3,
+                set(payload_played_asset_ids),
+                settings.date_lower_bound,
+                settings.date_upper_bound,
+                metadata_store=metadata_store,
+                settings=settings,
+            )
 
             if res is None:
                 raise HTTPException(status_code=404, detail='No eligible assets available')

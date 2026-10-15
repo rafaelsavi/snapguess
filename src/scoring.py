@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, TypeVar
 from src.app_logging import LOGGER_SCORING, get_logger
 
 if TYPE_CHECKING:
-    from src.immich.client import AssetAnswer
+    from src.models import AssetAnswer
 
 logger = get_logger(LOGGER_SCORING)
 

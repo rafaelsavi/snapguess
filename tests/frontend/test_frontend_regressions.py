@@ -48,6 +48,7 @@ DYNAMIC_IDS = frozenset(
         'grand-reveal-live-pill',
         'grand-reveal-live-status',
         'grand-reveal-meta-tally',
+        'grand-reveal-no-winners',
         'grand-reveal-podium',
         'grand-reveal-podium-section',
         'grand-reveal-provisional',
@@ -56,6 +57,7 @@ DYNAMIC_IDS = frozenset(
         'grand-reveal-replay-section',
         'grand-reveal-share-btn',
         'grand-reveal-share-summary-btn',
+        'grand-reveal-solo-winner',
         'grand-reveal-table',
         'journey-map',
         'journey-map-fullscreen',
@@ -1726,7 +1728,7 @@ def test_all_missing_components_have_dynamic_language_support():
 
     # 4. leaflet-control-layers-list: maps.js registers layer switcher dynamic update
     assert 'data-i18n", "map.layer_streets"' in maps_js
-    assert 'data-i18n", "map.layer_satellite"' in maps_js
+    assert 'data-i18n", "map.layer_hybrid"' in maps_js
     assert 'export function refreshMapsLanguage()' in maps_js
 
     # 5. reveal-actual & pinpoint-actual: chips render icon and value without labels
@@ -2283,7 +2285,6 @@ def test_match_meta_unique_emojis_and_mobile_responsive_labels() -> None:
 
     # 1. Targets (Guess) field has its own unique emojis, no longer hardcoded to 🎯
     assert 'targetsIcon = "🧭"' in match_meta_js
-    assert 'targetsIcon = "🗂️"' in match_meta_js
     assert 'targetsIcon = "📍"' in match_meta_js
     assert 'targetsIcon = "📅"' in match_meta_js
     assert 'type: "targets",\n      icon: targetsIcon,' in match_meta_js
@@ -2420,7 +2421,7 @@ def test_player_name_prefill_and_cf_identity_standardization() -> None:
     replay_js = (JS_DIR / 'modules' / 'screens' / 'replay.js').read_text(encoding='utf-8')
 
     # 1. Shared resolver applies identity, storage, and fallback precedence
-    assert 'export const LAST_PLAYER_NAME_KEY = "immich_quiz_last_player_name";' in landing_js
+    assert 'export const LAST_PLAYER_NAME_KEY = "snapguess_last_player_name";' in landing_js
     assert 'export function resolvePlayerName(storageKey = null, fallbackFn = null)' in formatters_js
     assert 'state.auth?.name' in formatters_js
     assert 'state.auth?.email' in formatters_js
@@ -2433,7 +2434,7 @@ def test_player_name_prefill_and_cf_identity_standardization() -> None:
     assert 'resolvePlayerName(LAST_PLAYER_NAME_KEY)' in landing_js
     assert 'localStorage.setItem(LAST_PLAYER_NAME_KEY, name);' in landing_js
     assert 'REPLAY_LAST_PLAYER_NAME_KEY' not in replay_js
-    assert 'localStorage.getItem("immich_quiz_players")' not in replay_js
+    assert 'localStorage.getItem("snapguess_players")' not in replay_js
 
     # 2. Challenge landing markup supports locked identity and prefilled default
     assert 'isLocked' in landing_js
@@ -2858,3 +2859,337 @@ def test_header_brand_title_nowrap_and_identity_badge_bounds() -> None:
 
     # 4. Mobile preserves mobile max-width containment
     assert '@media (max-width: 760px) {\n  .identity-badge {\n    max-width: 220px;' in auth_css
+
+
+def test_stats_recent_matches_solo_and_rank_badge_handling() -> None:
+    """Verify that stats.js detects solo local matches and formats rank badge accordingly."""
+    stats_js = (JS_DIR / 'modules' / 'screens' / 'stats.js').read_text(encoding='utf-8')
+
+    assert 'const isSolo = m.play_mode === "local" && (Number(m.player_count) <= 1 || !m.player_count);' in stats_js
+    assert 'const rankBadge = isSolo || !m.rank' in stats_js
+    assert '? formatRankBadge(null)' in stats_js
+    assert ': formatRankBadge(m.rank, { dot: true });' in stats_js
+
+
+def test_general_back_button_strategy_and_router_history_tracking() -> None:
+    """Verify that router.js implements navigateBack with session depth appIndex tracking,
+    and screens/headers use the standardized back button pattern and common.back translation.
+    """
+    router_js = (JS_DIR / 'modules' / 'router.js').read_text(encoding='utf-8')
+    replay_js = (JS_DIR / 'modules' / 'screens' / 'replay.js').read_text(encoding='utf-8')
+    stats_js = (JS_DIR / 'modules' / 'screens' / 'stats.js').read_text(encoding='utf-8')
+    index_html = INDEX_HTML.read_text(encoding='utf-8')
+    app_js = (JS_DIR / 'app.js').read_text(encoding='utf-8')
+
+    # 1. router.js exports navigateBack and tracks appIndex
+    assert 'export function navigateBack(' in router_js
+    assert 'export function getAppHistoryIndex(' in router_js
+    assert 'appIndex: currentAppIndex + 1' in router_js
+    assert 'window.history.back();' in router_js
+    assert 'navigate(fallbackPath, { replace: true });' in router_js
+
+    # 2. replay.js delegates back actions to navigateBack("/replays")
+    assert 'navigateBack("/replays")' in replay_js
+
+    # 3. stats.js delegates back actions to navigateBack("/players") and uses common.back
+    assert 'navigateBack("/players")' in stats_js
+    assert '${t("common.back")}' in stats_js
+
+    # 4. index.html configures replay back buttons with common.back and fallback metadata
+    assert 'id="replay-back-btn"' in index_html
+    assert 'data-action="back"' in index_html
+    assert 'data-fallback="/replays"' in index_html
+    assert 'data-i18n="common.back"' in index_html
+
+    # 5. app.js contains global delegated back action handler
+    assert 'document.addEventListener("click", (e) => {' in app_js
+    assert 'e.target.closest("[data-action=\'back\']");' in app_js
+    assert 'navigateBack(fallback);' in app_js
+
+    # 6. Dead container rows removed; back buttons integrated inline into headers
+    replay_css = (STATIC_DIR / 'css' / 'components' / 'replay.css').read_text(encoding='utf-8')
+    stats_css = (STATIC_DIR / 'css' / 'components' / 'stats.css').read_text(encoding='utf-8')
+    assert 'replay-header-top' not in index_html
+    assert 'replay-header-top' not in replay_css
+    assert 'profile-header-top' not in stats_js
+    assert 'player-profile-header' not in stats_js
+    assert 'player-profile-header' not in stats_css
+    assert 'player-profile-hero' not in stats_js
+    assert 'player-profile-hero' not in stats_css
+    assert '<div class="replay-header-main">\n            <button type="button" id="replay-back-btn"' in index_html
+    assert 'id="profile-back-to-hub-btn"' in index_html
+    assert 'id="stats-profile-header-main"' in index_html
+    assert 'id="profile-hero-name"' in index_html
+    assert 'id="summary-back-btn"' in index_html
+    assert '<div id="review-header-summary" class="summary-page-header replay-page-header">' in index_html
+
+
+def test_challenge_concluded_banners_and_live_poll_dot_finished_styling() -> None:
+    """Verify concluded challenge outcome banners, settled state resolution, and finished live-poll-dot styles."""
+    challenge_css = (STATIC_DIR / 'css' / 'components' / 'challenge.css').read_text(encoding='utf-8')
+    summary_js = (JS_DIR / 'modules' / 'screens' / 'summary.js').read_text(encoding='utf-8')
+    ch_summary_js = (JS_DIR / 'modules' / 'challenge' / 'summary.js').read_text(encoding='utf-8')
+
+    # 1. Stylesheet contains .live-poll-dot.is-finished with static display and no animation
+    assert '.live-poll-dot.is-finished {' in challenge_css
+    assert 'animation: none;' in challenge_css
+    assert '.challenge-live-pill.is-finished {' in challenge_css
+
+    # 2. Stylesheet defines .challenge-outcome-banner (.banner-no-winners and .banner-solo-winner)
+    assert '.challenge-outcome-banner {' in challenge_css
+    assert '.challenge-outcome-banner.banner-no-winners {' in challenge_css
+    assert '.challenge-outcome-banner.banner-solo-winner {' in challenge_css
+
+    # 3. summary.js settles concluded challenges even with < 2 finishers
+    assert 'finishedPlayers.length >= 2 || isConcluded' in summary_js
+    assert 'finishedPlayers.length >= 2 || isConcluded' in ch_summary_js
+
+    # 4. summary.js renders #grand-reveal-no-winners when concluded without winners
+    assert 'id="grand-reveal-no-winners"' in summary_js
+    assert 'challenge.concluded_no_winners_title' in summary_js
+    assert 'challenge.concluded_no_winners_desc' in summary_js
+
+    # 5. summary.js renders #grand-reveal-solo-winner for single-player finishes in concluded events
+    assert 'id="grand-reveal-solo-winner"' in summary_js
+    assert 'challenge.concluded_solo_title' in summary_js
+    assert 'challenge.concluded_solo_desc' in summary_js
+
+    # 6. Live poll pill and dot receive .is-finished when concluded
+    assert 'livePill.classList.add("is-finished")' in summary_js
+    assert 'dotEl.classList.add("is-finished")' in summary_js
+    assert 'pillEl.classList.add("is-finished")' in ch_summary_js
+    assert 'dotEl.classList.add("is-finished")' in ch_summary_js
+    assert 'challenge.live_concluded_tally' in summary_js
+    assert 'challenge.live_concluded_tally' in ch_summary_js
+
+
+def test_summary_actions_invite_and_home_button_cleanup() -> None:
+    """Verify that redundant summary-home-btn is removed and challenge-invite-btn
+    is strictly hidden when a challenge has concluded, and share button in challenges hub
+    is only rendered for active challenges.
+    """
+    index_html = (STATIC_DIR / 'index.html').read_text(encoding='utf-8')
+    state_js = (JS_DIR / 'modules' / 'state.js').read_text(encoding='utf-8')
+    app_js = (STATIC_DIR / 'js' / 'app.js').read_text(encoding='utf-8')
+    summary_js = (JS_DIR / 'modules' / 'screens' / 'summary.js').read_text(encoding='utf-8')
+    ch_summary_js = (JS_DIR / 'modules' / 'challenge' / 'summary.js').read_text(encoding='utf-8')
+    challenges_page_js = read_challenges_page_js()
+    ch_index_js = (JS_DIR / 'modules' / 'challenge' / 'index.js').read_text(encoding='utf-8')
+
+    # 1. summary-home-btn is completely removed
+    assert 'id="summary-home-btn"' not in index_html
+    assert 'summaryHomeBtn' not in state_js
+    assert 'summaryHomeBtn' not in app_js
+    assert 'summary-home-btn' not in summary_js
+
+    # 2. challenge-invite-btn in summary-actions is conditioned on !isConcluded
+    assert 'isChallenge && _currentMode !== "replay" && !isConcluded' in summary_js
+
+    # 3. Live polling conclusion in ch_summary_js hides challenge-invite-btn and summary-invite-drawer
+    assert 'inviteBtn.classList.add("hidden")' in ch_summary_js
+    assert 'inviteDrawer.classList.add("hidden")' in ch_summary_js
+
+    # 4. In challenges hub, btn-share-challenge-hub and share drawer are conditioned on isActive
+    assert 'isActive' in challenges_page_js
+    assert 'btn-share-challenge-hub' in challenges_page_js
+    assert 'challenge-hub-share-drawer' in challenges_page_js
+
+    # 5. When challenge is concluded, handleNextRound advances to Grand Reveal directly
+    assert 'this.showGrandReveal()' in ch_index_js
+    assert 'this.renderInviteFriendsScreen()' in ch_index_js
+
+
+def test_challenge_status_harmonization_and_landing_differentiation() -> None:
+    """Verify challenge status harmonization across hub, landing, and locale parity."""
+    challenges_page_js = read_challenges_page_js()
+    landing_js = (JS_DIR / 'modules' / 'challenge' / 'landing.js').read_text(encoding='utf-8')
+
+    # 1. challenges.js checks expiration before deactivation
+    assert 'const isExpired = expTime !== null && expTime <= now;' in challenges_page_js
+    exp_pos = challenges_page_js.find('status-expired')
+    deact_pos = challenges_page_js.find('status-deactivated')
+    assert exp_pos != -1 and deact_pos != -1
+    assert exp_pos < deact_pos, 'status-expired must be evaluated before status-deactivated'
+
+    # 2. Filter supports concluded tab alias
+    assert '_statusFilter === "expired" || _statusFilter === "concluded"' in challenges_page_js
+
+    # 3. landing.js differentiates expired vs deactivated challenges
+    assert 'isExpired ? "challenges_page.status_expired" : "challenges_page.status_deactivated"' in landing_js
+    assert 'isExpired ? "challenge.error_expired" : "challenge.error_deactivated"' in landing_js
+
+    # 4. English banner title parity
+    locales_dir = STATIC_DIR.parent / 'locales'
+    en_json = json.loads((locales_dir / 'en-US.json').read_text(encoding='utf-8'))
+    pt_json = json.loads((locales_dir / 'pt-BR.json').read_text(encoding='utf-8'))
+
+    assert en_json['challenge.concluded_solo_title'] == 'Challenge Concluded'
+    assert pt_json['challenge.concluded_solo_title'] == 'Desafio Concluído'
+    assert 'challenge.error_deactivated' in en_json
+    assert 'challenge.error_deactivated' in pt_json
+    assert en_json['challenges_page.status_deactivated'] == 'Deactivated'
+    assert pt_json['challenges_page.status_deactivated'] == 'Desativado'
+    assert en_json['challenges_page.deactivate_btn'] == 'Deactivate'
+    assert pt_json['challenges_page.deactivate_btn'] == 'Desativar'
+    assert en_json['challenges_page.filter_expired'] == 'Concluded'
+    assert pt_json['challenges_page.filter_expired'] == 'Concluídos'
+
+
+def test_match_meta_unified_target_modes_and_locale_removal() -> None:
+    """Verify that match_meta.js uniformly evaluates location_mode and date_mode
+    for both pinpoint and unshuffle without hardcoded mode overrides,
+    and meta.targets_shuffle is pruned across all locale files.
+    """
+    match_meta_js = (JS_DIR / 'modules' / 'components' / 'match_meta.js').read_text(encoding='utf-8')
+    assert 'meta.targets_shuffle' not in match_meta_js
+    assert 'if (locMode && dateMode)' in match_meta_js
+    assert 'meta.targets_loc_date' in match_meta_js
+    assert 'meta.targets_loc_only' in match_meta_js
+    assert 'meta.targets_date_only' in match_meta_js
+
+    # Verify pruned from all 4 locale files
+    locales_dir = STATIC_DIR.parent / 'locales'
+    for loc_file in [
+        locales_dir / 'en-US.json',
+        locales_dir / 'pt-BR.json',
+        JS_DIR / 'modules' / 'locales' / 'en_US.js',
+        JS_DIR / 'modules' / 'locales' / 'pt_BR.js',
+    ]:
+        content = loc_file.read_text(encoding='utf-8')
+        assert 'meta.targets_shuffle' not in content
+        assert 'meta.targets_loc_date' in content
+        assert 'meta.targets_loc_only' in content
+        assert 'meta.targets_date_only' in content
+
+
+def test_recreate_challenge_creator_capability() -> None:
+    """Verify that creators can recreate challenges from the Challenges Hub and Match Summary,
+    preserving game mode and library selection.
+    """
+    admin_js = (JS_DIR / 'modules' / 'admin.js').read_text(encoding='utf-8')
+    challenges_js = (JS_DIR / 'modules' / 'screens' / 'challenges.js').read_text(encoding='utf-8')
+    summary_js = (JS_DIR / 'modules' / 'screens' / 'summary.js').read_text(encoding='utf-8')
+    index_html = (STATIC_DIR / 'index.html').read_text(encoding='utf-8')
+    challenge_css = (STATIC_DIR / 'css' / 'components' / 'challenge.css').read_text(encoding='utf-8')
+    en_us = (JS_DIR / 'modules' / 'locales' / 'en_US.js').read_text(encoding='utf-8')
+    pt_br = (JS_DIR / 'modules' / 'locales' / 'pt_BR.js').read_text(encoding='utf-8')
+
+    # 1. Admin module exports recreateChallenge restoring game mode and libraries
+    assert 'export async function recreateChallenge' in admin_js
+    assert 'libraryMultiSelect.setSelectedIds(libraries)' in admin_js
+    assert 'onLibrariesChanged(false)' in admin_js
+    assert 'restoreFilters' in admin_js
+    assert 'restoreGameSettings' in admin_js
+    assert 'openAdminModal("challenge"' in admin_js
+
+    # 2. Challenges hub renders recreate button only for concluded/inactive challenges for creators
+    assert '!isActive && state.auth?.role === "creator"' in challenges_js
+    assert 'btn-recreate-challenge' in challenges_js
+    assert '.btn-recreate-challenge' in challenge_css
+    assert 'if (ch && !isChallengeActive(ch))' in challenges_js
+    assert 'isConcluded === false' in admin_js
+
+    # 3. Summary and replay actions render recreate button for all game modes when user is creator
+    assert 'id="summary-recreate-challenge-btn"' in index_html
+    assert 'id="replay-recreate-challenge-btn"' in index_html
+    assert 'summary.is_concluded' in summary_js
+    assert 'Boolean((!isChallenge || summary.is_concluded) && state.auth?.role === "creator")' in summary_js
+    assert 'summary-recreate-challenge-btn' in summary_js
+    assert 'replay-recreate-challenge-btn' in summary_js
+    assert 'recreateChallenge(summary)' in summary_js
+    assert 'summary.recreate_game_btn' in summary_js
+    assert 'export const recreateGame = recreateChallenge' in admin_js
+    assert 'openAdminModal("local"' in admin_js
+
+    # 4. Locale parity for recreation
+    for loc in (en_us, pt_br):
+        assert '"challenges_page.recreate_btn"' in loc
+        assert '"challenges_page.recreate_btn_title"' in loc
+        assert '"summary.recreate_challenge_btn"' in loc
+        assert '"summary.recreate_game_btn"' in loc
+        assert '"admin.recreate_toast"' in loc
+        assert '"admin.recreate_game_toast"' in loc
+
+
+def test_application_dialog_component_and_pwa_popups() -> None:
+    """Verify that the application dialog component replaces native alert/confirm/prompt
+    dialogs with accessible, themed website popups suited for PWA.
+    """
+    index_html = INDEX_HTML.read_text(encoding='utf-8')
+    style_css = (STATIC_DIR / 'css' / 'style.css').read_text(encoding='utf-8')
+    dialog_css = (STATIC_DIR / 'css' / 'components' / 'dialog.css').read_text(encoding='utf-8')
+    dialog_js = (JS_DIR / 'modules' / 'components' / 'dialog.js').read_text(encoding='utf-8')
+    i18n_js = (JS_DIR / 'modules' / 'i18n.js').read_text(encoding='utf-8')
+    app_js = (JS_DIR / 'app.js').read_text(encoding='utf-8')
+    common_js = (JS_DIR / 'modules' / 'screens' / 'common.js').read_text(encoding='utf-8')
+    setup_js = (JS_DIR / 'modules' / 'screens' / 'setup.js').read_text(encoding='utf-8')
+    challenges_js = (JS_DIR / 'modules' / 'screens' / 'challenges.js').read_text(encoding='utf-8')
+    reported_js = (JS_DIR / 'modules' / 'screens' / 'reported.js').read_text(encoding='utf-8')
+    router_js = (JS_DIR / 'modules' / 'router.js').read_text(encoding='utf-8')
+
+    # 1. HTML markup has all necessary elements and accessibility attributes
+    assert 'id="app-dialog-modal"' in index_html
+    assert 'id="app-dialog-card"' in index_html
+    assert 'id="app-dialog-title"' in index_html
+    assert 'id="app-dialog-close-btn"' in index_html
+    assert 'id="app-dialog-message"' in index_html
+    assert 'id="app-dialog-prompt-wrap"' in index_html
+    assert 'id="app-dialog-prompt-input"' in index_html
+    assert 'id="app-dialog-cancel-btn"' in index_html
+    assert 'id="app-dialog-confirm-btn"' in index_html
+    assert 'role="dialog"' in index_html
+    assert 'aria-modal="true"' in index_html
+
+    # 2. CSS styles imported and defined with dark mode & mobile rules
+    assert '@import "./components/dialog.css";' in style_css
+    assert '.dialog-card' in dialog_css
+    assert '.dialog-title-icon' in dialog_css
+    assert '.dialog-prompt-input' in dialog_css
+    assert '@media (max-width: 480px)' in dialog_css
+    assert '[data-theme="dark"]' in dialog_css
+
+    # 3. dialog.js exports core API functions
+    assert 'export function initDialogModal()' in dialog_js
+    assert 'export function showConfirmDialog(' in dialog_js
+    assert 'export function showAlertDialog(' in dialog_js
+    assert 'export function showPromptDialog(' in dialog_js
+
+    # 4. i18n.js routes showAlert to dialog and exports registerAlertDialogHandler
+    assert 'export function registerAlertDialogHandler(' in i18n_js
+    assert 'showAlertDialog' in i18n_js
+
+    # 5. Core modules use showConfirmDialog instead of native confirm/alert
+    assert 'showConfirmDialog' in common_js
+    assert 'showConfirmDialog' in setup_js
+    assert 'showConfirmDialog' in challenges_js
+    assert 'showConfirmDialog' in reported_js
+    assert 'showConfirmDialog' in app_js
+    assert 'initDialogModal()' in app_js
+
+    # 6. Router supports asynchronous navigation guards with replace on popstate
+    assert 'await guardRes' in router_js
+    assert 'navigate(newPath, { force: true, replace: true })' in router_js
+
+    # 7. Alert dialog respects non-error icons and game settings normalizes rounds
+    game_settings_js = (JS_DIR / 'modules' / 'game_settings.js').read_text(encoding='utf-8')
+    assert 'icon !== "info" && icon !== "success"' in dialog_js
+    assert 'source.rounds' in game_settings_js
+
+    # 8. Dedicated in-game exit/restart messages used consistently
+    assert 'game.abandon_exit_message' in common_js
+    assert 'game.abandon_exit_message' in setup_js
+    assert 'game.abandon_exit_message' in app_js
+
+
+def test_map_layer_preference_persistence() -> None:
+    """Verify that maps.js provides layer preference persistence with localStorage fallback."""
+    maps_js = (JS_DIR / 'modules' / 'maps.js').read_text(encoding='utf-8')
+
+    assert 'MAP_LAYER_STORAGE_KEY = "snapguess_preferred_map_layer"' in maps_js
+    assert 'export function getPreferredMapLayer()' in maps_js
+    assert 'export function setPreferredMapLayer(layerName)' in maps_js
+    assert 'localStorage.getItem(MAP_LAYER_STORAGE_KEY)' in maps_js
+    assert 'localStorage.setItem(MAP_LAYER_STORAGE_KEY, layerName)' in maps_js
+    assert 'map.on("baselayerchange"' in maps_js
+    assert 'getPreferredMapLayer()' in maps_js
+    assert 'activeBaseLayer = prefLayer === "hybrid" ? base.hybrid : base.streets' in maps_js

@@ -20,6 +20,8 @@ import { playerColor, playerInitial, formatRank, formatRoundsBadge, formatPlayer
 import { buildMatchMetaHtml } from "../components/match_meta.js";
 import { renderShareUrlContainerHtml, setupShareBox } from "../components/share_box.js";
 import { setupHubToolbar } from "../components/hub_toolbar.js";
+import { recreateChallenge } from "../admin.js";
+import { showConfirmDialog } from "../components/dialog.js";
 
 let _challenges = [];
 let _searchQuery = "";
@@ -135,6 +137,21 @@ export function initChallengesPage() {
         const token = resultsBtn.getAttribute("data-token");
         if (token) {
           navigate(`/play/${token}/summary`);
+        }
+        return;
+      }
+
+      // 3b. Recreate challenge button
+      const recreateBtn = e.target.closest(".btn-recreate-challenge");
+      if (recreateBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = recreateBtn.getAttribute("data-id");
+        if (id) {
+          const ch = _challenges.find((c) => c.challenge_id === id);
+          if (ch && !isChallengeActive(ch)) {
+            recreateChallenge(ch);
+          }
         }
         return;
       }
@@ -324,7 +341,7 @@ export function renderChallenges() {
   // 2. Status filter
   if (_statusFilter === "active") {
     filtered = filtered.filter(isChallengeActive);
-  } else if (_statusFilter === "expired") {
+  } else if (_statusFilter === "expired" || _statusFilter === "concluded") {
     filtered = filtered.filter((ch) => !isChallengeActive(ch));
   }
 
@@ -410,17 +427,16 @@ export function renderChallenges() {
 
     // Status pill
     let statusPillHtml = "";
+    const expTime = ch.expires_at ? new Date(ch.expires_at).getTime() : null;
+    const isExpired = expTime !== null && expTime <= now;
 
-    if (!ch.is_active) {
+    if (isExpired) {
+      statusPillHtml = `<span class="challenge-status-pill status-expired"><span class="status-dot"></span>${t("challenges_page.status_expired")}</span>`;
+    } else if (!ch.is_active) {
       statusPillHtml = `<span class="challenge-status-pill status-deactivated"><span class="status-dot"></span>${t("challenges_page.status_deactivated")}</span>`;
-    } else if (ch.expires_at) {
-      const expTime = new Date(ch.expires_at).getTime();
+    } else if (expTime !== null) {
       const diffMs = expTime - now;
-      if (diffMs > 0) {
-        statusPillHtml = `<span class="challenge-status-pill status-active"><span class="status-dot pulse"></span>${t("challenges_page.status_active")} • ${formatRelativeTime(diffMs, false)}</span>`;
-      } else {
-        statusPillHtml = `<span class="challenge-status-pill status-expired"><span class="status-dot"></span>${t("challenges_page.status_expired")}</span>`;
-      }
+      statusPillHtml = `<span class="challenge-status-pill status-active"><span class="status-dot pulse"></span>${t("challenges_page.status_active")} • ${formatRelativeTime(diffMs, false)}</span>`;
     } else {
       statusPillHtml = `<span class="challenge-status-pill status-active"><span class="status-dot pulse"></span>${t("challenges_page.status_active")}</span>`;
     }
@@ -444,23 +460,23 @@ export function renderChallenges() {
           </div>
 
           <div class="card-header-actions">
-            <button type="button" class="btn-share-challenge-hub ${isShareExpanded ? "active" : ""}"
-              data-id="${escapeHtml(ch.challenge_id)}" data-url="${escapeHtml(ch.play_url)}"
-              title="${t("challenges_page.share_btn_title")}"
-              aria-label="${t("challenges_page.share_btn")}"
-              aria-expanded="${isShareExpanded}"
-              aria-controls="share-drawer-${escapeHtml(ch.challenge_id)}">
-              <svg class="share-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="18" cy="5" r="3"></circle>
-                <circle cx="6" cy="12" r="3"></circle>
-                <circle cx="18" cy="19" r="3"></circle>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-              </svg>
-            </button>
             ${
               isActive
-                ? `<button type="button" class="btn-deactivate-challenge-hub btn-action-icon text-danger"
+                ? `<button type="button" class="btn-share-challenge-hub ${isShareExpanded ? "active" : ""}"
+                    data-id="${escapeHtml(ch.challenge_id)}" data-url="${escapeHtml(ch.play_url)}"
+                    title="${t("challenges_page.share_btn_title")}"
+                    aria-label="${t("challenges_page.share_btn")}"
+                    aria-expanded="${isShareExpanded}"
+                    aria-controls="share-drawer-${escapeHtml(ch.challenge_id)}">
+                    <svg class="share-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="18" cy="5" r="3"></circle>
+                      <circle cx="6" cy="12" r="3"></circle>
+                      <circle cx="18" cy="19" r="3"></circle>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                  </button>
+                  <button type="button" class="btn-deactivate-challenge-hub btn-action-icon text-danger"
                     data-id="${escapeHtml(ch.challenge_id)}" data-title="${escapeHtml(ch.title || "Challenge")}"
                     title="${t("challenges_page.deactivate_btn")}"
                     aria-label="${t("challenges_page.deactivate_btn")}">
@@ -472,13 +488,17 @@ export function renderChallenges() {
         </div>
 
         <!-- Expandable Share & QR Drawer -->
-        <div class="challenge-hub-share-drawer ${isShareExpanded ? "open" : "hidden"}" id="share-drawer-${escapeHtml(ch.challenge_id)}">
-          <div class="share-drawer-inner">
-            ${renderShareUrlContainerHtml(ch.play_url, {
-              prefix: `hub-share-${ch.challenge_id}`,
-            })}
-          </div>
-        </div>
+        ${
+          isActive
+            ? `<div class="challenge-hub-share-drawer ${isShareExpanded ? "open" : "hidden"}" id="share-drawer-${escapeHtml(ch.challenge_id)}">
+                <div class="share-drawer-inner">
+                  ${renderShareUrlContainerHtml(ch.play_url, {
+                    prefix: `hub-share-${ch.challenge_id}`,
+                  })}
+                </div>
+              </div>`
+            : ""
+        }
 
         <!-- Card Subtitle: Host and Created Date -->
         <div class="card-host-row">
@@ -505,6 +525,17 @@ export function renderChallenges() {
               <span class="btn-icon">🏆</span>
               ${t("challenges_page.results_btn")}
             </a>
+            ${
+              !isActive && state.auth?.role === "creator"
+                ? `<button type="button" class="btn-secondary btn-recreate-challenge"
+                    data-id="${escapeHtml(ch.challenge_id)}"
+                    title="${t("challenges_page.recreate_btn_title")}"
+                    aria-label="${t("challenges_page.recreate_btn_title")}">
+                    <span class="btn-icon">🔄</span>
+                    <span>${t("challenges_page.recreate_btn")}</span>
+                  </button>`
+                : ""
+            }
           </div>
 
           <button type="button" class="btn-standings-toggle ${isStandingsExpanded ? "active" : ""}"
@@ -763,7 +794,13 @@ async function renderStandingsDrawerContent(challengeId, capabilityToken) {
  * @param {string} challengeTitle
  */
 async function confirmAndDeactivate(challengeId, challengeTitle) {
-  const confirmed = window.confirm(t("challenges_page.deactivate_confirm", challengeTitle));
+  const confirmed = await showConfirmDialog({
+    message: t("challenges_page.deactivate_confirm", challengeTitle),
+    confirmText: t("common.confirm"),
+    cancelText: t("common.cancel"),
+    isDanger: true,
+    icon: "danger",
+  });
   if (!confirmed) return;
 
   try {

@@ -14,7 +14,7 @@ import { buildMatchMetaHtml } from "../components/match_meta.js";
 import { challengeSession } from "./session.js";
 import { attachPlayerAutocomplete } from "../components/player_autocomplete.js";
 
-export const LAST_PLAYER_NAME_KEY = "immich_quiz_last_player_name";
+export const LAST_PLAYER_NAME_KEY = "snapguess_last_player_name";
 
 /**
  * Render the challenge landing / entry screen with resume detection.
@@ -46,11 +46,15 @@ export function renderLandingScreen(data, savedSession, onStart, onSeeResults) {
   let mainActionHtml = "";
 
   if (data.is_active === false) {
+    const isExpired = Boolean(data.expires_at && new Date(data.expires_at).getTime() <= Date.now());
+    const statusTitleKey = isExpired ? "challenges_page.status_expired" : "challenges_page.status_deactivated";
+    const statusDescKey = isExpired ? "challenge.error_expired" : "challenge.error_deactivated";
+
     mainActionHtml = `
       <div class="challenge-single-path">
         <div class="challenge-single-header">
-          <h3 data-i18n="challenges_page.status_expired">${t("challenges_page.status_expired")}</h3>
-          <p data-i18n="challenge.error_expired">${t("challenge.error_expired")}</p>
+          <h3 data-i18n="${statusTitleKey}">${t(statusTitleKey)}</h3>
+          <p data-i18n="${statusDescKey}">${t(statusDescKey)}</p>
         </div>
         <button type="button" class="btn btn-primary btn-large challenge-path-btn" id="challenge-see-results-btn">
           <span>🏆 <span data-i18n="challenge.see_results">${t("challenge.see_results")}</span></span>

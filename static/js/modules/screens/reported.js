@@ -14,6 +14,7 @@ import { t, formatDateTime } from "../i18n.js";
 import { showCard } from "./common.js";
 import { showShareToast } from "../summary/share.js";
 import { formatRelativeTime, escapeHtml } from "../formatters.js";
+import { showConfirmDialog } from "../components/dialog.js";
 
 let _reportedAssets = [];
 let _selectedAssetId = null;
@@ -396,7 +397,13 @@ function renderInspectionPanel(item) {
 export async function handleResolveReport(assetId) {
   if (!assetId) return;
 
-  const confirmed = window.confirm(t("reported_page.resolve_confirm"));
+  const confirmed = await showConfirmDialog({
+    message: t("reported_page.resolve_confirm"),
+    confirmText: t("common.confirm"),
+    cancelText: t("common.cancel"),
+    isDanger: false,
+    icon: "info",
+  });
   if (!confirmed) return;
 
   try {

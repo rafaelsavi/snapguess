@@ -80,7 +80,8 @@ export class PinpointReplayStrategy {
       const actualMarker = L.marker(actualPt, { icon: actualIcon, zIndexOffset: 1000 })
         .addTo(map)
         .bindPopup(
-          `<strong>★ ${escapeHtml(t("reveal.popup_actual"))}</strong>${locText ? `<br>${escapeHtml(locText)}` : ""}`
+          `<strong>★ ${escapeHtml(t("reveal.popup_actual"))}</strong>${locText ? `<br>${escapeHtml(locText)}` : ""}`,
+          { autoPan: false, closeOnClick: false }
         );
       mapMarkers.push(actualMarker);
     }
@@ -122,7 +123,7 @@ export class PinpointReplayStrategy {
             ${g.distance_km != null ? `${escapeHtml(t("reveal.col_location"))}: ${formatDistance(g.distance_km)}<br>` : ""}
             ${g.time_taken_seconds != null ? `⏱️ ${g.time_taken_seconds}s` : ""}
           </div>
-        `);
+        `, { autoPan: false, closeOnClick: false });
       mapMarkers.push(marker);
 
       if (curPhoto.actual_latitude != null && curPhoto.actual_longitude != null) {
@@ -259,7 +260,7 @@ export class UnshuffleReplayStrategy {
             ${locText ? `<span>📍 ${escapeHtml(locText)}</span><br>` : ""}
             ${dateText ? `<span>📅 ${escapeHtml(dateText)}</span>` : ""}
           </div>
-        `);
+        `, { autoPan: false, closeOnClick: false });
 
       const selectPhotoForMarker = () => {
         if (roundStage && Array.isArray(roundStage.photos)) {
@@ -290,16 +291,14 @@ export class UnshuffleReplayStrategy {
       fitMapToBounds(map, bounds, { padding: [40, 40], maxZoom: 15 });
     }
 
-    // Spiderfy support for co-located pins
+    // Spiderfy support for co-located pins (updates only on zoom level changes)
     const updateSpiderfy = () => {
       applySpiderfy(map, trueCoords, markersByPin, spiderLines, getPinColor);
     };
     updateSpiderfy();
     map.on("zoomend", updateSpiderfy);
-    map.on("moveend", updateSpiderfy);
     mapMarkers._cleanupSpiderfy = () => {
       map.off("zoomend", updateSpiderfy);
-      map.off("moveend", updateSpiderfy);
       Object.keys(spiderLines).forEach((key) => {
         const line = spiderLines[key];
         if (line) {
@@ -407,7 +406,11 @@ export class UnshuffleReplayStrategy {
     if (marker && map) {
       try {
         marker.openPopup();
-        map.panTo(marker.getLatLng(), { animate: true, duration: 0.4 });
+        const latLng = marker.getLatLng();
+        const bounds = typeof map.getBounds === "function" ? map.getBounds() : null;
+        if (!bounds || !bounds.contains(latLng)) {
+          map.panTo(latLng, { animate: true, duration: 0.4 });
+        }
       } catch (_) {}
     }
   }
@@ -636,6 +639,12 @@ export class MatchReplayViewer {
       this.mapMarkers = [];
       this.mapPolylines = [];
       this.markersByPin = {};
+
+      this.map.on("click", (e) => {
+        if (e && e.latlng) {
+          this.map.panTo(e.latlng, { animate: true, duration: 0.3 });
+        }
+      });
     }
   }
 

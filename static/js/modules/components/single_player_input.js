@@ -7,7 +7,7 @@ import { state } from "../state.js";
 import { playerInitial, playerColor, resolvePlayerName } from "../formatters.js";
 import { attachPlayerAutocomplete } from "./player_autocomplete.js";
 
-export const CREATOR_NAME_STORAGE_KEY = "immich_challenge_creator_name";
+export const CREATOR_NAME_STORAGE_KEY = "snapguess_challenge_creator_name";
 
 export class SinglePlayerInput {
   /**

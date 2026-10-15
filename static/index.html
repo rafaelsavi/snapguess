@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>{{APP_TITLE}}</title>
-  <meta name="description" content="Multiplayer photo quiz game powered by your Immich photos." />
+  <meta name="description" content="Multiplayer photo trivia game powered by your Immich photos." />
   <meta name="theme-color" content="#0f172a" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -37,7 +37,7 @@
         document.documentElement.classList.add("game-mode-active");
       }
       try {
-        var s = localStorage.getItem("immich_quiz_theme") === "dark" ? "dark" : "light";
+        var s = localStorage.getItem("snapguess_theme") === "dark" ? "dark" : "light";
         document.documentElement.setAttribute("data-theme", s);
         document.documentElement.setAttribute("data-theme-setting", s);
       } catch (_) {}
@@ -546,14 +546,11 @@
 
         <!-- Replay Mode Header (used when viewing historical replay via /game/:id/replay) -->
         <div id="review-header-replay" class="replay-page-header hidden">
-          <div class="replay-header-top">
-            <button type="button" id="replay-back-btn" class="btn-secondary btn-sm replay-back-btn page-back-btn">
-              <span aria-hidden="true">←</span>
-              <span data-i18n="replay.exit">Exit Replay</span>
-            </button>
-          </div>
-
           <div class="replay-header-main">
+            <button type="button" id="replay-back-btn" class="btn-secondary btn-sm replay-back-btn page-back-btn" data-action="back" data-fallback="/replays">
+              <span aria-hidden="true">←</span>
+              <span data-i18n="common.back">Back</span>
+            </button>
             <div class="replay-title-block">
               <h2 class="replay-main-heading">
                 <span class="replay-heading-icon" aria-hidden="true">🎬</span>
@@ -567,16 +564,42 @@
         </div>
 
         <!-- Summary Mode Header (used when viewing fresh match finish via /game/:id/summary or /play/:token/summary) -->
-        <div id="review-header-summary" class="summary-page-header">
-          <div class="summary-header-badge-row">
-            <span id="summary-game-mode-badge" class="badge-tag badge-type badge-type-local">🕹️ Local</span>
-            <span id="grand-reveal-live-pill" class="challenge-live-pill hidden">
-              <span class="live-poll-dot" aria-hidden="true"></span>
-              <span id="grand-reveal-live-status"></span>
-            </span>
+        <div id="review-header-summary" class="summary-page-header replay-page-header">
+          <div class="replay-header-main">
+            <button type="button" id="summary-back-btn" class="btn-secondary btn-sm replay-back-btn page-back-btn" data-action="back" data-fallback="/challenges">
+              <span aria-hidden="true">←</span>
+              <span data-i18n="common.back">Back</span>
+            </button>
+            <div class="replay-title-block">
+              <h2 class="replay-main-heading">
+                <span id="summary-heading-icon" class="replay-heading-icon" aria-hidden="true">🏆</span>
+                <span id="summary-heading" data-i18n="summary.heading">Game Results</span>
+              </h2>
+              <p id="summary-match-title" class="replay-match-meta">
+                <span class="replay-meta-primary">
+                  <span id="summary-game-mode-badge" class="badge-tag badge-type badge-type-local">🕹️ Local</span>
+                  <span id="grand-reveal-live-pill" class="challenge-live-pill hidden">
+                    <span class="live-poll-dot" aria-hidden="true"></span>
+                    <span id="grand-reveal-live-status"></span>
+                  </span>
+                  <span id="summary-local-date-wrap" class="replay-meta-date-wrap hidden">
+                    <span class="meta-separator" aria-hidden="true">•</span>
+                    <span id="summary-local-match-date" class="replay-match-date"></span>
+                  </span>
+                </span>
+                <span id="summary-meta-break" class="meta-separator replay-meta-break hidden" aria-hidden="true">•</span>
+                <span id="summary-meta-secondary" class="replay-meta-secondary hidden">
+                  <span id="summary-challenge-title" class="replay-challenge-title"></span>
+                  <span id="summary-host-sep" class="meta-separator hidden" aria-hidden="true">•</span>
+                  <span id="summary-challenge-host" class="replay-challenge-host"></span>
+                  <span id="summary-date-sep" class="meta-separator hidden" aria-hidden="true">•</span>
+                  <span id="summary-match-date" class="replay-match-date hidden"></span>
+                </span>
+              </p>
+            </div>
           </div>
-          <h2 id="summary-heading" data-i18n="summary.heading">Game Results</h2>
-          <div id="summary-meta" class="summary-meta">
+
+          <div id="summary-meta" class="summary-meta replay-match-meta-container">
             <div id="summary-meta-items" class="summary-meta-items"></div>
           </div>
         </div>
@@ -586,8 +609,8 @@
         <div id="replay-error-state" class="empty-state hidden" style="padding: 3rem 1rem; text-align: center;">
           <p style="color: var(--text-muted); font-size: 1.1rem;" id="replay-error-text" data-i18n="replay.not_found">
             Match replay not found.</p>
-          <button type="button" class="btn-secondary" style="margin-top: 1rem;" id="replay-error-back-btn">
-            ← <span data-i18n="replay.exit">Exit Replay</span>
+          <button type="button" class="btn-secondary" style="margin-top: 1rem;" id="replay-error-back-btn" data-action="back" data-fallback="/replays">
+            ← <span data-i18n="common.back">Back</span>
           </button>
         </div>
 
@@ -608,7 +631,7 @@
           <!-- Summary Mode Bottom Actions -->
           <div id="summary-actions" class="summary-actions">
             <button type="button" id="summary-play-again-btn" class="btn-primary hidden" data-i18n="summary.play_again_btn">Play Again</button>
-            <button type="button" id="summary-home-btn" class="btn-secondary" data-i18n="game_ended.return_lobby_btn">Return to Home</button>
+            <button type="button" id="summary-recreate-challenge-btn" class="btn-secondary hidden" data-i18n="summary.recreate_challenge_btn">🔄 Recreate Challenge</button>
             <button type="button" id="share-summary-btn" class="btn-secondary" data-i18n="summary.share_results_btn">Share Results</button>
             <button type="button" id="challenge-invite-btn" class="btn-secondary hidden" data-i18n="challenge.invite_btn">🔗 Invite Friends</button>
           </div>
@@ -620,6 +643,7 @@
 
           <!-- Replay Mode Bottom Actions -->
           <div id="replay-actions" class="summary-actions hidden">
+            <button type="button" id="replay-recreate-challenge-btn" class="btn-secondary hidden" data-i18n="summary.recreate_challenge_btn">🔄 Recreate Challenge</button>
             <button type="button" id="replay-share-btn" class="btn-secondary" data-i18n="summary.share_results_btn">Share Results</button>
           </div>
         </div>
@@ -688,7 +712,7 @@
             <button type="button" class="filter-pill" data-status="active"
               data-i18n="challenges_page.filter_active">Active</button>
             <button type="button" class="filter-pill" data-status="expired"
-              data-i18n="challenges_page.filter_expired">Expired</button>
+              data-i18n="challenges_page.filter_expired">Concluded</button>
           </div>
 
           <!-- Mode filter dropdown -->
@@ -832,15 +856,30 @@
     <!-- Dedicated Player Directory & Statistics Page -->
     <section id="stats-page-card" class="card hidden">
       <div class="stats-page-header hub-page-header">
-        <div class="stats-page-title-group hub-page-title-group">
+        <button type="button" id="profile-back-to-hub-btn" class="btn-secondary btn-sm page-back-btn hidden" data-action="back" data-fallback="/players">
+          <span aria-hidden="true">←</span>
+          <span data-i18n="common.back">Back</span>
+        </button>
+
+        <!-- Directory Mode Title Group (visible on /players) -->
+        <div id="stats-directory-title-group" class="stats-page-title-group hub-page-title-group">
           <div class="stats-title-badge-row hub-title-badge-row">
             <span class="badge-stats hub-page-badge badge-players" data-i18n="nav.players">Players</span>
           </div>
-          <h2 id="stats-page-heading" class="hub-page-heading" data-i18n="stats.hub_title">Player Directory & Statistics
-          </h2>
+          <h2 id="stats-page-heading" class="hub-page-heading" data-i18n="stats.hub_title">Player Directory & Statistics</h2>
           <p id="stats-page-desc" class="stats-page-desc hub-page-desc" data-i18n="stats.hub_subtitle">Player legacy,
             career accuracy analytics, and competitive profiles.</p>
         </div>
+
+        <!-- Profile Mode Hero Header (visible on /players/:name) -->
+        <div id="stats-profile-header-main" class="stats-profile-hero hidden">
+          <div id="profile-hero-avatar" class="player-hero-avatar"></div>
+          <div class="player-hero-text">
+            <h2 id="profile-hero-name" class="player-hero-name"></h2>
+            <div id="profile-hero-badges" class="player-hero-badges"></div>
+          </div>
+        </div>
+
         <div class="stats-page-head-actions hub-page-head-actions">
           <button type="button" id="stats-page-refresh-btn" class="btn-icon-action" title="Refresh"
             aria-label="Refresh"
@@ -1249,6 +1288,33 @@
         </div>
         <div class="modal-footer">
           <button type="button" id="pwa-ios-gotit-btn" class="btn-primary" data-i18n="pwa.ios_close">Got it</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Application Dialog Modal (Alert / Confirm / Prompt) -->
+    <div id="app-dialog-modal" class="modal-overlay hidden" role="dialog" aria-modal="true"
+      aria-labelledby="app-dialog-title" aria-describedby="app-dialog-message" aria-hidden="true">
+      <div class="modal-card dialog-card" id="app-dialog-card">
+        <div class="modal-header dialog-header">
+          <div class="modal-title-wrap dialog-title-wrap">
+            <span id="app-dialog-icon" class="dialog-title-icon" aria-hidden="true"></span>
+            <h3 id="app-dialog-title"></h3>
+          </div>
+          <button type="button" id="app-dialog-close-btn" class="modal-close-btn dialog-close-btn" aria-label="Close" title="Close"
+            data-i18n-title="modal.close" data-i18n-aria-label="modal.close">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div class="modal-body dialog-body">
+          <p id="app-dialog-message" class="dialog-message"></p>
+          <div id="app-dialog-prompt-wrap" class="dialog-prompt-wrap hidden">
+            <input type="text" id="app-dialog-prompt-input" class="dialog-prompt-input" autocomplete="off" />
+          </div>
+        </div>
+        <div class="modal-footer dialog-footer">
+          <button type="button" id="app-dialog-cancel-btn" class="btn-secondary">Cancel</button>
+          <button type="button" id="app-dialog-confirm-btn" class="btn-primary">OK</button>
         </div>
       </div>
     </div>

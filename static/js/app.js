@@ -8,6 +8,7 @@ import {
 } from "./modules/state.js";
 import {
   navigate,
+  navigateBack,
   initRouter,
   setNavigationGuard,
   RouteType,
@@ -38,6 +39,7 @@ import { clearTimer, startTimer, refreshTimerLanguage } from "./modules/timer.js
 import { playerInitial, playerColor, escapeHtml, refreshRoundMeta } from "./modules/formatters.js";
 import { bindGlobalShortcuts, markShortcutCooldown } from "./modules/shortcuts.js";
 import { shareMatchSummary, showShareToast } from "./modules/summary/share.js";
+import { initDialogModal, showConfirmDialog } from "./modules/components/dialog.js";
 import {
   initPlayerInput,
   initLibraries,
@@ -393,10 +395,6 @@ bindClick(el.summaryPlayAgainBtn, () => {
   restartSameGame();
 });
 
-bindClick(el.summaryHomeBtn, () => {
-  returnToSetup();
-});
-
 bindClick(el.langToggleBtn, () => {
   toggleLanguage();
   refreshActiveScreenLanguage();
@@ -501,14 +499,7 @@ bindGlobalShortcuts({
     refreshActiveScreenLanguage();
   },
   onReturnToLobby: () => {
-    if (challenge.isActive()) {
-      if (confirm(t("game.abandon_confirm", t("game.abandon_exit")))) {
-        challenge.reset();
-        returnToSetup();
-      }
-      return;
-    }
-    if (isGameActive()) {
+    if (challenge.isActive() || isGameActive()) {
       handleAbandonGame("exit");
     } else if (!el.summaryCard.classList.contains("hidden") || (el.challengeCard && !el.challengeCard.classList.contains("hidden"))) {
       returnToSetup();
@@ -580,11 +571,14 @@ function applyUiConfig(config) {
   if (config.immich_web_url) {
     state.immichWebUrl = config.immich_web_url;
   }
-  if (config.language && !localStorage.getItem("immich_quiz_language")) {
+  if (config.tile_config) {
+    state.tileConfig = config.tile_config;
+  }
+  if (config.language && !localStorage.getItem("snapguess_language")) {
     const lang = normalizeLanguage(config.language);
     if (lang) {
       state.language = lang;
-      localStorage.setItem("immich_quiz_language", lang);
+      localStorage.setItem("snapguess_language", lang);
       updateLanguageUi();
     }
   }
@@ -793,6 +787,7 @@ function initHomeCard() {
     });
   }
 
+  initDialogModal();
   initMapFullscreenControls();
   updateHeaderChallengeBadge();
   refreshActiveScreenLanguage();
@@ -800,32 +795,42 @@ function initHomeCard() {
   initHomeCard();
   initPlayerProfileLinks();
 
-  setNavigationGuard((toRoute, fromRoute) => {
+  document.addEventListener("click", (e) => {
+    const backBtn = e.target.closest("[data-action='back']");
+    if (backBtn) {
+      e.preventDefault();
+      const fallback = backBtn.dataset.fallback || "/";
+      navigateBack(fallback);
+    }
+  });
+
+  setNavigationGuard(async (toRoute, fromRoute) => {
     if (!canAccessRoute(toRoute.type, state.auth.role)) {
       const msg = state.auth.role === "guest" ? t("auth.access_restricted_user") : t("auth.access_restricted_creator");
       showShareToast(msg);
       return false;
     }
-    if (fromRoute.type === RouteType.GAME_ACTIVE && isGameActive()) {
-      if (toRoute.path !== fromRoute.path) {
-        const label = t("game.abandon_exit");
-        if (confirm(t("game.abandon_confirm", label))) {
-          clearTimer();
-          clearActiveMatchSession();
-          return true;
-        }
-        return false;
-      }
-    } else if (fromRoute.type === RouteType.CHALLENGE && challenge.isGameActive()) {
-      if (toRoute.path !== fromRoute.path) {
-        const label = t("game.abandon_exit");
-        if (confirm(t("game.abandon_confirm", label))) {
-          clearTimer();
+    const isStandardGame = fromRoute.type === RouteType.GAME_ACTIVE && isGameActive();
+    const isChallengeGame = fromRoute.type === RouteType.CHALLENGE && challenge.isGameActive();
+    if ((isStandardGame || isChallengeGame) && toRoute.path !== fromRoute.path) {
+      const confirmed = await showConfirmDialog({
+        title: t("game.abandon_title"),
+        message: t("game.abandon_exit_message"),
+        confirmText: t("game.abandon_exit_btn"),
+        cancelText: t("common.cancel"),
+        isDanger: true,
+        icon: "danger",
+      });
+      if (confirmed) {
+        clearTimer();
+        if (isChallengeGame) {
           challenge.reset();
-          return true;
+        } else {
+          clearActiveMatchSession();
         }
-        return false;
+        return true;
       }
+      return false;
     }
     return true;
   });
@@ -849,7 +854,7 @@ function initHomeCard() {
     (window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1" ||
       window.location.hostname === "0.0.0.0" ||
-      window.__IMMICH_QUIZ_TEST__)
+      window.__SNAPGUESS_TEST__)
   ) {
     window.__state = state;
   }

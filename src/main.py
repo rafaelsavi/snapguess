@@ -84,7 +84,6 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     game_service = GameService(
         session_store=session_store,
         metadata_store=metadata_store,
-        immich_client=immich_client,
         leaderboard_store=leaderboard_store,
         settings=settings,
     )
