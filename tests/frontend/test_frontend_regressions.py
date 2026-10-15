@@ -3082,15 +3082,16 @@ def test_recreate_challenge_creator_capability() -> None:
     assert 'restoreGameSettings' in admin_js
     assert 'openAdminModal("challenge"' in admin_js
 
-    # 2. Challenges hub renders recreate button for creators
-    assert 'state.auth?.role === "creator"' in challenges_js
+    # 2. Challenges hub renders recreate button only for concluded/inactive challenges for creators
+    assert '!isActive && state.auth?.role === "creator"' in challenges_js
     assert 'btn-recreate-challenge' in challenges_js
     assert '.btn-recreate-challenge' in challenge_css
     assert 'recreateChallenge(ch)' in challenges_js
 
-    # 3. Summary actions render recreate button for challenge mode
+    # 3. Summary actions render recreate button only when challenge is concluded
     assert 'id="summary-recreate-challenge-btn"' in index_html
     assert 'id="replay-recreate-challenge-btn"' in index_html
+    assert 'summary.is_concluded' in summary_js
     assert 'summary-recreate-challenge-btn' in summary_js
     assert 'replay-recreate-challenge-btn' in summary_js
     assert 'recreateChallenge(summary)' in summary_js

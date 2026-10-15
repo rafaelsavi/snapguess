@@ -343,7 +343,7 @@ export function renderSummaryContent(summary) {
 
   const recreateChallengeBtn = document.getElementById("summary-recreate-challenge-btn");
   if (recreateChallengeBtn) {
-    const canRecreate = Boolean(isChallenge && state.auth?.role === "creator");
+    const canRecreate = Boolean(isChallenge && summary.is_concluded && state.auth?.role === "creator");
     recreateChallengeBtn.classList.toggle("hidden", !canRecreate);
     recreateChallengeBtn.onclick = () => {
       recreateChallenge(summary);
@@ -352,7 +352,7 @@ export function renderSummaryContent(summary) {
 
   const replayRecreateBtn = document.getElementById("replay-recreate-challenge-btn");
   if (replayRecreateBtn) {
-    const canRecreate = Boolean(isChallenge && state.auth?.role === "creator");
+    const canRecreate = Boolean(isChallenge && summary.is_concluded && state.auth?.role === "creator");
     replayRecreateBtn.classList.toggle("hidden", !canRecreate);
     replayRecreateBtn.onclick = () => {
       recreateChallenge(summary);

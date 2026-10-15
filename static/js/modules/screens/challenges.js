@@ -525,7 +525,7 @@ export function renderChallenges() {
               ${t("challenges_page.results_btn")}
             </a>
             ${
-              state.auth?.role === "creator"
+              !isActive && state.auth?.role === "creator"
                 ? `<button type="button" class="btn-secondary btn-recreate-challenge"
                     data-id="${escapeHtml(ch.challenge_id)}"
                     title="${t("challenges_page.recreate_btn_title")}"
