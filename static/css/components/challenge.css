@@ -1326,6 +1326,26 @@ tr.highlight-player-row {
   font-size: 1rem;
 }
 
+.btn-recreate-challenge {
+  cursor: pointer;
+}
+
+.btn-recreate-challenge:hover {
+  background: var(--bg-surface-secondary);
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  color: var(--ink) !important;
+}
+
+.btn-recreate-challenge:active {
+  transform: translateY(0);
+}
+
+.btn-recreate-challenge .btn-icon {
+  font-size: 1rem;
+}
+
 .footer-left-actions .btn-secondary {
   width: auto !important;
   display: inline-flex;
@@ -1650,15 +1670,17 @@ tr.highlight-player-row {
 
   .footer-left-actions {
     display: flex;
+    flex-wrap: wrap;
     width: 100%;
     gap: 0.5rem;
   }
 
   .footer-left-actions .btn-play-challenge,
   .footer-left-actions .btn-results-challenge,
+  .footer-left-actions .btn-recreate-challenge,
   .footer-left-actions .btn-secondary {
-    flex: 1 1 0;
-    width: 100% !important;
+    flex: 1 1 calc(50% - 0.25rem);
+    min-height: 40px;
     padding: 0.55rem 0.5rem;
     justify-content: center;
   }

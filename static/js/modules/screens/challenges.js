@@ -20,6 +20,7 @@ import { playerColor, playerInitial, formatRank, formatRoundsBadge, formatPlayer
 import { buildMatchMetaHtml } from "../components/match_meta.js";
 import { renderShareUrlContainerHtml, setupShareBox } from "../components/share_box.js";
 import { setupHubToolbar } from "../components/hub_toolbar.js";
+import { recreateChallenge } from "../admin.js";
 
 let _challenges = [];
 let _searchQuery = "";
@@ -135,6 +136,21 @@ export function initChallengesPage() {
         const token = resultsBtn.getAttribute("data-token");
         if (token) {
           navigate(`/play/${token}/summary`);
+        }
+        return;
+      }
+
+      // 3b. Recreate challenge button
+      const recreateBtn = e.target.closest(".btn-recreate-challenge");
+      if (recreateBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = recreateBtn.getAttribute("data-id");
+        if (id) {
+          const ch = _challenges.find((c) => c.challenge_id === id);
+          if (ch) {
+            recreateChallenge(ch);
+          }
         }
         return;
       }
@@ -508,6 +524,17 @@ export function renderChallenges() {
               <span class="btn-icon">🏆</span>
               ${t("challenges_page.results_btn")}
             </a>
+            ${
+              state.auth?.role === "creator"
+                ? `<button type="button" class="btn-secondary btn-recreate-challenge"
+                    data-id="${escapeHtml(ch.challenge_id)}"
+                    title="${t("challenges_page.recreate_btn_title")}"
+                    aria-label="${t("challenges_page.recreate_btn_title")}">
+                    <span class="btn-icon">🔄</span>
+                    <span>${t("challenges_page.recreate_btn")}</span>
+                  </button>`
+                : ""
+            }
           </div>
 
           <button type="button" class="btn-standings-toggle ${isStandingsExpanded ? "active" : ""}"

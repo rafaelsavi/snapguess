@@ -34,6 +34,12 @@ export function setEnsureLobbyInitializedFn(fn) {
   _ensureLobbyInitializedFn = fn;
 }
 
+export async function ensureLobbyReady() {
+  if (_ensureLobbyInitializedFn) {
+    await _ensureLobbyInitializedFn();
+  }
+}
+
 export async function startMatch(event) {
   if (event) event.preventDefault();
 

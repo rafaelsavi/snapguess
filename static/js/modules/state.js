@@ -300,6 +300,12 @@ export const el = {
   get summaryPlayAgainBtn() {
     return document.getElementById("summary-play-again-btn");
   },
+  get summaryRecreateChallengeBtn() {
+    return document.getElementById("summary-recreate-challenge-btn");
+  },
+  get replayRecreateChallengeBtn() {
+    return document.getElementById("replay-recreate-challenge-btn");
+  },
   get challengeInviteBtn() {
     return document.getElementById("challenge-invite-btn");
   },

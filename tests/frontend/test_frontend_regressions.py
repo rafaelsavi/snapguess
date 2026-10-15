@@ -3060,3 +3060,44 @@ def test_match_meta_unified_target_modes_and_locale_removal() -> None:
         assert 'meta.targets_loc_date' in content
         assert 'meta.targets_loc_only' in content
         assert 'meta.targets_date_only' in content
+
+
+def test_recreate_challenge_creator_capability() -> None:
+    """Verify that creators can recreate challenges from the Challenges Hub and Match Summary,
+    preserving game mode and library selection.
+    """
+    admin_js = (JS_DIR / 'modules' / 'admin.js').read_text(encoding='utf-8')
+    challenges_js = (JS_DIR / 'modules' / 'screens' / 'challenges.js').read_text(encoding='utf-8')
+    summary_js = (JS_DIR / 'modules' / 'screens' / 'summary.js').read_text(encoding='utf-8')
+    index_html = (STATIC_DIR / 'index.html').read_text(encoding='utf-8')
+    challenge_css = (STATIC_DIR / 'css' / 'components' / 'challenge.css').read_text(encoding='utf-8')
+    en_us = (JS_DIR / 'modules' / 'locales' / 'en_US.js').read_text(encoding='utf-8')
+    pt_br = (JS_DIR / 'modules' / 'locales' / 'pt_BR.js').read_text(encoding='utf-8')
+
+    # 1. Admin module exports recreateChallenge restoring game mode and libraries
+    assert 'export async function recreateChallenge' in admin_js
+    assert 'libraryMultiSelect.setSelectedIds(libraries)' in admin_js
+    assert 'onLibrariesChanged(false)' in admin_js
+    assert 'restoreFilters' in admin_js
+    assert 'restoreGameSettings' in admin_js
+    assert 'openAdminModal("challenge"' in admin_js
+
+    # 2. Challenges hub renders recreate button for creators
+    assert 'state.auth?.role === "creator"' in challenges_js
+    assert 'btn-recreate-challenge' in challenges_js
+    assert '.btn-recreate-challenge' in challenge_css
+    assert 'recreateChallenge(ch)' in challenges_js
+
+    # 3. Summary actions render recreate button for challenge mode
+    assert 'id="summary-recreate-challenge-btn"' in index_html
+    assert 'id="replay-recreate-challenge-btn"' in index_html
+    assert 'summary-recreate-challenge-btn' in summary_js
+    assert 'replay-recreate-challenge-btn' in summary_js
+    assert 'recreateChallenge(summary)' in summary_js
+
+    # 4. Locale parity for recreation
+    for loc in (en_us, pt_br):
+        assert '"challenges_page.recreate_btn"' in loc
+        assert '"challenges_page.recreate_btn_title"' in loc
+        assert '"summary.recreate_challenge_btn"' in loc
+        assert '"admin.recreate_toast"' in loc

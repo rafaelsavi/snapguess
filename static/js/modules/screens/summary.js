@@ -30,6 +30,7 @@ import { renderMatchMeta } from "../components/match_meta.js";
 import { escapeHtml, playerColor } from "../formatters.js";
 import { renderShareUrlContainerHtml, setupShareBox } from "../components/share_box.js";
 import { challengeSession } from "../challenge/session.js";
+import { recreateChallenge } from "../admin.js";
 
 let _reviewDeck = null;
 let _currentMode = "summary";
@@ -340,6 +341,24 @@ export function renderSummaryContent(summary) {
     playAgainBtn.classList.toggle("hidden", Boolean(isChallenge || !state.lastMatchConfig));
   }
 
+  const recreateChallengeBtn = document.getElementById("summary-recreate-challenge-btn");
+  if (recreateChallengeBtn) {
+    const canRecreate = Boolean(isChallenge && state.auth?.role === "creator");
+    recreateChallengeBtn.classList.toggle("hidden", !canRecreate);
+    recreateChallengeBtn.onclick = () => {
+      recreateChallenge(summary);
+    };
+  }
+
+  const replayRecreateBtn = document.getElementById("replay-recreate-challenge-btn");
+  if (replayRecreateBtn) {
+    const canRecreate = Boolean(isChallenge && state.auth?.role === "creator");
+    replayRecreateBtn.classList.toggle("hidden", !canRecreate);
+    replayRecreateBtn.onclick = () => {
+      recreateChallenge(summary);
+    };
+  }
+
   // 5. Challenge Invite Friends Action & Drawer
   const inviteBtn = document.getElementById("challenge-invite-btn");
   const inviteDrawer = document.getElementById("summary-invite-drawer");
@@ -553,8 +572,16 @@ export function buildUnifiedSummary({
     challenge_id: challengeData?.challenge_id || replayData?.challenge_id || summaryData?.challenge_id || challengeSession?.challengeData?.challenge_id || null,
     challenge_title: challengeTitle,
     challenge_creator: challengeCreator,
+    title: challengeTitle,
+    creator_name: challengeCreator,
     capability_token: challengeData?.capability_token || summaryData?.capability_token || challengeSession?.challengeData?.capability_token || null,
     game_mode: challengeData?.game_mode || replayData?.game_mode || summaryData?.game_mode || "pinpoint",
+    libraries:
+      challengeData?.libraries ||
+      challengeData?.config?.libraries ||
+      replayData?.config?.libraries ||
+      summaryData?.config?.libraries ||
+      [],
     location_mode: challengeData ? (challengeData.location_mode !== false) : (replayData?.location_mode ?? summaryData?.location_mode ?? true),
     date_mode: challengeData ? (challengeData.date_mode !== false) : (replayData?.date_mode ?? summaryData?.date_mode ?? true),
     rounds_played: totalRounds,
