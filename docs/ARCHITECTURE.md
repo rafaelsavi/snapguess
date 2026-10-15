@@ -72,13 +72,14 @@ snapguess/
     ├── css/             Modular CSS stylesheets:
     │   ├── style.css    Master entrypoint (@importing base, components, modes).
     │   ├── base/        Design tokens (variables.css), resets (reset.css), app shell (layout.css).
-    │   ├── components/  UI components (auth.css, avatar.css, buttons.css, cards.css, maps.css, leaderboard.css, challenge.css, modals.css, multi_select.css, player_input.css, range_slider.css, reported.css, filters.css, timer.css, toolbar.css, hub_header.css, stats.css, round_stage.css, reveal_table.css, replay.css, review_deck.css, summary.css).
+    │   ├── components/  UI components (auth.css, avatar.css, buttons.css, cards.css, dialog.css, maps.css, leaderboard.css, challenge.css, modals.css, multi_select.css, player_input.css, range_slider.css, reported.css, filters.css, timer.css, toolbar.css, hub_header.css, stats.css, round_stage.css, reveal_table.css, replay.css, review_deck.css, summary.css).
     │   └── modes/       Game mode styles (pinpoint.css, unshuffle.css).
     ├── js/app.js        Main application coordinator and match lifecycle state machine.
     ├── js/audio-playground.js Playground controller & visualizer logic.
     └── js/modules/      Modular ES modules:
         ├── components/  Reusable UI components:
         │   ├── activity_toast.js Glassmorphic activity toast notifications for real-time multiplayer.
+        │   ├── dialog.js    Accessible Promise-based alert, confirm, and prompt dialog component with focus trapping, sequential queuing, touch standards, and dark mode.
         │   ├── focus_trap.js Accessible modal focus trap utility (Tab / Shift+Tab) restoring focus.
         │   ├── hub_search.js Standardized hub search component managing search inputs, clear button visibility, debouncing, and Escape/Enter triggers.
         │   ├── hub_toolbar.js Standardized hub toolbar controller orchestrating search, segmented tabs, dropdown selects, and counter badges.

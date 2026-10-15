@@ -21,6 +21,7 @@ import { buildMatchMetaHtml } from "../components/match_meta.js";
 import { renderShareUrlContainerHtml, setupShareBox } from "../components/share_box.js";
 import { setupHubToolbar } from "../components/hub_toolbar.js";
 import { recreateChallenge } from "../admin.js";
+import { showConfirmDialog } from "../components/dialog.js";
 
 let _challenges = [];
 let _searchQuery = "";
@@ -148,7 +149,7 @@ export function initChallengesPage() {
         const id = recreateBtn.getAttribute("data-id");
         if (id) {
           const ch = _challenges.find((c) => c.challenge_id === id);
-          if (ch) {
+          if (ch && !isChallengeActive(ch)) {
             recreateChallenge(ch);
           }
         }
@@ -793,7 +794,13 @@ async function renderStandingsDrawerContent(challengeId, capabilityToken) {
  * @param {string} challengeTitle
  */
 async function confirmAndDeactivate(challengeId, challengeTitle) {
-  const confirmed = window.confirm(t("challenges_page.deactivate_confirm", challengeTitle));
+  const confirmed = await showConfirmDialog({
+    message: t("challenges_page.deactivate_confirm", challengeTitle),
+    confirmText: t("common.confirm"),
+    cancelText: t("common.cancel"),
+    isDanger: true,
+    icon: "danger",
+  });
   if (!confirmed) return;
 
   try {

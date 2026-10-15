@@ -9,6 +9,7 @@ import { closeAdminModal } from "../admin.js";
 import { challenge } from "../challenge/index.js";
 import { clearTimer } from "../timer.js";
 import { loadLeaderboard } from "../leaderboard.js";
+import { showConfirmDialog } from "../components/dialog.js";
 import {
   playerInput,
   libraryMultiSelect,
@@ -265,12 +266,18 @@ export async function restartSameGame() {
   }
 }
 
-export function handleAbandonGame(action) {
+export async function handleAbandonGame(action) {
   if (action === "restart" && challenge && challenge.isActive()) {
     return;
   }
   if (challenge && challenge.isActive()) {
-    if (!confirm(t("game.abandon_confirm", t("game.abandon_exit")))) {
+    const confirmed = await showConfirmDialog({
+      message: t("game.abandon_confirm", t("game.abandon_exit")),
+      confirmText: t("game.abandon_exit"),
+      cancelText: t("common.cancel"),
+      isDanger: true,
+    });
+    if (!confirmed) {
       return;
     }
     clearTimer();
@@ -278,7 +285,8 @@ export function handleAbandonGame(action) {
     returnToSetup();
     return;
   }
-  if (!confirmAbandonMatch(action)) return;
+  const confirmed = await confirmAbandonMatch(action);
+  if (!confirmed) return;
   if (action === "restart") {
     restartSameGame().catch((err) => showAlert(err.message));
   } else {

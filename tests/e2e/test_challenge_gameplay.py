@@ -245,14 +245,11 @@ async def test_challenge_exit_game_button(page: Page, e2e_server: str) -> None:
         assert deact_res.status_code == 200
 
     # Click Exit button on question screen
-    dialog_messages = []
-
-    async def handle_dialog(d):
-        dialog_messages.append(d.message)
-        await d.accept()
-
-    page.on('dialog', handle_dialog)
+    dialog = page.locator('#app-dialog-modal')
     await page.locator('#game-exit-btn').click()
+    await expect(dialog).to_be_visible()
+    await page.locator('#app-dialog-confirm-btn').click()
+    await expect(dialog).to_be_hidden()
 
     await expect(page.locator('#setup-card')).to_be_visible()
     await expect(page.locator('#game-card')).to_be_hidden()

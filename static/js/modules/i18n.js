@@ -264,9 +264,23 @@ export function translateError(msg) {
   return str;
 }
 
+let _alertDialogHandler = null;
+
+export function registerAlertDialogHandler(handler) {
+  _alertDialogHandler = handler;
+}
+
 export function showAlert(msg) {
-  if (!msg) return;
-  alert(translateError(msg));
+  if (!msg) return Promise.resolve();
+  const translated = translateError(msg);
+  if (typeof _alertDialogHandler === "function") {
+    return _alertDialogHandler(translated);
+  }
+  return import("./components/dialog.js")
+    .then(({ showAlertDialog }) => showAlertDialog({ message: translated }))
+    .catch(() => {
+      alert(translated);
+    });
 }
 
 export function getInitialLanguagePreference() {

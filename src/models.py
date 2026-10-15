@@ -851,6 +851,8 @@ class MatchSummaryResponse(BaseModel):
     finished: bool
     winners: list[str]
     players: list[MatchSummaryPlayer]
+    challenge_id: str | None = None
+    is_concluded: bool | None = None
     filter_summary: str | None = None
     filter_tooltip: str | None = None
     is_custom_filtered: bool = False
@@ -1095,6 +1097,7 @@ class MatchReplayResponse(BaseModel):
     challenge_id: str | None = None
     challenge_title: str | None = None
     challenge_creator: str | None = None
+    is_concluded: bool | None = None
     winners: list[str] = Field(default_factory=list)
     players: list[MatchSummaryPlayer] = Field(default_factory=list)
     rounds_data: list[MatchReplayRound] = Field(default_factory=list)

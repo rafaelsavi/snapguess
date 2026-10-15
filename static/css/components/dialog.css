@@ -1,0 +1,223 @@
+/* ==========================================================================
+   Application Dialog Modal Styles (Alert, Confirm, Prompt)
+   ========================================================================== */
+
+#app-dialog-modal {
+  z-index: 3200; /* Must overlay Leaflet (1000) and other open modals (3100) */
+}
+
+.dialog-card {
+  width: min(92vw, 440px);
+  background: var(--card, #fffdf8);
+  border-radius: var(--radius-xl, 20px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-light, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: dialogPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+@keyframes dialogPop {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.15rem 1.25rem 0.95rem;
+  border-bottom: 1px solid var(--border-light, #e2e8f0);
+}
+
+.dialog-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.dialog-title-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  background: rgba(15, 124, 127, 0.12);
+  border: 1px solid rgba(15, 124, 127, 0.2);
+}
+
+.dialog-title-icon.icon-warning {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.dialog-title-icon.icon-danger {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.dialog-title-icon.icon-info {
+  background: rgba(15, 124, 127, 0.12);
+  border-color: rgba(15, 124, 127, 0.25);
+}
+
+.dialog-title-icon.icon-success {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.dialog-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink, #1f2a44);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dialog-body {
+  padding: 1.25rem 1.25rem 1.4rem;
+  font-size: 0.96rem;
+  line-height: 1.55;
+  color: var(--ink, #1f2a44);
+}
+
+.dialog-message {
+  margin: 0;
+  white-space: pre-line;
+  word-break: break-word;
+  color: var(--ink, #1f2a44);
+}
+
+.dialog-prompt-wrap {
+  margin-top: 1rem;
+}
+
+.dialog-prompt-wrap.hidden {
+  display: none !important;
+}
+
+.dialog-prompt-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 0.65rem 0.95rem;
+  border-radius: var(--radius-sm, 8px);
+  border: 1.5px solid var(--input-border, #c7ccd8);
+  background: var(--input-bg, #ffffff);
+  color: var(--ink, #1f2a44);
+  font-size: 0.98rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dialog-prompt-input:focus {
+  border-color: var(--accent, #0f7c7f);
+  box-shadow: 0 0 0 3px rgba(15, 124, 127, 0.2);
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.95rem 1.25rem;
+  border-top: 1px solid var(--border-light, #e2e8f0);
+  background: var(--bg-surface-secondary, #f8fafc);
+}
+
+.dialog-footer button {
+  min-height: 44px;
+  box-sizing: border-box;
+  min-width: 90px;
+  padding: 0.55rem 1.15rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dialog-footer button:active {
+  transform: scale(0.98);
+}
+
+.dialog-footer button.hidden {
+  display: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   Mobile Viewports (<= 480px and down to 360px baseline)
+   -------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+  .dialog-card {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 18px;
+    margin: 0;
+  }
+
+  .dialog-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+    padding: 0.85rem 1rem max(0.85rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .dialog-footer button {
+    width: 100%;
+    min-height: 44px; /* Touch target standard */
+  }
+
+  /* When only 1 button is visible (e.g. Alert dialog) */
+  .dialog-footer:has(button.hidden),
+  .dialog-footer button:only-child {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Dark Mode Styles
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] .dialog-card {
+  background: var(--card, #131b2e);
+  border-color: var(--border, #26344d);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="dark"] .dialog-header,
+[data-theme="dark"] .dialog-footer {
+  border-color: var(--border, #26344d);
+}
+
+[data-theme="dark"] .dialog-footer {
+  background: var(--bg-surface-secondary, #0c1322);
+}
+
+[data-theme="dark"] .dialog-prompt-input {
+  background: var(--input-bg, #141d2e);
+  border-color: var(--input-border, #283650);
+  color: var(--ink, #f8fafc);
+}
+
+[data-theme="dark"] .dialog-prompt-input:focus {
+  border-color: var(--accent, #0f7c7f);
+  box-shadow: 0 0 0 3px rgba(15, 124, 127, 0.35);
+}

@@ -512,13 +512,35 @@ export function buildUnifiedSummary({
   const finishedPlayers = players.filter((p) => p.is_finished || p.completed_rounds >= totalRounds);
 
   // 3. Determine concluded & settled states
-  // Replays and finished local matches are always concluded.
-  // Live challenges check challengeData/session flags.
-  const isConcluded = isReplay || !challengeData || Boolean(
-    challengeData.is_concluded ||
-    challengeSession?.challengeData?.is_active === false ||
-    (challengeSession?.challengeData?.expires_at && new Date() > new Date(challengeSession.challengeData.expires_at))
-  );
+  // Local matches are concluded once finished.
+  // Challenges check backend conclusion, active status, and expiration flags.
+  let isConcluded = false;
+  if (isChallenge) {
+    if (challengeData) {
+      isConcluded = Boolean(
+        challengeData.is_concluded ||
+        challengeData.is_active === false ||
+        (challengeData.expires_at && new Date() > new Date(challengeData.expires_at)) ||
+        challengeSession?.challengeData?.is_active === false ||
+        (challengeSession?.challengeData?.expires_at && new Date() > new Date(challengeSession.challengeData.expires_at))
+      );
+    } else if (replayData?.is_concluded !== undefined && replayData?.is_concluded !== null) {
+      isConcluded = Boolean(replayData.is_concluded);
+    } else if (isReplay) {
+      isConcluded = true;
+    } else if (summaryData?.is_concluded !== undefined && summaryData?.is_concluded !== null) {
+      isConcluded = Boolean(summaryData.is_concluded);
+    } else if (challengeSession?.challengeData) {
+      isConcluded = Boolean(
+        challengeSession.challengeData.is_active === false ||
+        (challengeSession.challengeData.expires_at && new Date() > new Date(challengeSession.challengeData.expires_at))
+      );
+    } else {
+      isConcluded = false;
+    }
+  } else {
+    isConcluded = true;
+  }
 
   const isSettled = finishedPlayers.length >= 2 || isConcluded;
 

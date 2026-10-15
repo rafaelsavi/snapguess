@@ -39,6 +39,7 @@ import { clearTimer, startTimer, refreshTimerLanguage } from "./modules/timer.js
 import { playerInitial, playerColor, escapeHtml, refreshRoundMeta } from "./modules/formatters.js";
 import { bindGlobalShortcuts, markShortcutCooldown } from "./modules/shortcuts.js";
 import { shareMatchSummary, showShareToast } from "./modules/summary/share.js";
+import { initDialogModal, showConfirmDialog } from "./modules/components/dialog.js";
 import {
   initPlayerInput,
   initLibraries,
@@ -497,9 +498,15 @@ bindGlobalShortcuts({
     toggleLanguage();
     refreshActiveScreenLanguage();
   },
-  onReturnToLobby: () => {
+  onReturnToLobby: async () => {
     if (challenge.isActive()) {
-      if (confirm(t("game.abandon_confirm", t("game.abandon_exit")))) {
+      const confirmed = await showConfirmDialog({
+        message: t("game.abandon_confirm", t("game.abandon_exit")),
+        confirmText: t("game.abandon_exit"),
+        cancelText: t("common.cancel"),
+        isDanger: true,
+      });
+      if (confirmed) {
         challenge.reset();
         returnToSetup();
       }
@@ -793,6 +800,7 @@ function initHomeCard() {
     });
   }
 
+  initDialogModal();
   initMapFullscreenControls();
   updateHeaderChallengeBadge();
   refreshActiveScreenLanguage();
@@ -809,7 +817,7 @@ function initHomeCard() {
     }
   });
 
-  setNavigationGuard((toRoute, fromRoute) => {
+  setNavigationGuard(async (toRoute, fromRoute) => {
     if (!canAccessRoute(toRoute.type, state.auth.role)) {
       const msg = state.auth.role === "guest" ? t("auth.access_restricted_user") : t("auth.access_restricted_creator");
       showShareToast(msg);
@@ -818,7 +826,13 @@ function initHomeCard() {
     if (fromRoute.type === RouteType.GAME_ACTIVE && isGameActive()) {
       if (toRoute.path !== fromRoute.path) {
         const label = t("game.abandon_exit");
-        if (confirm(t("game.abandon_confirm", label))) {
+        const confirmed = await showConfirmDialog({
+          message: t("game.abandon_confirm", label),
+          confirmText: t("game.abandon_exit"),
+          cancelText: t("common.cancel"),
+          isDanger: true,
+        });
+        if (confirmed) {
           clearTimer();
           clearActiveMatchSession();
           return true;
@@ -828,7 +842,13 @@ function initHomeCard() {
     } else if (fromRoute.type === RouteType.CHALLENGE && challenge.isGameActive()) {
       if (toRoute.path !== fromRoute.path) {
         const label = t("game.abandon_exit");
-        if (confirm(t("game.abandon_confirm", label))) {
+        const confirmed = await showConfirmDialog({
+          message: t("game.abandon_confirm", label),
+          confirmText: t("game.abandon_exit"),
+          cancelText: t("common.cancel"),
+          isDanger: true,
+        });
+        if (confirmed) {
           clearTimer();
           challenge.reset();
           return true;

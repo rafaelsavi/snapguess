@@ -740,5 +740,11 @@ export default {
   "stats.match_count_single": "{count} match",
   "stats.match_count_plural": "{count} matches",
   "stats.verified_account": "Verified Account",
-  "stats.you_badge": "You"
+  "stats.you_badge": "You",
+  "common.ok": "OK",
+  "common.confirm": "Confirm",
+  "dialog.confirm_title": "Confirmation",
+  "dialog.alert_title": "Notice",
+  "dialog.error_title": "Error",
+  "dialog.prompt_title": "Input Required"
 };

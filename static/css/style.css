@@ -10,6 +10,7 @@
 @import "./components/maps.css";
 @import "./components/leaderboard.css";
 @import "./components/modals.css";
+@import "./components/dialog.css";
 @import "./components/multi_select.css";
 @import "./components/filters.css";
 @import "./components/hub_header.css";

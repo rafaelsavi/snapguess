@@ -532,6 +532,7 @@ def test_get_match_replay_challenge_multiplayer(tmp_path: Path) -> None:
     assert len(replay.players) == 2
     assert replay.winners == ['Alice']
     assert len(replay.rounds_data[0].player_guesses) == 2
+    assert replay.is_concluded is False
 
     # 2. Query by challenge_id
     replay_ch = store.get_match_replay(ch_id)
@@ -539,6 +540,25 @@ def test_get_match_replay_challenge_multiplayer(tmp_path: Path) -> None:
     assert len(replay_ch.players) == 2
     assert replay_ch.winners == ['Alice']
     assert len(replay_ch.rounds_data[0].player_guesses) == 2
+    assert replay_ch.is_concluded is False
+
+    # 3. Query summary
+    summary = store.get_match_summary('m-ch-1')
+    assert summary is not None
+    assert summary.challenge_id == ch_id
+    assert summary.is_concluded is False
+
+    # 4. Deactivate challenge and verify is_concluded becomes True
+    with store.db.connection() as conn:
+        conn.execute('UPDATE challenges SET is_active = 0 WHERE challenge_id = ?', (ch_id,))
+
+    replay_concluded = store.get_match_replay(ch_id)
+    assert replay_concluded is not None
+    assert replay_concluded.is_concluded is True
+
+    summary_concluded = store.get_match_summary(ch_id)
+    assert summary_concluded is not None
+    assert summary_concluded.is_concluded is True
 
 
 def test_multiple_challenge_sessions_do_not_duplicate_player_stats(tmp_path: Path) -> None:

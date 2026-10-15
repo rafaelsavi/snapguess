@@ -303,33 +303,21 @@ async def test_in_game_navigation_guard_and_abandon_dialog(page: Page) -> None:
     await page.wait_for_timeout(200)
 
     # 1. Dismiss abandonment dialog: Player stays in game
-    dismissed = False
-
-    async def handle_dismiss(dialog):
-        nonlocal dismissed
-        dismissed = True
-        await dialog.dismiss()
-
-    page.on('dialog', handle_dismiss)
     await page.locator('#game-exit-btn').click()
-    assert dismissed is True
-    page.remove_listener('dialog', handle_dismiss)
+    dialog = page.locator('#app-dialog-modal')
+    await expect(dialog).to_be_visible()
+    await expect(page.locator('#app-dialog-message')).to_contain_text('Are you sure')
+    await page.locator('#app-dialog-cancel-btn').click()
+    await expect(dialog).to_be_hidden()
 
     # Game card remains visible
     await expect(page.locator('#game-card')).to_be_visible()
 
     # 2. Confirm abandonment dialog: Player returns to Lobby
-    accepted = False
-
-    async def handle_accept(dialog):
-        nonlocal accepted
-        accepted = True
-        await dialog.accept()
-
-    page.on('dialog', handle_accept)
     await page.locator('#game-exit-btn').click()
-    assert accepted is True
-    page.remove_listener('dialog', handle_accept)
+    await expect(dialog).to_be_visible()
+    await page.locator('#app-dialog-confirm-btn').click()
+    await expect(dialog).to_be_hidden()
 
     # Returned to setup lobby
     await expect(page).to_have_url(re.compile(r'/$'))

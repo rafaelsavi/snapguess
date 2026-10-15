@@ -189,13 +189,14 @@ export function getAppHistoryIndex() {
  * @param {string} path
  * @param {{ replace?: boolean, state?: any, force?: boolean, silent?: boolean }} [options]
  */
-export function navigate(path, { replace = false, state = null, force = false, silent = false } = {}) {
+export async function navigate(path, { replace = false, state = null, force = false, silent = false } = {}) {
   const targetPath = normalizePath(path);
   const fromRoute = parseRoute(currentPath);
   const toRoute = parseRoute(targetPath);
 
   if (!force && navigationGuardFn && currentPath !== targetPath) {
-    const allowed = navigationGuardFn(toRoute, fromRoute);
+    const guardRes = navigationGuardFn(toRoute, fromRoute);
+    const allowed = guardRes && typeof guardRes.then === "function" ? await guardRes : guardRes;
     if (!allowed) {
       return false;
     }
@@ -275,18 +276,22 @@ export function initRouter(handler) {
     }
   }
 
-  window.addEventListener("popstate", (event) => {
+  window.addEventListener("popstate", async (event) => {
     const newPath = normalizePath(window.location.pathname);
     const fromRoute = parseRoute(currentPath);
     const toRoute = parseRoute(newPath);
 
     if (navigationGuardFn && currentPath !== newPath) {
-      const allowed = navigationGuardFn(toRoute, fromRoute);
+      // Revert current URL in browser history while awaiting dialog confirmation
+      history.pushState(event.state, "", currentPath);
+
+      const guardRes = navigationGuardFn(toRoute, fromRoute);
+      const allowed = guardRes && typeof guardRes.then === "function" ? await guardRes : guardRes;
       if (!allowed) {
-        // Restore current URL in browser history
-        history.pushState(event.state, "", currentPath);
         return;
       }
+      navigate(newPath, { force: true });
+      return;
     }
 
     currentPath = newPath;

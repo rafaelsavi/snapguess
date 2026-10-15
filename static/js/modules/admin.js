@@ -525,6 +525,16 @@ export function syncCreatorName() {
 export async function recreateChallenge(challengeData) {
   if (!challengeData) return;
 
+  // Defensive guard: do not recreate if challenge is still active/running
+  const isConcluded =
+    challengeData.is_concluded ??
+    (challengeData.is_active === false ||
+      (challengeData.expires_at && new Date(challengeData.expires_at).getTime() <= Date.now()));
+
+  if (isConcluded === false) {
+    return;
+  }
+
   const config = challengeData.config || {};
   const gameMode = challengeData.game_mode || config.game_mode || "pinpoint";
   const libraries = challengeData.libraries || config.libraries || [];

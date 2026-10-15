@@ -1292,6 +1292,31 @@
       </div>
     </div>
 
+    <!-- Global Application Dialog Modal (Alert / Confirm / Prompt) -->
+    <div id="app-dialog-modal" class="modal-overlay hidden" role="dialog" aria-modal="true"
+      aria-labelledby="app-dialog-title" aria-describedby="app-dialog-message" aria-hidden="true">
+      <div class="modal-card dialog-card" id="app-dialog-card">
+        <div class="modal-header dialog-header">
+          <div class="modal-title-wrap dialog-title-wrap">
+            <span id="app-dialog-icon" class="dialog-title-icon" aria-hidden="true">⚠️</span>
+            <h3 id="app-dialog-title"></h3>
+          </div>
+          <button type="button" id="app-dialog-close-btn" class="modal-close-btn" aria-label="Close" title="Close"
+            data-i18n-title="modal.close" data-i18n-aria-label="modal.close">&times;</button>
+        </div>
+        <div class="modal-body dialog-body">
+          <p id="app-dialog-message" class="dialog-message"></p>
+          <div id="app-dialog-prompt-wrap" class="dialog-prompt-wrap hidden">
+            <input type="text" id="app-dialog-prompt-input" class="dialog-prompt-input" autocomplete="off" />
+          </div>
+        </div>
+        <div class="modal-footer dialog-footer">
+          <button type="button" id="app-dialog-cancel-btn" class="btn-secondary">Cancel</button>
+          <button type="button" id="app-dialog-confirm-btn" class="btn-primary">OK</button>
+        </div>
+      </div>
+    </div>
+
     <!-- PWA Mobile Install Banner -->
     <div id="pwa-install-banner" class="pwa-install-banner hidden" role="region" aria-label="Install SnapGuess">
       <div class="pwa-banner-content">

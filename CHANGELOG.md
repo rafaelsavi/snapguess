@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Themed Website Dialog Popups for PWA & Mobile**: Replaced native browser `alert`, `confirm`, and `prompt` dialogs with modern, styled modal popups matching SnapGuess's visual design. Features smooth entrance animations, full keyboard accessibility (Escape to dismiss, Tab cycling with focus trapping), accessible touch targets (≥44px), safe area spacing on mobile devices, and seamless dark mode theme support.
 - **1-Click Challenge Recreation for Creators**: Creators can now quickly recreate concluded challenges directly from the Challenges Hub, match results, and replay screens. Recreating restores the original game mode (Pinpoint or Unshuffle), Immich library selection, and photo filter criteria into the creator setup modal, allowing instant generation of a new challenge seed once an event has finished.
 - **Concluded Challenge Outcome Banners**: Added dedicated summary banners on the Grand Reveal and Match Review screens when a challenge concludes with no winning scores or with a solo participant, providing clear confirmation of the final result.
 - **Concluded Challenge Status Indicator**: Concluded challenges now display a neutral, non-pulsing status badge and dot on match review screens, distinguishing completed events from actively running multiplayer lobbies.

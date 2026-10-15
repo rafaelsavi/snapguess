@@ -5,6 +5,7 @@ import { getActiveMode } from "../modes/index.js";
 import { t } from "../i18n.js";
 import { challenge } from "../challenge/index.js";
 import { clearActivityToasts } from "../components/activity_toast.js";
+import { showConfirmDialog } from "../components/dialog.js";
 
 export function clearRevealAnimation() {
   if (state.revealAnimationFrameId !== null) {
@@ -170,7 +171,7 @@ export function handleBeforeUnload(event) {
   }
 }
 
-export function confirmAbandonMatch(action = "exit") {
+export async function confirmAbandonMatch(action = "exit") {
   if (state.startingMatch) return false;
   if (action === "restart" && challenge && typeof challenge.isActive === "function" && challenge.isActive()) {
     return false;
@@ -178,7 +179,13 @@ export function confirmAbandonMatch(action = "exit") {
   if (!isGameActive()) return true;
 
   const label = action === "restart" ? t("game.abandon_restart") : t("game.abandon_exit");
-  if (!confirm(t("game.abandon_confirm", label))) {
+  const confirmed = await showConfirmDialog({
+    message: t("game.abandon_confirm", label),
+    confirmText: action === "restart" ? t("game.abandon_restart") : t("game.abandon_exit"),
+    cancelText: t("common.cancel"),
+    isDanger: true,
+  });
+  if (!confirmed) {
     return false;
   }
   clearTimer();

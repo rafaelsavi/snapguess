@@ -473,6 +473,8 @@ Response:
   "date_mode": true,
   "game_mode": "pinpoint",
   "finished": true,
+  "challenge_id": "ch_98765",
+  "is_concluded": true,
   "winners": ["Alice"],
   "players": [
     {
@@ -1244,6 +1246,7 @@ Response (`200 OK`):
   "challenge_id": "ch_98765",
   "challenge_title": "Summer Roadtrip 2026",
   "challenge_creator": "Host",
+  "is_concluded": true,
   "players": ["Alex", "Alice", "Bob"],
   "rounds_data": [
     {

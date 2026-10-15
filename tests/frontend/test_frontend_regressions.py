@@ -3086,12 +3086,14 @@ def test_recreate_challenge_creator_capability() -> None:
     assert '!isActive && state.auth?.role === "creator"' in challenges_js
     assert 'btn-recreate-challenge' in challenges_js
     assert '.btn-recreate-challenge' in challenge_css
-    assert 'recreateChallenge(ch)' in challenges_js
+    assert 'if (ch && !isChallengeActive(ch))' in challenges_js
+    assert 'isConcluded === false' in admin_js
 
     # 3. Summary actions render recreate button only when challenge is concluded
     assert 'id="summary-recreate-challenge-btn"' in index_html
     assert 'id="replay-recreate-challenge-btn"' in index_html
     assert 'summary.is_concluded' in summary_js
+    assert 'Boolean(isChallenge && summary.is_concluded && state.auth?.role === "creator")' in summary_js
     assert 'summary-recreate-challenge-btn' in summary_js
     assert 'replay-recreate-challenge-btn' in summary_js
     assert 'recreateChallenge(summary)' in summary_js
@@ -3102,3 +3104,62 @@ def test_recreate_challenge_creator_capability() -> None:
         assert '"challenges_page.recreate_btn_title"' in loc
         assert '"summary.recreate_challenge_btn"' in loc
         assert '"admin.recreate_toast"' in loc
+
+
+def test_application_dialog_component_and_pwa_popups() -> None:
+    """Verify that the application dialog component replaces native alert/confirm/prompt
+    dialogs with accessible, themed website popups suited for PWA.
+    """
+    index_html = INDEX_HTML.read_text(encoding='utf-8')
+    style_css = (STATIC_DIR / 'css' / 'style.css').read_text(encoding='utf-8')
+    dialog_css = (STATIC_DIR / 'css' / 'components' / 'dialog.css').read_text(encoding='utf-8')
+    dialog_js = (JS_DIR / 'modules' / 'components' / 'dialog.js').read_text(encoding='utf-8')
+    i18n_js = (JS_DIR / 'modules' / 'i18n.js').read_text(encoding='utf-8')
+    app_js = (JS_DIR / 'app.js').read_text(encoding='utf-8')
+    common_js = (JS_DIR / 'modules' / 'screens' / 'common.js').read_text(encoding='utf-8')
+    setup_js = (JS_DIR / 'modules' / 'screens' / 'setup.js').read_text(encoding='utf-8')
+    challenges_js = (JS_DIR / 'modules' / 'screens' / 'challenges.js').read_text(encoding='utf-8')
+    reported_js = (JS_DIR / 'modules' / 'screens' / 'reported.js').read_text(encoding='utf-8')
+    router_js = (JS_DIR / 'modules' / 'router.js').read_text(encoding='utf-8')
+
+    # 1. HTML markup has all necessary elements and accessibility attributes
+    assert 'id="app-dialog-modal"' in index_html
+    assert 'id="app-dialog-card"' in index_html
+    assert 'id="app-dialog-title"' in index_html
+    assert 'id="app-dialog-close-btn"' in index_html
+    assert 'id="app-dialog-message"' in index_html
+    assert 'id="app-dialog-prompt-wrap"' in index_html
+    assert 'id="app-dialog-prompt-input"' in index_html
+    assert 'id="app-dialog-cancel-btn"' in index_html
+    assert 'id="app-dialog-confirm-btn"' in index_html
+    assert 'role="dialog"' in index_html
+    assert 'aria-modal="true"' in index_html
+
+    # 2. CSS styles imported and defined with dark mode & mobile rules
+    assert '@import "./components/dialog.css";' in style_css
+    assert '.dialog-card' in dialog_css
+    assert '.dialog-title-icon' in dialog_css
+    assert '.dialog-prompt-input' in dialog_css
+    assert '@media (max-width: 480px)' in dialog_css
+    assert '[data-theme="dark"]' in dialog_css
+
+    # 3. dialog.js exports core API functions
+    assert 'export function initDialogModal()' in dialog_js
+    assert 'export function showConfirmDialog(' in dialog_js
+    assert 'export function showAlertDialog(' in dialog_js
+    assert 'export function showPromptDialog(' in dialog_js
+
+    # 4. i18n.js routes showAlert to dialog and exports registerAlertDialogHandler
+    assert 'export function registerAlertDialogHandler(' in i18n_js
+    assert 'showAlertDialog' in i18n_js
+
+    # 5. Core modules use showConfirmDialog instead of native confirm/alert
+    assert 'showConfirmDialog' in common_js
+    assert 'showConfirmDialog' in setup_js
+    assert 'showConfirmDialog' in challenges_js
+    assert 'showConfirmDialog' in reported_js
+    assert 'showConfirmDialog' in app_js
+    assert 'initDialogModal()' in app_js
+
+    # 6. Router supports asynchronous navigation guards
+    assert 'await guardRes' in router_js

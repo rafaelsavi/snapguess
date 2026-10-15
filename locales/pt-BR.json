@@ -740,5 +740,11 @@
   "stats.match_count_single": "{count} partida",
   "stats.match_count_plural": "{count} partidas",
   "stats.verified_account": "Conta Verificada",
-  "stats.you_badge": "Você"
+  "stats.you_badge": "Você",
+  "common.ok": "OK",
+  "common.confirm": "Confirmar",
+  "dialog.confirm_title": "Confirmação",
+  "dialog.alert_title": "Aviso",
+  "dialog.error_title": "Erro",
+  "dialog.prompt_title": "Entrada Necessária"
 }
