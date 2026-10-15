@@ -112,10 +112,7 @@ async def test_unshuffle_responsive_layouts_and_orientation_swap(page: Page) -> 
     # 2. Samsung Galaxy Z Fold 7 Landscape (1092 x 984 >= 1024px)
     # -------------------------------------------------------------------------
     await page.set_viewport_size({'width': 1092, 'height': 984})
-    await page.wait_for_timeout(100)
-
-    disp_fold_land = await cards_list.evaluate('el => getComputedStyle(el).display')
-    assert disp_fold_land == 'grid', 'Z Fold 7 landscape must be in single row horizontal mode'
+    await expect(cards_list).to_have_css('display', 'grid')
     await expect(oldest_header).to_contain_text('⬅️')
     await expect(first_card.locator('button.shuffle-rank-btn').first).to_have_text('◀')
 
@@ -126,15 +123,10 @@ async def test_unshuffle_responsive_layouts_and_orientation_swap(page: Page) -> 
     # 3. Samsung Galaxy Z Fold 7 Portrait (984 x 1092 < 1024px)
     # -------------------------------------------------------------------------
     await page.set_viewport_size({'width': 984, 'height': 1092})
-    await page.wait_for_timeout(100)
 
     # Must dynamically switch to vertical column!
-    disp_fold_port = await cards_list.evaluate('el => getComputedStyle(el).display')
-    assert disp_fold_port == 'flex', f'Z Fold 7 portrait must be in flex mode, got {disp_fold_port}'
-    flex_dir_fold_port = await cards_list.evaluate('el => getComputedStyle(el).flexDirection')
-    assert flex_dir_fold_port == 'column', (
-        f'Z Fold 7 portrait must be in vertical column mode, got {flex_dir_fold_port}'
-    )
+    await expect(cards_list).to_have_css('display', 'flex')
+    await expect(cards_list).to_have_css('flex-direction', 'column')
 
     # Header and footer have vertical emojis
     await expect(oldest_header).to_contain_text('⬆️')
@@ -172,12 +164,8 @@ async def test_unshuffle_responsive_layouts_and_orientation_swap(page: Page) -> 
     # 4. Standard Mobile Phone (360 x 800)
     # -------------------------------------------------------------------------
     await page.set_viewport_size({'width': 360, 'height': 800})
-    await page.wait_for_timeout(100)
-
-    disp_mobile = await cards_list.evaluate('el => getComputedStyle(el).display')
-    assert disp_mobile == 'flex', 'Mobile screen must be in flex mode'
-    flex_dir_mobile = await cards_list.evaluate('el => getComputedStyle(el).flexDirection')
-    assert flex_dir_mobile == 'column', 'Mobile screen must be in vertical column mode'
+    await expect(cards_list).to_have_css('display', 'flex')
+    await expect(cards_list).to_have_css('flex-direction', 'column')
     await expect(oldest_header).to_contain_text('⬆️')
     await expect(first_card.locator('button.shuffle-rank-btn').first).to_have_text('▲')
 
@@ -250,8 +238,7 @@ async def test_unshuffle_mouse_and_touch_drag_and_drop(page: Page) -> None:
     await expect(reordered_cards.nth(2).locator('img')).to_have_attribute('src', img0 or '')
 
     # Aria-live polite region must announce movement
-    live_text = await page.locator('#shuffle-live').text_content()
-    assert live_text and '3' in live_text, f"Live region should announce moved position, got '{live_text}'"
+    await expect(page.locator('#shuffle-live')).to_contain_text('3')
 
     # -------------------------------------------------------------------------
     # 2. Touch Drag-and-Drop on Mobile: Touch drag card 0 down to card 1

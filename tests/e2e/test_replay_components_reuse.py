@@ -126,8 +126,7 @@ async def test_replay_reuses_media_frame_and_map_shell(page: Page) -> None:
     await expect(media_frame).to_have_class('media-frame replay-media-frame')
 
     # Verify background is consistent with standard .media-frame (#eef2fb)
-    bg_color = await media_frame.evaluate('el => window.getComputedStyle(el).backgroundColor')
-    assert bg_color == 'rgb(238, 242, 251)'
+    await expect(media_frame).to_have_css('background-color', 'rgb(238, 242, 251)')
 
     photo_img = page.locator('#replay-photo-img')
     await expect(photo_img).to_be_visible()
@@ -421,7 +420,13 @@ async def test_unshuffle_replay_map_photo_icons_and_tab_jumping(page: Page) -> N
     await map_locator.scroll_into_view_if_needed()
     initial_center = await page.evaluate("() => document.getElementById('replay-leaflet-map')._leaflet_map.getCenter()")
     await map_locator.click(position={'x': 40, 'y': 40})
-    await page.wait_for_timeout(400)
+    await page.wait_for_function(
+        """([initLat, initLng]) => {
+            const c = document.getElementById('replay-leaflet-map')._leaflet_map.getCenter();
+            return Math.abs(c.lat - initLat) > 0.5 || Math.abs(c.lng - initLng) > 0.5;
+        }""",
+        arg=[initial_center['lat'], initial_center['lng']],
+    )
     new_center = await page.evaluate("() => document.getElementById('replay-leaflet-map')._leaflet_map.getCenter()")
     assert abs(new_center['lat'] - initial_center['lat']) > 0.5 or abs(new_center['lng'] - initial_center['lng']) > 0.5
 
@@ -658,16 +663,12 @@ async def test_replay_challenge_incomplete_concluded_matches(page: Page) -> None
     # 2. Concluded live status tally shows 0/2 finished
     pill = page.locator('#replay-match-title .challenge-live-pill')
     await expect(pill).to_be_visible()
-    pill_text = await pill.text_content()
-    assert '0/2' in pill_text
+    await expect(pill).to_contain_text('0/2')
 
     # 3. Standings table renders ⏳ 2/20 and accurate rank order (Thresa #1, Host #2)
     rows = page.locator('#summary-table tbody tr')
     await expect(rows).to_have_count(2)
-    row0_text = await rows.nth(0).text_content()
-    row1_text = await rows.nth(1).text_content()
-
-    assert 'Thresa' in row0_text
-    assert '2/20' in row0_text
-    assert 'Host' in row1_text
-    assert '2/20' in row1_text
+    await expect(rows.nth(0)).to_contain_text('Thresa')
+    await expect(rows.nth(0)).to_contain_text('2/20')
+    await expect(rows.nth(1)).to_contain_text('Host')
+    await expect(rows.nth(1)).to_contain_text('2/20')
