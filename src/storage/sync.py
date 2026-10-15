@@ -357,6 +357,10 @@ class SyncEngine:
         if not aid:
             return None, [], [], []
 
+        file_type = str(item.get('type', 'IMAGE')).upper()
+        if file_type != 'IMAGE':
+            return None, [], [], []
+
         # Determine ownership flags
         owner_id = ImmichClient._extract_owner_id(item)
         in_shared_album = bool(aid in album_asset_map and (album_asset_map[aid] & shared_album_ids))
@@ -389,13 +393,12 @@ class SyncEngine:
         capture_dt = ImmichClient.extract_capture_datetime(item)
         capture_dt_str = capture_dt.isoformat() if capture_dt is not None else None
         updated_at_str = _clean_str(item.get('updatedAt'))
-        file_type = str(item.get('type', 'IMAGE')).upper()
 
         asset_dict = {
             'id': aid,
             'is_shared': is_shared_flag,
             'is_partner': is_partner_flag,
-            'file_type': file_type,
+            'file_type': 'IMAGE',
             'latitude': lat,
             'longitude': lon,
             'country': country,
@@ -460,19 +463,7 @@ class SyncEngine:
         try:
             self._sync_warnings.pop(library_name, None)
             key = self._immich._library_key(library_name)
-            supports_search_v2 = False
-            if hasattr(self._immich, 'supports_search_v2'):
-                try:
-                    supports_search_v2 = await self._immich.supports_search_v2()
-                except Exception as exc:
-                    logger.warning('Failed to check Immich Search API v2 support: %s', exc)
-
-            api_protocol = (
-                'Search API v2 (structured filter & cursor pagination)'
-                if supports_search_v2
-                else 'legacy search API (flat params & page pagination)'
-            )
-            logger.info("Using Immich %s for library '%s'", api_protocol, library_name)
+            logger.info("Using Immich Search API v2 for library '%s'", library_name)
 
             current_user_id = await self._immich._current_user_id(key)
             if not current_user_id:
@@ -567,73 +558,52 @@ class SyncEngine:
                 async def _fetch_album_contents(alb_id: str, count: int) -> tuple[str, list[str]]:
                     async with album_semaphore:
                         try:
-                            if supports_search_v2:
-                                # On Immich >= 3.2.0, POST /search/metadata with structured filter is the
-                                # primary endpoint for retrieving album assets (GET /albums/:id does not return assets).
-                                item_ids: list[str] = []
-                                cursor: str | None = None
-                                while True:
-                                    search_alb_payload: dict[str, Any] = {
-                                        'filter': {
-                                            'albumIds': {'any': [alb_id]},
-                                            'trashedAt': {'eq': None},
-                                        },
-                                        'size': 1000,
-                                    }
-                                    if cursor:
-                                        search_alb_payload['cursor'] = cursor
+                            # Primary endpoint for retrieving album assets (POST /search/metadata)
+                            item_ids: list[str] = []
+                            cursor: str | None = None
+                            while True:
+                                search_alb_payload: dict[str, Any] = {
+                                    'filter': {
+                                        'albumIds': {'any': [alb_id]},
+                                        'trashedAt': {'eq': None},
+                                        'type': {'eq': 'IMAGE'},
+                                    },
+                                    'size': 1000,
+                                }
+                                if cursor:
+                                    search_alb_payload['cursor'] = cursor
 
-                                    search_alb = await self._immich._request_json(
-                                        'POST',
-                                        '/search/metadata',
-                                        key,
-                                        json=search_alb_payload,
-                                    )
-                                    alb_assets = self._immich._extract_asset_items(search_alb)
-                                    if not alb_assets:
-                                        break
+                                search_alb = await self._immich._request_json(
+                                    'POST',
+                                    '/search/metadata',
+                                    key,
+                                    json=search_alb_payload,
+                                )
+                                alb_assets = self._immich._extract_asset_items(search_alb)
+                                if not alb_assets:
+                                    break
 
-                                    batch_ids = [
-                                        str(item.get('id', '') or item.get('assetId', '')).strip()
-                                        for item in alb_assets
-                                        if str(item.get('id', '') or item.get('assetId', '')).strip()
-                                    ]
-                                    item_ids.extend(batch_ids)
-
-                                    if len(batch_ids) < 1000 or (count > 0 and len(item_ids) >= count):
-                                        break
-
-                                    next_cursor = None
-                                    if isinstance(search_alb, dict):
-                                        assets_obj = search_alb.get('assets')
-                                        if isinstance(assets_obj, dict):
-                                            next_cursor = assets_obj.get('nextCursor')
-                                    if not next_cursor:
-                                        break
-                                    cursor = str(next_cursor)
-
-                                logger.debug('Album %s resolved %d asset item(s)', alb_id, len(item_ids))
-                                return alb_id, item_ids
-                            else:
-                                # Legacy Immich (< 3.2.0): try GET /albums/{alb_id} first, fallback to search if empty
-                                alb_detail = await self._immich._request_json('GET', f'/albums/{alb_id}', key)
-                                alb_assets = self._immich._extract_asset_items(alb_detail)
-                                if not alb_assets and count > 0:
-                                    search_alb = await self._immich._request_json(
-                                        'POST',
-                                        '/search/metadata',
-                                        key,
-                                        json={'albumIds': [alb_id], 'size': 1000},
-                                    )
-                                    alb_assets = self._immich._extract_asset_items(search_alb)
-
-                                item_ids = [
+                                batch_ids = [
                                     str(item.get('id', '') or item.get('assetId', '')).strip()
                                     for item in alb_assets
                                     if str(item.get('id', '') or item.get('assetId', '')).strip()
                                 ]
-                                logger.debug('Album %s resolved %d asset item(s)', alb_id, len(item_ids))
-                                return alb_id, item_ids
+                                item_ids.extend(batch_ids)
+
+                                if len(batch_ids) < 1000 or (count > 0 and len(item_ids) >= count):
+                                    break
+
+                                next_cursor = None
+                                if isinstance(search_alb, dict):
+                                    assets_obj = search_alb.get('assets')
+                                    if isinstance(assets_obj, dict):
+                                        next_cursor = assets_obj.get('nextCursor')
+                                if not next_cursor:
+                                    break
+                                cursor = str(next_cursor)
+
+                            logger.debug('Album %s resolved %d asset item(s)', alb_id, len(item_ids))
+                            return alb_id, item_ids
                         except ImmichClientError as exc:
                             logger.warning('Failed to fetch assets for album %s: %s', alb_id, exc)
                             return alb_id, []
@@ -694,7 +664,6 @@ class SyncEngine:
 
             # 4. Asset search (Delta or Full)
             page_size = 250
-            page_num = 1
             cursor: str | None = None
             seen_asset_ids: set[str] = set()
             max_updated_at: str | None = last_immich_updated_at if is_delta else None
@@ -740,33 +709,21 @@ class SyncEngine:
                 )
 
             while True:
-                if supports_search_v2:
-                    filter_payload: dict[str, Any] = {
-                        'trashedAt': {'eq': None},
-                    }
-                    if is_delta and last_immich_updated_at:
-                        filter_payload['updatedAt'] = {'gte': last_immich_updated_at}
-                    payload: dict[str, Any] = {
-                        'size': page_size,
-                        'filter': filter_payload,
-                        'withExif': True,
-                        'withPeople': True,
-                        'withStacked': True,
-                    }
-                    if cursor:
-                        payload['cursor'] = cursor
-                else:
-                    payload = {
-                        'size': page_size,
-                        'page': page_num,
-                        'withExif': True,
-                        'withPartners': True,
-                        'isShared': True,
-                        'withPeople': True,
-                        'withTags': True,
-                    }
-                    if is_delta and last_immich_updated_at:
-                        payload['updatedAfter'] = last_immich_updated_at
+                filter_payload: dict[str, Any] = {
+                    'trashedAt': {'eq': None},
+                    'type': {'eq': 'IMAGE'},
+                }
+                if is_delta and last_immich_updated_at:
+                    filter_payload['updatedAt'] = {'gte': last_immich_updated_at}
+                payload: dict[str, Any] = {
+                    'size': page_size,
+                    'filter': filter_payload,
+                    'withExif': True,
+                    'withPeople': True,
+                    'withStacked': True,
+                }
+                if cursor:
+                    payload['cursor'] = cursor
 
                 raw_page = await self._immich._request_json('POST', '/search/metadata', key, json=payload)
                 if not is_delta and total_reported is None:
@@ -826,9 +783,7 @@ class SyncEngine:
                 )
 
                 synced_count = len(seen_asset_ids)
-                batch_label = (
-                    f'page {page_num}' if not supports_search_v2 else f'batch {(synced_count - 1) // page_size + 1}'
-                )
+                batch_label = f'batch {(synced_count - 1) // page_size + 1}'
                 total_suffix = f' / ~{total_reported}' if total_reported else ''
                 logger.info(
                     "Sync progress for '%s': %s processed (%d assets in batch, %d cumulative%s)",
@@ -860,21 +815,18 @@ class SyncEngine:
                         total_assets=synced_count,
                     )
 
-                if supports_search_v2:
-                    next_cursor: str | None = None
-                    if isinstance(raw_page, dict):
-                        assets_obj = raw_page.get('assets')
-                        if isinstance(assets_obj, dict):
-                            next_cursor = assets_obj.get('nextCursor')
-                    if not next_cursor:
-                        logger.info(
-                            "Cursor pagination completed for library '%s' (no nextCursor returned)",
-                            library_name,
-                        )
-                        break
-                    cursor = str(next_cursor)
-                else:
-                    page_num += 1
+                next_cursor: str | None = None
+                if isinstance(raw_page, dict):
+                    assets_obj = raw_page.get('assets')
+                    if isinstance(assets_obj, dict):
+                        next_cursor = assets_obj.get('nextCursor')
+                if not next_cursor:
+                    logger.info(
+                        "Cursor pagination completed for library '%s' (no nextCursor returned)",
+                        library_name,
+                    )
+                    break
+                cursor = str(next_cursor)
 
                 await asyncio.sleep(0.01)
 

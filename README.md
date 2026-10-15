@@ -8,7 +8,7 @@
   <a href="https://github.com/rafaelsavi/snapguess/releases"><img src="https://img.shields.io/github/v/release/rafaelsavi/snapguess?color=blue&logo=github&label=release" alt="GitHub Release"></a>
   <a href="https://github.com/rafaelsavi/snapguess/pkgs/container/snapguess"><img src="https://img.shields.io/badge/docker-ghcr.io%2Frafaelsavi%2Fsnapguess-blue?logo=docker" alt="GHCR Container"></a>
   <a href="https://github.com/rafaelsavi/snapguess/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/rafaelsavi/snapguess/ci.yml?branch=main&label=CI&logo=githubactions" alt="CI Status"></a>
-  <a href="https://github.com/immich-app/immich"><img src="https://img.shields.io/badge/immich-v1.118+-5c6bc0?logo=googlephotos" alt="Immich Compatibility"></a>
+  <a href="https://github.com/immich-app/immich"><img src="https://img.shields.io/badge/immich-v3.2.0+-5c6bc0?logo=googlephotos" alt="Immich Compatibility"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/i18n-en--US%20%7C%20pt--BR-orange" alt="Supported Locales">
 </p>
@@ -170,9 +170,9 @@ API keys can be generated in Immich under **Account Settings > API Keys**. Follo
 
 | Permission Scope | Required For                | Endpoints Used                                       | Description                                                                                                                           |
 |:-----------------|:----------------------------|:-----------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------|
-| `asset.read`     | Asset Metadata & Sync       | `POST /search/metadata`<br>`POST /search/statistics` | Discovers photos/videos, extracts EXIF coordinates/dates, computes library statistics, and validates connection.                      |
+| `asset.read`     | Asset Metadata & Sync       | `POST /search/metadata`<br>`POST /search/statistics` | Discovers photos, extracts EXIF coordinates/dates, computes library statistics, and validates connection.                             |
 | `asset.view`     | Gameplay Image Previews     | `GET /assets/{id}/thumbnail`                         | Streams compressed preview thumbnails during active quiz rounds. *(Original full-resolution files are never accessed or downloaded).* |
-| `album.read`     | Album Filtering & Shuffle   | `GET /albums`<br>`GET /albums/{id}`                  | Fetches album listings and album asset associations for setup filters and Unshuffle mode.                                             |
+| `album.read`     | Album Filtering & Shuffle   | `GET /albums`<br>`POST /search/metadata`             | Fetches album listings and album asset associations for setup filters and Unshuffle mode.                                             |
 | `person.read`    | People / Face Filters       | `GET /people`                                        | Discovers recognized people and names for setup filtering (Any / All matching) and whitelist/blacklist rules.                         |
 | `tag.read`       | Asset Tag Filters           | `GET /tags`                                          | Retrieves custom asset tags for setup filtering and tag whitelist/blacklist rules.                                                    |
 | `user.read`      | Ownership & Sharing Context | `GET /users/me`                                      | Identifies the authenticated account to distinguish personal photos from shared albums and partner assets.                            |

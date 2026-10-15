@@ -46,6 +46,8 @@ def asset(**overrides) -> dict:
 
 def test_video_assets_are_rejected() -> None:
     assert ImmichClient.is_eligible_asset(asset(type='VIDEO'), True, True) is False
+    assert ImmichClient.is_eligible_asset(asset(type='AUDIO'), True, True) is False
+    assert ImmichClient.is_eligible_asset(asset(type='IMAGE'), True, True) is True
 
 
 def test_missing_coordinates_rejected_in_location_mode() -> None:
@@ -347,7 +349,7 @@ async def test_list_albums_shared_by_user_retained_when_shared_false_and_top_lev
     ]
 
 
-async def test_get_asset_count_from_search_statistics_total() -> None:
+async def test_get_asset_count_from_search_statistics_images() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith('/search/statistics') and request.method == 'POST':
             return httpx.Response(200, json={'total': 42, 'images': 30, 'videos': 12})
@@ -356,10 +358,10 @@ async def test_get_asset_count_from_search_statistics_total() -> None:
     client = build_client(handler)
     count = await client.get_asset_count('family')
     await client.aclose()
-    assert count == 42
+    assert count == 30
 
 
-async def test_get_asset_count_fallback_images_and_videos() -> None:
+async def test_get_asset_count_fallback_images_only() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith('/search/statistics') and request.method == 'POST':
             return httpx.Response(200, json={'images': 50, 'videos': 10})
@@ -368,7 +370,19 @@ async def test_get_asset_count_fallback_images_and_videos() -> None:
     client = build_client(handler)
     count = await client.get_asset_count('family')
     await client.aclose()
-    assert count == 60
+    assert count == 50
+
+
+async def test_get_asset_count_fallback_to_total() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith('/search/statistics') and request.method == 'POST':
+            return httpx.Response(200, json={'total': 25})
+        return httpx.Response(404, json={'error': 'not found'})
+
+    client = build_client(handler)
+    count = await client.get_asset_count('family')
+    await client.aclose()
+    assert count == 25
 
 
 async def test_get_asset_count_error_returns_none() -> None:
@@ -827,30 +841,18 @@ async def test_validate_access_search_v2_payload() -> None:
 
     data = json.loads(recorded_payloads[0].decode('utf-8'))
     assert 'filter' in data
-    assert data['filter'] == {'trashedAt': {'eq': None}}
+    assert data['filter'] == {'trashedAt': {'eq': None}, 'type': {'eq': 'IMAGE'}}
     assert data.get('withExif') is True
     assert 'page' not in data
 
 
 @pytest.mark.asyncio
-async def test_validate_access_legacy_payload() -> None:
-    recorded_payloads: list[dict] = []
-
+async def test_validate_access_rejects_unsupported_version() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == '/api/server/version':
-            return httpx.Response(200, json={'major': 3, 'minor': 1, 'patch': 0})
-        if request.url.path == '/api/search/metadata':
-            recorded_payloads.append(request.read())
-            return httpx.Response(200, json={'assets': {'items': []}})
+            return httpx.Response(200, json={'major': 3, 'minor': 1, 'patch': 9})
         return httpx.Response(404)
 
     client = build_client(handler)
-    await client.validate_access('family')
-
-    assert len(recorded_payloads) == 1
-    import json
-
-    data = json.loads(recorded_payloads[0].decode('utf-8'))
-    assert 'page' in data
-    assert data['page'] == 1
-    assert 'filter' not in data
+    with pytest.raises(ImmichClientError, match='requires Immich >= 3.2.0'):
+        await client.validate_access('family')

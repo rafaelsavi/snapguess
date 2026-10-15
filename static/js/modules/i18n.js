@@ -257,6 +257,10 @@ export function translateError(msg) {
     return t("error.unknown_album");
   }
 
+  if (str.includes("SnapGuess requires Immich >= 3.2.0") || str.includes("is unsupported")) {
+    return t("error.unsupported_immich_version");
+  }
+
   return str;
 }
 

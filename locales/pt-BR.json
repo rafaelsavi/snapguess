@@ -302,6 +302,7 @@
   "error.guessed_latitude and guessed_longitude must be provided together": "Latitude e longitude devem ser fornecidas juntas.",
   "error.guessed_year and guessed_month must be provided together": "Ano e mês devem ser fornecidos juntos.",
   "error.unknown_album": "ID de álbum desconhecido para a biblioteca selecionada.",
+  "error.unsupported_immich_version": "O SnapGuess requer o Immich versão 3.2.0 ou superior.",
   "game.fullscreen_error": "Tela cheia indisponível: {0}",
   "map.layer_streets": "Ruas",
   "map.layer_hybrid": "Híbrido",
