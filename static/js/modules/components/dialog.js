@@ -85,13 +85,18 @@ export function initDialogModal() {
     _isBackdropPress = false;
   });
 
-  // Global Escape key dismiss
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && _modalEl && !_modalEl.classList.contains("hidden")) {
-      e.preventDefault();
-      closeDialog(_currentMode === "prompt" ? null : false);
-    }
-  });
+  // Global Escape key dismiss (capture phase so dialog dismisses without closing parent modals)
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (e.key === "Escape" && _modalEl && !_modalEl.classList.contains("hidden")) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        closeDialog(_currentMode === "prompt" ? null : false);
+      }
+    },
+    { capture: true }
+  );
 }
 
 function closeDialog(result) {
@@ -100,6 +105,7 @@ function closeDialog(result) {
   deactivateFocusTrap();
   _modalEl.classList.add("hidden");
   _modalEl.setAttribute("aria-hidden", "true");
+  _modalEl.querySelector(".dialog-footer")?.classList.remove("dialog-single-action");
 
   if (_currentResolver) {
     const resolver = _currentResolver;
@@ -117,6 +123,19 @@ function closeDialog(result) {
   }
 }
 
+const DIALOG_ICONS = {
+  danger: `<svg class="dialog-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
+  warning: `<svg class="dialog-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`,
+  success: `<svg class="dialog-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
+  prompt: `<svg class="dialog-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`,
+  info: `<svg class="dialog-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
+};
+
+function formatButtonLabel(text) {
+  if (!text || typeof text !== "string") return text;
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 function applyIcon(iconType) {
   if (!_iconEl) return;
   _iconEl.className = "dialog-title-icon";
@@ -124,24 +143,24 @@ function applyIcon(iconType) {
   switch (iconType) {
     case "danger":
     case "error":
-      _iconEl.textContent = "⚠️";
+      _iconEl.innerHTML = DIALOG_ICONS.danger;
       _iconEl.classList.add("icon-danger");
       break;
     case "warning":
-      _iconEl.textContent = "⚠️";
+      _iconEl.innerHTML = DIALOG_ICONS.warning;
       _iconEl.classList.add("icon-warning");
       break;
     case "success":
-      _iconEl.textContent = "✓";
+      _iconEl.innerHTML = DIALOG_ICONS.success;
       _iconEl.classList.add("icon-success");
       break;
     case "prompt":
-      _iconEl.textContent = "✏️";
+      _iconEl.innerHTML = DIALOG_ICONS.prompt;
       _iconEl.classList.add("icon-info");
       break;
     case "info":
     default:
-      _iconEl.textContent = "ℹ️";
+      _iconEl.innerHTML = DIALOG_ICONS.info;
       _iconEl.classList.add("icon-info");
       break;
   }
@@ -190,14 +209,15 @@ export function showConfirmDialog({
     _messageEl.textContent = message;
     applyIcon(resolvedIcon);
 
-    _confirmBtn.textContent = resolvedConfirm;
+    _confirmBtn.textContent = formatButtonLabel(resolvedConfirm);
     _confirmBtn.classList.remove("hidden");
     _confirmBtn.className = isDanger ? "btn-danger" : "btn-primary";
 
-    _cancelBtn.textContent = resolvedCancel;
+    _cancelBtn.textContent = formatButtonLabel(resolvedCancel);
     _cancelBtn.classList.remove("hidden");
 
     _promptWrapEl.classList.add("hidden");
+    _modalEl.querySelector(".dialog-footer")?.classList.remove("dialog-single-action");
 
     _modalEl.classList.remove("hidden");
     _modalEl.setAttribute("aria-hidden", "false");
@@ -250,12 +270,13 @@ export function showAlertDialog(options) {
     _messageEl.textContent = message;
     applyIcon(resolvedIcon);
 
-    _confirmBtn.textContent = resolvedOk;
+    _confirmBtn.textContent = formatButtonLabel(resolvedOk);
     _confirmBtn.classList.remove("hidden");
     _confirmBtn.className = isError ? "btn-danger" : "btn-primary";
 
     _cancelBtn.classList.add("hidden");
     _promptWrapEl.classList.add("hidden");
+    _modalEl.querySelector(".dialog-footer")?.classList.add("dialog-single-action");
 
     _modalEl.classList.remove("hidden");
     _modalEl.setAttribute("aria-hidden", "false");
@@ -310,14 +331,16 @@ export function showPromptDialog({
     if (_promptInputEl) {
       _promptInputEl.value = defaultValue;
       _promptInputEl.placeholder = placeholder;
+      _promptInputEl.setAttribute("aria-label", resolvedTitle || message || "Input");
     }
 
-    _confirmBtn.textContent = resolvedConfirm;
+    _confirmBtn.textContent = formatButtonLabel(resolvedConfirm);
     _confirmBtn.classList.remove("hidden");
     _confirmBtn.className = "btn-primary";
 
-    _cancelBtn.textContent = resolvedCancel;
+    _cancelBtn.textContent = formatButtonLabel(resolvedCancel);
     _cancelBtn.classList.remove("hidden");
+    _modalEl.querySelector(".dialog-footer")?.classList.remove("dialog-single-action");
 
     _modalEl.classList.remove("hidden");
     _modalEl.setAttribute("aria-hidden", "false");

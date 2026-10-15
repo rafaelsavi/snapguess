@@ -112,7 +112,14 @@ class ImmichClient:
             },
             'withExif': True,
         }
-        await self._request_json('POST', '/search/metadata', key, json=payload)
+        try:
+            await self._request_json('POST', '/search/metadata', key, json=payload)
+        except ImmichClientError as exc:
+            if version is None and ('400' in str(exc) or '404' in str(exc)):
+                raise ImmichClientError(
+                    f'Immich Search API v2 query failed ({exc}). SnapGuess requires Immich >= 3.2.0 (Search API v2).'
+                ) from exc
+            raise
 
     async def list_albums(self, library_name: str, include_shared: bool = False) -> list[dict[str, str]]:
         """Fetch and return all albums for a library, optionally filtering out shared albums."""
@@ -166,7 +173,9 @@ class ImmichClient:
         try:
             stats = await self._request_json('POST', '/search/statistics', key, json={})
             if isinstance(stats, dict):
-                images = stats.get('images') or stats.get('photos')
+                images = stats.get('images')
+                if images is None:
+                    images = stats.get('photos')
                 if isinstance(images, int) and images >= 0:
                     logger.info('get_asset_count(%s): reported %d photo asset(s)', library_name, images)
                     return images
@@ -343,7 +352,8 @@ class ImmichClient:
     ) -> bool:
         """Check whether an asset satisfies location, date, and whitelist/blacklist constraints."""
         # 1. Reject non-image assets (videos, audio, etc.)
-        if asset.get('type') and asset.get('type') != 'IMAGE':
+        asset_type = str(asset.get('type', 'IMAGE')).upper()
+        if asset_type != 'IMAGE':
             return False
 
         # 2. Location mode check (valid non-zero lat/lng)

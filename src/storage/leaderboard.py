@@ -3149,22 +3149,25 @@ class LeaderboardStore:
         ch_config: dict[str, Any] = {}
 
         is_concluded: bool | None = None
-        if ch_row and challenge_id:
-            is_active = bool(ch_row.get('is_active', 1))
-            is_expired = False
-            if ch_row.get('expires_at'):
-                with contextlib.suppress(Exception):
-                    exp_dt = datetime.fromisoformat(ch_row['expires_at'])
-                    if exp_dt.tzinfo is None:
-                        exp_dt = exp_dt.replace(tzinfo=UTC)
-                    if datetime.now(UTC) > exp_dt:
-                        is_expired = True
-            is_concluded = bool(not is_active or is_expired)
-            challenge_title = ch_row.get('title')
-            challenge_creator = ch_row.get('creator_name')
-            if ch_row.get('config_json'):
-                with contextlib.suppress(Exception):
-                    ch_config = json.loads(ch_row['config_json'])
+        if challenge_id:
+            if ch_row:
+                is_active = bool(ch_row.get('is_active', 1))
+                is_expired = False
+                if ch_row.get('expires_at'):
+                    with contextlib.suppress(Exception):
+                        exp_dt = datetime.fromisoformat(ch_row['expires_at'])
+                        if exp_dt.tzinfo is None:
+                            exp_dt = exp_dt.replace(tzinfo=UTC)
+                        if datetime.now(UTC) > exp_dt:
+                            is_expired = True
+                is_concluded = bool(not is_active or is_expired)
+                challenge_title = ch_row.get('title')
+                challenge_creator = ch_row.get('creator_name')
+                if ch_row.get('config_json'):
+                    with contextlib.suppress(Exception):
+                        ch_config = json.loads(ch_row['config_json'])
+            else:
+                is_concluded = True
 
             standings = self.get_challenge_standings(challenge_id)
             players = [

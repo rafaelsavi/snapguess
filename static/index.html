@@ -1298,11 +1298,13 @@
       <div class="modal-card dialog-card" id="app-dialog-card">
         <div class="modal-header dialog-header">
           <div class="modal-title-wrap dialog-title-wrap">
-            <span id="app-dialog-icon" class="dialog-title-icon" aria-hidden="true">⚠️</span>
+            <span id="app-dialog-icon" class="dialog-title-icon" aria-hidden="true"></span>
             <h3 id="app-dialog-title"></h3>
           </div>
-          <button type="button" id="app-dialog-close-btn" class="modal-close-btn" aria-label="Close" title="Close"
-            data-i18n-title="modal.close" data-i18n-aria-label="modal.close">&times;</button>
+          <button type="button" id="app-dialog-close-btn" class="modal-close-btn dialog-close-btn" aria-label="Close" title="Close"
+            data-i18n-title="modal.close" data-i18n-aria-label="modal.close">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </div>
         <div class="modal-body dialog-body">
           <p id="app-dialog-message" class="dialog-message"></p>

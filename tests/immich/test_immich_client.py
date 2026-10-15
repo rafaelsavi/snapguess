@@ -46,8 +46,10 @@ def asset(**overrides) -> dict:
 
 def test_video_assets_are_rejected() -> None:
     assert ImmichClient.is_eligible_asset(asset(type='VIDEO'), True, True) is False
+    assert ImmichClient.is_eligible_asset(asset(type='video'), True, True) is False
     assert ImmichClient.is_eligible_asset(asset(type='AUDIO'), True, True) is False
     assert ImmichClient.is_eligible_asset(asset(type='IMAGE'), True, True) is True
+    assert ImmichClient.is_eligible_asset(asset(type='image'), True, True) is True
 
 
 def test_missing_coordinates_rejected_in_location_mode() -> None:
@@ -383,6 +385,18 @@ async def test_get_asset_count_fallback_to_total() -> None:
     count = await client.get_asset_count('family')
     await client.aclose()
     assert count == 25
+
+
+async def test_get_asset_count_zero_images_does_not_fallback_to_total() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith('/search/statistics') and request.method == 'POST':
+            return httpx.Response(200, json={'total': 15, 'images': 0, 'videos': 15})
+        return httpx.Response(404, json={'error': 'not found'})
+
+    client = build_client(handler)
+    count = await client.get_asset_count('family')
+    await client.aclose()
+    assert count == 0
 
 
 async def test_get_asset_count_error_returns_none() -> None:

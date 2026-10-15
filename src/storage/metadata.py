@@ -251,12 +251,20 @@ class MetadataStore:
                 """
             )
 
-        # Safeguard: Purge legacy VIDEO assets and their junction rows
-        with self._db.connection() as conn:
-            conn.execute("DELETE FROM asset_people WHERE asset_id IN (SELECT id FROM assets WHERE file_type = 'VIDEO')")
-            conn.execute("DELETE FROM asset_albums WHERE asset_id IN (SELECT id FROM assets WHERE file_type = 'VIDEO')")
-            conn.execute("DELETE FROM asset_tags WHERE asset_id IN (SELECT id FROM assets WHERE file_type = 'VIDEO')")
-            conn.execute("DELETE FROM assets WHERE file_type = 'VIDEO'")
+        # Safeguard: Purge legacy VIDEO assets and their junction rows if any exist
+        has_videos = self._db.fetch_val("SELECT 1 FROM assets WHERE file_type = 'VIDEO' LIMIT 1")
+        if has_videos:
+            with self._db.connection() as conn:
+                conn.execute(
+                    "DELETE FROM asset_people WHERE asset_id IN (SELECT id FROM assets WHERE file_type = 'VIDEO')"
+                )
+                conn.execute(
+                    "DELETE FROM asset_albums WHERE asset_id IN (SELECT id FROM assets WHERE file_type = 'VIDEO')"
+                )
+                conn.execute(
+                    "DELETE FROM asset_tags WHERE asset_id IN (SELECT id FROM assets WHERE file_type = 'VIDEO')"
+                )
+                conn.execute("DELETE FROM assets WHERE file_type = 'VIDEO'")
 
     def has_synced_assets(self, libraries: list[str] | tuple[str, ...] | None = None) -> bool:
         """Check if any photo assets are indexed for the given libraries (or across all if None)."""

@@ -179,11 +179,14 @@ export async function confirmAbandonMatch(action = "exit") {
   if (!isGameActive()) return true;
 
   const label = action === "restart" ? t("game.abandon_restart") : t("game.abandon_exit");
+  const actionBtnText = action === "restart" ? t("game.abandon_restart_action") : t("game.abandon_exit_action");
   const confirmed = await showConfirmDialog({
+    title: t("game.abandon_title"),
     message: t("game.abandon_confirm", label),
-    confirmText: action === "restart" ? t("game.abandon_restart") : t("game.abandon_exit"),
+    confirmText: actionBtnText,
     cancelText: t("common.cancel"),
     isDanger: true,
+    icon: "danger",
   });
   if (!confirmed) {
     return false;

@@ -501,10 +501,12 @@ bindGlobalShortcuts({
   onReturnToLobby: async () => {
     if (challenge.isActive()) {
       const confirmed = await showConfirmDialog({
+        title: t("game.abandon_title"),
         message: t("game.abandon_confirm", t("game.abandon_exit")),
-        confirmText: t("game.abandon_exit"),
+        confirmText: t("game.abandon_exit_action"),
         cancelText: t("common.cancel"),
         isDanger: true,
+        icon: "danger",
       });
       if (confirmed) {
         challenge.reset();
@@ -827,10 +829,12 @@ function initHomeCard() {
       if (toRoute.path !== fromRoute.path) {
         const label = t("game.abandon_exit");
         const confirmed = await showConfirmDialog({
+          title: t("game.abandon_title"),
           message: t("game.abandon_confirm", label),
-          confirmText: t("game.abandon_exit"),
+          confirmText: t("game.abandon_exit_action"),
           cancelText: t("common.cancel"),
           isDanger: true,
+          icon: "danger",
         });
         if (confirmed) {
           clearTimer();
@@ -843,10 +847,12 @@ function initHomeCard() {
       if (toRoute.path !== fromRoute.path) {
         const label = t("game.abandon_exit");
         const confirmed = await showConfirmDialog({
+          title: t("game.abandon_title"),
           message: t("game.abandon_confirm", label),
-          confirmText: t("game.abandon_exit"),
+          confirmText: t("game.abandon_exit_action"),
           cancelText: t("common.cancel"),
           isDanger: true,
+          icon: "danger",
         });
         if (confirmed) {
           clearTimer();
