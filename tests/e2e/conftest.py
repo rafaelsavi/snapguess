@@ -197,7 +197,7 @@ def e2e_server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     )
 
     app = create_app(settings=settings)
-    app.state.immich_client = immich_client
+    app.state.photo_provider = immich_client
     if hasattr(app.state, 'metadata_store'):
         seed_e2e_metadata(app.state.metadata_store, 'family', assets)
 

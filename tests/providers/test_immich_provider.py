@@ -5,13 +5,13 @@ from datetime import date
 import httpx
 import pytest
 
-from src.immich.client import ImmichClient, ImmichClientError
 from src.models import PeopleMode
+from src.providers.immich import ImmichClientError, ImmichPhotoProvider
 
 
-def build_client(handler) -> ImmichClient:
+def build_client(handler) -> ImmichPhotoProvider:
     transport = httpx.MockTransport(handler)
-    return ImmichClient(
+    return ImmichPhotoProvider(
         'https://example.test/api',
         {'family': 'token'},
         client=httpx.AsyncClient(transport=transport),
@@ -19,13 +19,13 @@ def build_client(handler) -> ImmichClient:
 
 
 def test_immich_client_url_normalization() -> None:
-    client1 = ImmichClient('https://example.test', {'family': 'token'})
+    client1 = ImmichPhotoProvider('https://example.test', {'family': 'token'})
     assert client1._server_url == 'https://example.test/api'
 
-    client2 = ImmichClient('https://example.test/', {'family': 'token'})
+    client2 = ImmichPhotoProvider('https://example.test/', {'family': 'token'})
     assert client2._server_url == 'https://example.test/api'
 
-    client3 = ImmichClient('https://example.test/api/', {'family': 'token'})
+    client3 = ImmichPhotoProvider('https://example.test/api/', {'family': 'token'})
     assert client3._server_url == 'https://example.test/api'
 
 
@@ -45,24 +45,24 @@ def asset(**overrides) -> dict:
 
 
 def test_video_assets_are_rejected() -> None:
-    assert ImmichClient.is_eligible_asset(asset(type='VIDEO'), True, True) is False
-    assert ImmichClient.is_eligible_asset(asset(type='video'), True, True) is False
-    assert ImmichClient.is_eligible_asset(asset(type='AUDIO'), True, True) is False
-    assert ImmichClient.is_eligible_asset(asset(type='IMAGE'), True, True) is True
-    assert ImmichClient.is_eligible_asset(asset(type='image'), True, True) is True
+    assert ImmichPhotoProvider.is_eligible_asset(asset(type='VIDEO'), True, True) is False
+    assert ImmichPhotoProvider.is_eligible_asset(asset(type='video'), True, True) is False
+    assert ImmichPhotoProvider.is_eligible_asset(asset(type='AUDIO'), True, True) is False
+    assert ImmichPhotoProvider.is_eligible_asset(asset(type='IMAGE'), True, True) is True
+    assert ImmichPhotoProvider.is_eligible_asset(asset(type='image'), True, True) is True
 
 
 def test_missing_coordinates_rejected_in_location_mode() -> None:
     no_coords = asset(exifInfo={'dateTimeOriginal': '2024-01-14T10:11:12Z'})
-    assert ImmichClient.is_eligible_asset(no_coords, True, False) is False
-    assert ImmichClient.is_eligible_asset(no_coords, False, True) is True
+    assert ImmichPhotoProvider.is_eligible_asset(no_coords, True, False) is False
+    assert ImmichPhotoProvider.is_eligible_asset(no_coords, False, True) is True
 
 
 def test_zero_coordinates_rejected_in_location_mode() -> None:
     zeroed = asset(exifInfo={'latitude': 0, 'longitude': 0, 'dateTimeOriginal': '2024-01-14T10:11:12Z'})
-    assert ImmichClient.is_eligible_asset(zeroed, True, False) is False
+    assert ImmichPhotoProvider.is_eligible_asset(zeroed, True, False) is False
 
-    ans = ImmichClient.extract_answer(zeroed)
+    ans = ImmichPhotoProvider.extract_answer(zeroed)
     assert ans.latitude is None
     assert ans.longitude is None
 
@@ -70,41 +70,41 @@ def test_zero_coordinates_rejected_in_location_mode() -> None:
 def test_greenwich_and_equator_coordinates_accepted() -> None:
     greenwich = asset(exifInfo={'latitude': 51.4778, 'longitude': 0.0, 'dateTimeOriginal': '2024-01-14T10:11:12Z'})
     equator = asset(exifInfo={'latitude': 0.0, 'longitude': 37.9062, 'dateTimeOriginal': '2024-01-14T10:11:12Z'})
-    assert ImmichClient.is_eligible_asset(greenwich, True, False) is True
-    assert ImmichClient.is_eligible_asset(equator, True, False) is True
-    ans_g = ImmichClient.extract_answer(greenwich)
+    assert ImmichPhotoProvider.is_eligible_asset(greenwich, True, False) is True
+    assert ImmichPhotoProvider.is_eligible_asset(equator, True, False) is True
+    ans_g = ImmichPhotoProvider.extract_answer(greenwich)
     assert ans_g.latitude == 51.4778
     assert ans_g.longitude == 0.0
 
 
 def test_unparseable_date_rejected_in_date_mode() -> None:
     bad_date = asset(exifInfo={'latitude': 10.0, 'longitude': 20.0, 'dateTimeOriginal': 'nope'}, fileCreatedAt=None)
-    assert ImmichClient.is_eligible_asset(bad_date, False, True) is False
-    assert ImmichClient.is_eligible_asset(bad_date, True, False) is True
+    assert ImmichPhotoProvider.is_eligible_asset(bad_date, False, True) is False
+    assert ImmichPhotoProvider.is_eligible_asset(bad_date, True, False) is True
 
 
 def test_date_lower_bound_filters_older_assets() -> None:
     older = asset(exifInfo={'latitude': 10.0, 'longitude': 20.0, 'dateTimeOriginal': '2020-01-01T10:11:12Z'})
-    assert ImmichClient.is_eligible_asset(older, False, False, min_date=date(2021, 1, 1)) is False
+    assert ImmichPhotoProvider.is_eligible_asset(older, False, False, min_date=date(2021, 1, 1)) is False
 
 
 def test_date_upper_bound_filters_newer_assets() -> None:
     newer = asset(exifInfo={'latitude': 10.0, 'longitude': 20.0, 'dateTimeOriginal': '2025-01-01T10:11:12Z'})
-    assert ImmichClient.is_eligible_asset(newer, False, False, max_date=date(2024, 12, 31)) is False
+    assert ImmichPhotoProvider.is_eligible_asset(newer, False, False, max_date=date(2024, 12, 31)) is False
 
 
 def test_date_bounds_require_parseable_date() -> None:
     bad_date = asset(exifInfo={'latitude': 10.0, 'longitude': 20.0, 'dateTimeOriginal': 'nope'}, fileCreatedAt=None)
-    assert ImmichClient.is_eligible_asset(bad_date, False, False, min_date=date(2021, 1, 1)) is False
+    assert ImmichPhotoProvider.is_eligible_asset(bad_date, False, False, min_date=date(2021, 1, 1)) is False
 
 
 def test_valid_asset_accepted() -> None:
-    assert ImmichClient.is_eligible_asset(asset(), True, True) is True
+    assert ImmichPhotoProvider.is_eligible_asset(asset(), True, True) is True
 
 
 def test_asset_within_date_bounds_is_accepted() -> None:
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset(),
             True,
             True,
@@ -116,7 +116,7 @@ def test_asset_within_date_bounds_is_accepted() -> None:
 
 
 def test_extract_answer_reads_exif() -> None:
-    answer = ImmichClient.extract_answer(asset())
+    answer = ImmichPhotoProvider.extract_answer(asset())
     assert answer.latitude == 10.0
     assert answer.longitude == 20.0
     assert answer.capture_date == date(2024, 1, 14)
@@ -437,13 +437,13 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
         'tags': [],
     }
 
-    assert ImmichClient.is_eligible_asset(asset_brazil, location_mode=True, date_mode=True) is True
-    assert ImmichClient.is_eligible_asset(asset_germany, location_mode=True, date_mode=True) is True
-    assert ImmichClient.is_eligible_asset(asset_landscape, location_mode=True, date_mode=True) is True
+    assert ImmichPhotoProvider.is_eligible_asset(asset_brazil, location_mode=True, date_mode=True) is True
+    assert ImmichPhotoProvider.is_eligible_asset(asset_germany, location_mode=True, date_mode=True) is True
+    assert ImmichPhotoProvider.is_eligible_asset(asset_landscape, location_mode=True, date_mode=True) is True
 
     # Country blacklist
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_germany,
             location_mode=True,
             date_mode=True,
@@ -454,7 +454,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
 
     # City blacklist
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_germany,
             location_mode=True,
             date_mode=True,
@@ -465,7 +465,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
 
     # People blacklist by name
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_germany,
             location_mode=True,
             date_mode=True,
@@ -476,7 +476,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
 
     # People blacklist by ID
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_germany,
             location_mode=True,
             date_mode=True,
@@ -487,7 +487,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
 
     # Tag blacklist by name
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_germany,
             location_mode=True,
             date_mode=True,
@@ -498,7 +498,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
 
     # Tag blacklist by ID
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_germany,
             location_mode=True,
             date_mode=True,
@@ -509,7 +509,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
 
     # Country whitelist (only Japan)
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_brazil,
             location_mode=True,
             date_mode=True,
@@ -518,7 +518,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
         is False
     )
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_landscape,
             location_mode=True,
             date_mode=True,
@@ -529,7 +529,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
 
     # People whitelist (only Alice)
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_brazil,
             location_mode=True,
             date_mode=True,
@@ -538,7 +538,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
         is True
     )
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_germany,
             location_mode=True,
             date_mode=True,
@@ -547,7 +547,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
         is False
     )
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_landscape,
             location_mode=True,
             date_mode=True,
@@ -558,7 +558,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
 
     # Tag whitelist (only Vacation)
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_brazil,
             location_mode=True,
             date_mode=True,
@@ -568,7 +568,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
     )
     # Tag whitelist by ID ('t-1' and uppercase 'T-1')
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_brazil,
             location_mode=True,
             date_mode=True,
@@ -577,7 +577,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
         is True
     )
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_brazil,
             location_mode=True,
             date_mode=True,
@@ -586,7 +586,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
         is True
     )
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_germany,
             location_mode=True,
             date_mode=True,
@@ -595,7 +595,7 @@ def test_is_eligible_asset_config_whitelists_and_blacklists() -> None:
         is False
     )
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_landscape,
             location_mode=True,
             date_mode=True,
@@ -621,7 +621,7 @@ def test_is_eligible_asset_people_mode_enum() -> None:
 
     # ANY mode with Names (Alice, Bob): matches both
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_p1_p2,
             location_mode=True,
             date_mode=True,
@@ -631,7 +631,7 @@ def test_is_eligible_asset_people_mode_enum() -> None:
         is True
     )
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_p1_only,
             location_mode=True,
             date_mode=True,
@@ -643,7 +643,7 @@ def test_is_eligible_asset_people_mode_enum() -> None:
 
     # ANY mode with IDs (p1, p2): matches both
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_p1_p2,
             location_mode=True,
             date_mode=True,
@@ -653,7 +653,7 @@ def test_is_eligible_asset_people_mode_enum() -> None:
         is True
     )
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_p1_only,
             location_mode=True,
             date_mode=True,
@@ -665,7 +665,7 @@ def test_is_eligible_asset_people_mode_enum() -> None:
 
     # ALL mode with Names (Alice, Bob): matches asset_p1_p2 only
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_p1_p2,
             location_mode=True,
             date_mode=True,
@@ -675,7 +675,7 @@ def test_is_eligible_asset_people_mode_enum() -> None:
         is True
     )
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_p1_only,
             location_mode=True,
             date_mode=True,
@@ -687,7 +687,7 @@ def test_is_eligible_asset_people_mode_enum() -> None:
 
     # ALL mode with IDs (p1, p2): matches asset_p1_p2 only
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_p1_p2,
             location_mode=True,
             date_mode=True,
@@ -697,7 +697,7 @@ def test_is_eligible_asset_people_mode_enum() -> None:
         is True
     )
     assert (
-        ImmichClient.is_eligible_asset(
+        ImmichPhotoProvider.is_eligible_asset(
             asset_p1_only,
             location_mode=True,
             date_mode=True,
@@ -741,7 +741,7 @@ def test_extract_answer_includes_state() -> None:
             'dateTimeOriginal': '2023-06-01T12:00:00Z',
         },
     }
-    ans = ImmichClient.extract_answer(raw)
+    ans = ImmichPhotoProvider.extract_answer(raw)
     assert ans.latitude == 34.0522
     assert ans.longitude == -118.2437
     assert ans.city == 'Los Angeles'
@@ -759,25 +759,25 @@ def test_is_shared_album_ownership_checks() -> None:
             {'user': {'id': 'user-2'}, 'role': 'viewer'},
         ],
     }
-    assert ImmichClient._is_shared_album(alb_owner, current_user_id='user-1') is False
+    assert ImmichPhotoProvider._is_shared_album(alb_owner, current_user_id='user-1') is False
 
     # 2. User is viewer in albumUsers -> True
-    assert ImmichClient._is_shared_album(alb_owner, current_user_id='user-2') is True
+    assert ImmichPhotoProvider._is_shared_album(alb_owner, current_user_id='user-2') is True
 
     # 3. User is not in albumUsers, another user is owner -> True
-    assert ImmichClient._is_shared_album(alb_owner, current_user_id='user-3') is True
+    assert ImmichPhotoProvider._is_shared_album(alb_owner, current_user_id='user-3') is True
 
     # 4. Unknown current_user_id -> False (safe default, not treated as foreign shared)
-    assert ImmichClient._is_shared_album(alb_owner, current_user_id=None) is False
+    assert ImmichPhotoProvider._is_shared_album(alb_owner, current_user_id=None) is False
 
     # 5. Top-level ownerId matches current_user_id -> False
     alb_top_owner = {'id': 'alb-2', 'ownerId': 'user-1', 'isShared': True}
-    assert ImmichClient._is_shared_album(alb_top_owner, current_user_id='user-1') is False
-    assert ImmichClient._is_shared_album(alb_top_owner, current_user_id='user-2') is True
+    assert ImmichPhotoProvider._is_shared_album(alb_top_owner, current_user_id='user-1') is False
+    assert ImmichPhotoProvider._is_shared_album(alb_top_owner, current_user_id='user-2') is True
 
     # 6. Album explicitly not shared -> False
     alb_unshared = {'id': 'alb-3', 'shared': False}
-    assert ImmichClient._is_shared_album(alb_unshared, current_user_id='user-1') is False
+    assert ImmichPhotoProvider._is_shared_album(alb_unshared, current_user_id='user-1') is False
 
 
 @pytest.mark.asyncio

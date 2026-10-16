@@ -15,9 +15,9 @@
 ```
 snapguess/
 ├── src/
-│   ├── main.py          App factory and lifespan. Creates ImmichClient,
+│   ├── main.py          App factory and lifespan. Creates photo provider,
 │   │                    SessionStore, MetadataStore, and LeaderboardStore;
-│   │                    validates Immich access on startup; mounts static files and routes;
+│   │                    validates library access on startup; mounts static files and routes;
 │   │                    schedules periodic background delta sync tasks.
 │   ├── config.py        AppSettings dataclass. Parses and validates all env
 │   │                    vars at startup; raises ConfigError on bad input.
@@ -45,10 +45,12 @@ snapguess/
 │   │   │                preflight checks, answer scoring, and match finish persistence.
 │   │   └── challenge_service.py ChallengeService managing deterministic match seeds,
 │   │                    frozen decay calculations, capability tokens, and player sessions.
+│   ├── providers/       Swappable photo providers subsystem.
+│   │   ├── base.py      BasePhotoProvider abstract class and ProviderError base exception.
+│   │   ├── immich.py    ImmichPhotoProvider implementing BasePhotoProvider for Immich v3.2.0+.
+│   │   └── factory.py   Provider factory instantiating configured provider (via PHOTO_PROVIDER).
 │   ├── immich/
-│   │   └── client.py    ImmichClient adapter. Wraps httpx AsyncClient.
-│   │                    Provides: validate_access, list_albums, list_tags, search_assets,
-│   │                    search_random_assets, list_people, get_timeline_bounds, get_asset_bytes.
+│   │   └── client.py    Backward-compatible proxy re-exporting ImmichClient from src.providers.immich.
 │   ├── app_logging/     Structured logging and observability subsystem.
 │   │   ├── context.py   Async contextvars tracking (match_id, request_id, player_name).
 │   │   ├── filters.py   ContextFilter record enrichment and RedactionFilter secret scrubbing.
@@ -166,7 +168,7 @@ snapguess/
     │   └── test_unshuffle_gameplay.py Photo card reordering and multi-pin placement.
     ├── frontend/        Frontend regression and component tests (test_frontend_regressions.py, test_setup_card_bento_regression.py, test_multi_select.py, test_player_input.py, test_range_slider.py).
     ├── game/            Match selection, candidate pools, and diversity tests (test_diversity.py).
-    ├── immich/          Immich client adapter tests (test_immich_client.py).
+    ├── providers/       Photo provider subsystem tests (test_providers.py, test_immich_provider.py).
     ├── storage/         Storage subsystem tests (test_challenge_storage.py, test_leaderboard.py, test_metadata_storage.py).
     ├── test_adaptive_scoring.py Adaptive scoring calibration tests.
     ├── test_config.py   Settings parsing and validation tests.
@@ -219,7 +221,7 @@ POST /api/question
 
 GET /api/media/{asset_id}
   └── routes.py verifies asset_id was issued in a live match (rejects any other)
-  └── Calls ImmichClient.get_asset_bytes → proxies preview thumbnail bytes
+  └── Calls BasePhotoProvider.get_asset_bytes → proxies preview thumbnail bytes
   └── If asset fails to load, marks asset invalid in SQLite metadata index
   └── Browser never contacts Immich directly
 
@@ -324,10 +326,10 @@ date) in-memory and never exposes it through the question or answer responses.
 
 ## Startup Validation
 
-`main.py` calls `ImmichClient.validate_access` for every configured library
-key during the lifespan startup phase. Keys that fail are excluded from
+`main.py` calls `provider.validate_access` for every configured library
+during the lifespan startup phase. Libraries that fail are excluded from
 `/api/libraries` and reported in the `unavailable` field; the app continues
-with the remaining keys rather than refusing to start.
+with the remaining libraries rather than refusing to start.
 
 ---
 

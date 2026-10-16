@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from src.config import AppSettings
 from src.main import create_app
 from src.models import SyncStatus
+from src.providers.base import BasePhotoProvider
 from src.storage.metadata import MetadataStore
 
 
@@ -71,7 +72,7 @@ def setup_payload(**overrides: Any) -> dict[str, Any]:
     return payload
 
 
-class FakeImmichClient:
+class FakeImmichClient(BasePhotoProvider):
     def __init__(
         self,
         assets: list[dict[str, Any]] | None = None,
@@ -90,6 +91,10 @@ class FakeImmichClient:
         self.closed = False
         self.last_include_shared = False
         self.last_query = None
+
+    @property
+    def provider_id(self) -> str:
+        return 'fake_immich'
 
     def list_libraries(self) -> list[str]:
         return ['family']
@@ -353,11 +358,9 @@ def build_client(
         tag_blacklist=tag_blacklist,
     )
     app = create_app(settings=settings)
-    app.state.immich_client = immich
+    app.state.photo_provider = immich
     if hasattr(app.state, 'sync_engine'):
-        app.state.sync_engine._immich = immich
-    if hasattr(app.state, 'game_service'):
-        app.state.game_service._immich = immich
+        app.state.sync_engine._provider = immich
     if auto_seed and hasattr(app.state, 'metadata_store'):
         for lib in settings.immich_libraries:
             seed_test_metadata(app.state.metadata_store, lib, immich)

@@ -16,7 +16,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from src.auth.models import Role
 from src.auth.service import get_current_auth, require_role
 from src.game.challenge_service import ChallengeService, get_challenge_total_rounds
-from src.immich.client import ImmichClient, ImmichClientError
 from src.models import (
     ChallengeAnswerRequest,
     ChallengeAnswerResponse,
@@ -36,6 +35,7 @@ from src.models import (
     MapBounds,
     RoundLength,
 )
+from src.providers import BasePhotoProvider, ProviderError
 from src.storage.challenge import ChallengeStore
 from src.storage.leaderboard import LeaderboardStore
 from src.storage.metadata import MetadataStore
@@ -62,9 +62,12 @@ def get_leaderboard_store(request: Request) -> LeaderboardStore:
     return request.app.state.leaderboard_store
 
 
-def get_immich_client(request: Request) -> ImmichClient:
-    """FastAPI dependency yielding the Immich client."""
-    return request.app.state.immich_client
+def get_photo_provider(request: Request) -> BasePhotoProvider:
+    """FastAPI dependency yielding the configured photo provider."""
+    provider: BasePhotoProvider | None = getattr(request.app.state, 'photo_provider', None)
+    if provider is None:
+        raise RuntimeError('Photo provider is not initialized on app state')
+    return provider
 
 
 def get_metadata_store(request: Request) -> MetadataStore:
@@ -529,7 +532,7 @@ async def play_media(
     asset_id: str,
     request: Request,
     challenge_store: ChallengeStore = Depends(get_challenge_store),
-    immich: ImmichClient = Depends(get_immich_client),
+    provider: BasePhotoProvider = Depends(get_photo_provider),
     metadata_store: MetadataStore = Depends(get_metadata_store),
 ) -> Response:
     """Scoped media proxy for challenge players.
@@ -557,8 +560,8 @@ async def play_media(
         )
 
     try:
-        content, content_type = await immich.get_asset_bytes(target_library, asset_id)
-    except ImmichClientError as exc:
+        content, content_type = await provider.get_asset_bytes(target_library, asset_id)
+    except ProviderError as exc:
         await asyncio.to_thread(metadata_store.mark_asset_invalid, asset_id)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 

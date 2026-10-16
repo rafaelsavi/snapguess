@@ -20,7 +20,7 @@ from src.config import AppSettings, ConfigError, load_settings
 from src.game.challenge_service import ChallengeService
 from src.game.service import GameService
 from src.i18n import SupportedLanguage, parse_accept_language
-from src.immich.client import ImmichClient, ImmichClientError
+from src.providers import BasePhotoProvider, ProviderError, create_photo_provider
 from src.storage.challenge import ChallengeStore
 from src.storage.db import DatabaseManager
 from src.storage.leaderboard import LeaderboardStore
@@ -71,9 +71,9 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     metadata_db_manager = DatabaseManager(settings.metadata_db_path)
     leaderboard_db_manager = DatabaseManager(settings.leaderboard_db_path)
     metadata_store = MetadataStore(metadata_db_manager)
-    immich_client = ImmichClient(settings.immich_server_url, settings.immich_libraries)
+    photo_provider = create_photo_provider(settings)
     sync_engine = SyncEngine(
-        immich_client,
+        photo_provider,
         metadata_store,
         on_sync_complete=invalidate_filters_cache,
         cooldown_seconds=settings.sync_cooldown_seconds,
@@ -104,15 +104,19 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
             settings.data_path,
             settings.log_level,
         )
-        immich: ImmichClient = app.state.immich_client
+        provider: BasePhotoProvider = app.state.photo_provider
         available: list[str] = []
         unavailable: dict[str, str] = {}
-        for library_name in immich.list_libraries():
+        for library_name in provider.list_libraries():
             try:
-                await immich.validate_access(library_name)
+                await provider.validate_access(library_name)
                 available.append(library_name)
-                logger.info('✅ Library %r validated successfully with Immich server', library_name)
-            except ImmichClientError as exc:
+                logger.info(
+                    '✅ Library %r validated successfully with %s provider',
+                    library_name,
+                    provider.provider_id,
+                )
+            except ProviderError as exc:
                 unavailable[library_name] = str(exc)
                 logger.warning('⚠️ Library %r is unavailable and was hidden from setup: %s', library_name, exc)
 
@@ -167,9 +171,9 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
             active_sync_engine = getattr(app.state, 'sync_engine', None)
             if active_sync_engine is not None:
                 active_sync_engine.cancel_all_syncs()
-            close = getattr(app.state.immich_client, 'aclose', None)
-            if close is not None:
-                await close()
+            close = getattr(app.state, 'photo_provider', None)
+            if close is not None and hasattr(close, 'aclose'):
+                await close.aclose()
             metadata_db = getattr(app.state, 'metadata_db_manager', None)
             if metadata_db is not None:
                 metadata_db.checkpoint(mode='TRUNCATE')
@@ -182,7 +186,7 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     app = FastAPI(title='SnapGuess', version=APP_VERSION, lifespan=lifespan)
     app.state.settings = settings
     app.state.session_store = session_store
-    app.state.immich_client = immich_client
+    app.state.photo_provider = photo_provider
     app.state.metadata_db_manager = metadata_db_manager
     app.state.leaderboard_db_manager = leaderboard_db_manager
     app.state.metadata_store = metadata_store

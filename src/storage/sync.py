@@ -10,8 +10,9 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from src.app_logging import LOGGER_SYNC, get_logger
-from src.immich.client import ImmichClient, ImmichClientError
 from src.models import SyncMode, SyncStage, SyncStatus
+from src.providers.base import BasePhotoProvider
+from src.providers.immich import ImmichClientError, ImmichPhotoProvider
 from src.storage.metadata import MetadataStore
 
 logger = get_logger(LOGGER_SYNC)
@@ -37,18 +38,18 @@ def _clean_str(val: Any) -> str | None:
 
 
 class SyncEngine:
-    """Coordinates background synchronization between Immich and the local SQLite metadata index."""
+    """Coordinates background synchronization between photo providers and the local SQLite metadata index."""
 
     def __init__(
         self,
-        immich: ImmichClient,
+        provider: BasePhotoProvider,
         metadata_store: MetadataStore,
         *,
         on_sync_complete: Callable[[str], None] | None = None,
         cooldown_seconds: int = 60,
     ) -> None:
-        """Initialize SyncEngine with Immich client, metadata store, optional callback, and cooldown."""
-        self._immich = immich
+        """Initialize SyncEngine with photo provider, metadata store, optional callback, and cooldown."""
+        self._provider: Any = provider
         self._metadata_store = metadata_store
         self._on_sync_complete = on_sync_complete
         self._cooldown_seconds = max(0, cooldown_seconds)
@@ -76,8 +77,8 @@ class SyncEngine:
             libs = [library_name]
         elif available_libraries is not None:
             libs = list(available_libraries)
-        elif hasattr(self._immich, 'list_libraries') and self._immich.list_libraries():
-            libs = self._immich.list_libraries()
+        elif hasattr(self._provider, 'list_libraries') and self._provider.list_libraries():
+            libs = self._provider.list_libraries()
         else:
             all_states = self._metadata_store.get_all_sync_states()
             libs = [s['library_name'] for s in all_states] or list(self._active_sync_tasks.keys())
@@ -151,8 +152,8 @@ class SyncEngine:
             libs = [available_libraries]
         elif available_libraries is not None:
             libs = list(available_libraries)
-        elif hasattr(self._immich, 'list_libraries') and self._immich.list_libraries():
-            libs = self._immich.list_libraries()
+        elif hasattr(self._provider, 'list_libraries') and self._provider.list_libraries():
+            libs = self._provider.list_libraries()
         else:
             all_states = self._metadata_store.get_all_sync_states()
             libs = [s['library_name'] for s in all_states] or list(self._active_sync_tasks.keys())
@@ -256,7 +257,7 @@ class SyncEngine:
         available_libraries: list[str] | None = None,
     ) -> list[asyncio.Task[None]]:
         """Trigger background synchronization for all configured and available libraries."""
-        libs = available_libraries if available_libraries is not None else self._immich.list_libraries()
+        libs = available_libraries if available_libraries is not None else self._provider.list_libraries()
         tasks = []
         for lib in libs:
             t = self.trigger_sync(lib, force_full=force_full, bypass_cooldown=bypass_cooldown)
@@ -362,7 +363,7 @@ class SyncEngine:
             return None, [], [], []
 
         # Determine ownership flags
-        owner_id = ImmichClient._extract_owner_id(item)
+        owner_id = ImmichPhotoProvider._extract_owner_id(item)
         in_shared_album = bool(aid in album_asset_map and (album_asset_map[aid] & shared_album_ids))
         has_shared_prop = bool(item.get('isShared') or item.get('shared'))
         is_shared_flag = 1 if (has_shared_prop or in_shared_album) else 0
@@ -370,7 +371,7 @@ class SyncEngine:
         is_partner_flag = 1 if (is_other_owner and not is_shared_flag) else 0
 
         # Extract EXIF & location
-        exif = ImmichClient._exif(item)
+        exif = ImmichPhotoProvider._exif(item)
         lat: float | None = None
         lon: float | None = None
         raw_lat = exif.get('latitude')
@@ -390,7 +391,7 @@ class SyncEngine:
         state = _clean_str(exif.get('state'))
         country = _clean_str(exif.get('country'))
 
-        capture_dt = ImmichClient.extract_capture_datetime(item)
+        capture_dt = ImmichPhotoProvider.extract_capture_datetime(item)
         capture_dt_str = capture_dt.isoformat() if capture_dt is not None else None
         updated_at_str = _clean_str(item.get('updatedAt'))
 
@@ -462,10 +463,10 @@ class SyncEngine:
 
         try:
             self._sync_warnings.pop(library_name, None)
-            key = self._immich._library_key(library_name)
+            key = self._provider._library_key(library_name)
             logger.info("Using Immich Search API v2 for library '%s'", library_name)
 
-            current_user_id = await self._immich._current_user_id(key)
+            current_user_id = await self._provider._current_user_id(key)
             if not current_user_id:
                 logger.warning(
                     'Could not resolve current authenticated user ID for library %s. '
@@ -476,7 +477,7 @@ class SyncEngine:
                 logger.debug("Resolved authenticated user ID '%s' for library '%s'", current_user_id, library_name)
 
             # 1. Fetch & store people
-            raw_people = await self._immich._request_json('GET', '/people', key)
+            raw_people = await self._provider._request_json('GET', '/people', key)
             people_list = (
                 raw_people.get('people', raw_people)
                 if isinstance(raw_people, dict)
@@ -494,7 +495,7 @@ class SyncEngine:
             logger.info("Indexed %d active people for library '%s'", len(people_data), library_name)
 
             # 2. Fetch & store albums
-            raw_albums = await self._immich._request_json('GET', '/albums', key)
+            raw_albums = await self._provider._request_json('GET', '/albums', key)
             albums_list = raw_albums if isinstance(raw_albums, list) else []
             albums_data: list[dict[str, Any]] = []
             album_asset_map: dict[str, set[str]] = {}  # asset_id -> set of album_ids
@@ -507,7 +508,7 @@ class SyncEngine:
                 if isinstance(alb, dict):
                     aid = str(alb.get('id', '')).strip()
                     aname = str(alb.get('albumName', '') or alb.get('name', '')).strip()
-                    is_shared = ImmichClient._is_shared_album(alb, current_user_id)
+                    is_shared = ImmichPhotoProvider._is_shared_album(alb, current_user_id)
                     if is_shared:
                         shared_album_ids.add(aid)
                     if aid and aname:
@@ -573,13 +574,13 @@ class SyncEngine:
                                 if cursor:
                                     search_alb_payload['cursor'] = cursor
 
-                                search_alb = await self._immich._request_json(
+                                search_alb = await self._provider._request_json(
                                     'POST',
                                     '/search/metadata',
                                     key,
                                     json=search_alb_payload,
                                 )
-                                alb_assets = self._immich._extract_asset_items(search_alb)
+                                alb_assets = self._provider._extract_asset_items(search_alb)
                                 if not alb_assets:
                                     break
 
@@ -646,7 +647,7 @@ class SyncEngine:
 
             # 3. Fetch & store tags
             try:
-                raw_tags = await self._immich._request_json('GET', '/tags', key)
+                raw_tags = await self._provider._request_json('GET', '/tags', key)
                 tags_list = raw_tags if isinstance(raw_tags, list) else []
                 tags_data: list[dict[str, str]] = []
                 for t in tags_list:
@@ -670,7 +671,7 @@ class SyncEngine:
             total_reported: int | None = None
 
             if not is_delta:
-                total_reported = await self._immich.get_asset_count(library_name)
+                total_reported = await self._provider.get_asset_count(library_name)
                 if total_reported is None:
                     msg = (
                         f"Immich /search/statistics did not return an asset count for library '{library_name}'. "
@@ -725,9 +726,9 @@ class SyncEngine:
                 if cursor:
                     payload['cursor'] = cursor
 
-                raw_page = await self._immich._request_json('POST', '/search/metadata', key, json=payload)
+                raw_page = await self._provider._request_json('POST', '/search/metadata', key, json=payload)
                 if not is_delta and total_reported is None:
-                    extracted_total = self._immich._extract_total_assets(raw_page)
+                    extracted_total = self._provider._extract_total_assets(raw_page)
                     if extracted_total is not None and extracted_total > 0:
                         total_reported = extracted_total
                         logger.info(
@@ -736,7 +737,7 @@ class SyncEngine:
                             library_name,
                         )
 
-                items = self._immich._extract_asset_items(raw_page)
+                items = self._provider._extract_asset_items(raw_page)
                 if not items:
                     logger.info(
                         "Asset search pagination reached end for library '%s' (no items returned)",
