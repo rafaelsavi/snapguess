@@ -35,6 +35,8 @@ def isolated_env(monkeypatch: pytest.MonkeyPatch) -> None:
         'TAG_BLACKLIST',
         'EXCLUDE_FLAGGED_ASSETS',
         'EXCLUDE_FLAGGED_PHOTOS',
+        'PHOTO_PROVIDER',
+        'LOCAL_LIBRARIES',
     ):
         monkeypatch.delenv(key, raising=False)
 
@@ -472,3 +474,29 @@ def test_tile_url_empty_raises(monkeypatch: pytest.MonkeyPatch) -> None:
             immich_libraries={'family': 'token'},
             tile_url_streets='',
         )
+
+
+def test_load_settings_local_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify load_settings works with PHOTO_PROVIDER=local without requiring Immich credentials."""
+    monkeypatch.setenv('PHOTO_PROVIDER', 'local')
+    monkeypatch.setenv('LOCAL_LIBRARIES', '{"Family": "/photos/family", "Travel": "/photos/travel"}')
+    settings = load_settings()
+    assert settings.photo_provider == 'local'
+    assert settings.local_libraries == {'Family': '/photos/family', 'Travel': '/photos/travel'}
+    assert settings.immich_server_url == ''
+    assert settings.immich_libraries == {}
+
+
+def test_load_settings_local_provider_missing_libraries(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify error when PHOTO_PROVIDER=local but LOCAL_LIBRARIES is missing."""
+    monkeypatch.setenv('PHOTO_PROVIDER', 'local')
+    with pytest.raises(ConfigError, match='LOCAL_LIBRARIES'):
+        load_settings()
+
+
+def test_load_settings_local_provider_malformed_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify error when LOCAL_LIBRARIES contains invalid JSON."""
+    monkeypatch.setenv('PHOTO_PROVIDER', 'local')
+    monkeypatch.setenv('LOCAL_LIBRARIES', '{not-valid-json}')
+    with pytest.raises(ConfigError, match='valid JSON'):
+        load_settings()

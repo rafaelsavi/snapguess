@@ -48,9 +48,8 @@ snapguess/
 │   ├── providers/       Swappable photo providers subsystem.
 │   │   ├── base.py      BasePhotoProvider abstract class and ProviderError base exception.
 │   │   ├── immich.py    ImmichPhotoProvider implementing BasePhotoProvider for Immich v3.2.0+.
+│   │   ├── local.py     LocalFolderPhotoProvider implementing BasePhotoProvider for local directory trees.
 │   │   └── factory.py   Provider factory instantiating configured provider (via PHOTO_PROVIDER).
-│   ├── immich/
-│   │   └── client.py    Backward-compatible proxy re-exporting ImmichClient from src.providers.immich.
 │   ├── app_logging/     Structured logging and observability subsystem.
 │   │   ├── context.py   Async contextvars tracking (match_id, request_id, player_name).
 │   │   ├── filters.py   ContextFilter record enrichment and RedactionFilter secret scrubbing.
@@ -220,10 +219,10 @@ POST /api/question
   └── Returns sanitized QuestionResponse (no coordinates, no capture dates)
 
 GET /api/media/{asset_id}
-  └── routes.py verifies asset_id was issued in a live match (rejects any other)
-  └── Calls BasePhotoProvider.get_asset_bytes → proxies preview thumbnail bytes
+  └── routes.py verifies asset_id belongs to a live match, active challenge, match history, or reported photo queue
+  └── Calls BasePhotoProvider.get_asset_bytes → generates/proxies preview thumbnail bytes
   └── If asset fails to load, marks asset invalid in SQLite metadata index
-  └── Browser never contacts Immich directly
+  └── Browser never contacts photo providers directly; all metadata is scrubbed server-side
 
 POST /api/answer
   └── routes.py looks up QuestionState
@@ -330,6 +329,29 @@ date) in-memory and never exposes it through the question or answer responses.
 during the lifespan startup phase. Libraries that fail are excluded from
 `/api/libraries` and reported in the `unavailable` field; the app continues
 with the remaining libraries rather than refusing to start.
+
+---
+
+## Photo Provider Subsystem & Filter Equivalences
+
+SnapGuess supports interchangeable photo backend architectures via the swappable `BasePhotoProvider` interface:
+
+1. **`ImmichPhotoProvider` (`PHOTO_PROVIDER=immich`)**: Connects to one or more Immich server libraries via REST API, indexing asset EXIF metadata, faces, tags, and albums.
+2. **`LocalFolderPhotoProvider` (`PHOTO_PROVIDER=local`)**: Runs 100% standalone and offline directly against local photo directories (`LOCAL_LIBRARIES`), extracting EXIF metadata with Pillow, performing local offline reverse-geocoding, and mapping subfolders to albums.
+
+### Filter Equivalences & Capability Matrix
+
+| Filter Capability | Immich Provider (`immich`) | Local Folder Provider (`local`) | Equivalence Mechanics |
+|:---|:---|:---|:---|
+| **Photo Libraries** | `IMMICH_LIBRARIES` (Name $\to$ API Key) | `LOCAL_LIBRARIES` (Name $\to$ Directory Path) | Libraries appear identically in setup multi-select chips. |
+| **Countries** | Extracted from Immich reverse-geocoding | Offline reverse-geocoding via bundled KD-tree | Both populate `assets.country` with standardized full English country names. Whitelist/blacklist filters work identically. |
+| **Cities / Regions** | Extracted from Immich reverse-geocoding | Offline reverse-geocoding via bundled KD-tree | Both populate `assets.city` and `assets.state`. Whitelist/blacklist filters work identically. |
+| **Date Ranges & Year Sliders** | Extracted from Immich `fileCreatedAt` / EXIF | Extracted from EXIF `DateTimeOriginal` / `DateTimeDigitized` (fallback to file `mtime`) | Populates `assets.capture_datetime` as ISO 8601 UTC. Date bound filters and dual-handle Year-Month slider work identically. |
+| **Albums** | Immich server albums (`/albums`) | Relative directory subfolders (e.g. `2023 / Summer / Hawaii`) | Subdirectories are automatically indexed into `albums` and mapped in `asset_albums`. Multi-select album chips work identically. |
+| **People / Face Recognition** | Immich ML face recognition (`/people`) | *Not supported in local mode* (No server-side ML) | Filter row is gracefully empty; people mode selector is omitted when no recognized people exist. |
+| **Tags** | Immich tag taxonomy (`/tags`) | *Not supported in local mode* | Tag filter multi-select is omitted when no tags exist. |
+| **Shared / Partner Photos** | Shared partner libraries toggle (`#label-include-shared`) | *Not applicable* (all local photos belong to the local host) | Frontend dynamically hides the shared filter toggle (`.filter-sources-row`) when `photo_provider !== 'immich'`. |
+| **Anti-Cheat Media Delivery** | Immich proxy with stripped headers | On-demand 1280px LANCZOS thumbnailing with 100% stripped EXIF/GPS tags | Both stream clean JPEG thumbnails via `/api/media/{asset_id}` with zero client-accessible location/date metadata. |
 
 ---
 

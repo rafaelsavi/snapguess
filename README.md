@@ -1,7 +1,7 @@
 # 📸 SnapGuess
 
 <p align="center">
-  <strong>Turn your self-hosted Immich photo library into an interactive, multiplayer trivia game.</strong>
+  <strong>Turn your personal photo library (Immich or local folders) into an interactive, multiplayer trivia game.</strong>
 </p>
 
 <p align="center">
@@ -41,7 +41,7 @@
 - **⚔️ Asynchronous & Hybrid Challenges**: Share capability URLs (`/play/ch_...`) or instant QR codes with customizable expiration periods. Opponents play at their own pace on their own devices with live opponent updates.
 - **📊 Lifetime Player Directory & KPIs**: Track player records, win rates, podium medals, and 4-tier accuracy distributions for Location and Date across player profiles.
 - **🎬 Match Replays & Photo Journey**: Relive past matches with full route replays, stage cards, and high-res photo memories.
-- **⚡ Sub-Millisecond SQLite Metadata Engine**: Fast, local SQLite indexing with automatic delta and full background syncs from Immich. Zero lag during matches.
+- **⚡ Sub-Millisecond SQLite Metadata Engine**: Fast, local SQLite indexing with automatic delta and full background syncs from Immich or local folders. Zero lag during matches.
 - **🛡️ Anti-Cheat & Privacy-First**: All EXIF, GPS coordinates, and camera metadata are stripped server-side before client delivery.
 - **🔐 Granular Role-Based Access Control**: Native Cloudflare Zero Trust and reverse proxy integration with three permission tiers (👑 Creator, 👥 Player, 🎟️ Guest).
 - **🌓 Clear & Dark Themes + i18n**: Aesthetic design with automatic dark/light theme switching and bilingual support in English (`en-US`) and Brazilian Portuguese (`pt-BR`).
@@ -102,7 +102,7 @@ The official Docker image is published to GitHub Container Registry (GHCR):
 |----------------------|------------------------------------------------------------|-----------------------------------------------------|
 | `:latest`            | Latest official stable release (multi-arch: amd64 / arm64) | `docker pull ghcr.io/rafaelsavi/snapguess:latest` |
 | `:rc`                | Latest Release Candidate build                             | `docker pull ghcr.io/rafaelsavi/snapguess:rc`     |
-| `:v4.2.0` / `:4.2.0` | Specific semantic release version                          | `docker pull ghcr.io/rafaelsavi/snapguess:v4.2.0` |
+| `:v4.3.0` / `:4.3.0` | Specific semantic release version                          | `docker pull ghcr.io/rafaelsavi/snapguess:v4.3.0` |
 | `:<sha>`             | Exact commit hash build                                    | `docker pull ghcr.io/rafaelsavi/snapguess:<sha>`  |
 
 ### Quick Start
@@ -119,7 +119,7 @@ Use the example files:
 | `PHOTO_PROVIDER`                 | No          | `immich`      | Photo source backend architecture (`immich` for Immich server; `local` for local photo directories)                                                                            |
 | `IMMICH_SERVER_URL`              | When immich | —             | Full URL to the Immich API, e.g. `https://photos.example.com/api` (required when `PHOTO_PROVIDER=immich`)                                                                       |
 | `IMMICH_LIBRARIES`               | When immich | —             | JSON object mapping display names to API keys, e.g. `{"Family": "key123"}` (required when `PHOTO_PROVIDER=immich`)                                                             |
-| `LOCAL_LIBRARIES    `          | When local  | —             | JSON object mapping display names to local filesystem directory paths, e.g. `{"Family": "/photos/family"}` (required when `PHOTO_PROVIDER=local`)                               |
+| `LOCAL_LIBRARIES`               | When local  | —             | JSON object mapping display names to local filesystem directory paths, e.g. `{"Family": "/photos/family"}` (required when `PHOTO_PROVIDER=local`)                               |
 | `APP_HOST`                       | No       | `127.0.0.1`   | Set to `0.0.0.0` in Docker so the port is reachable from the host                                                                                                                                                |
 | `APP_PORT`                       | No       | `8010`        | Port the app listens on                                                                                                                                                                                          |
 | `LANGUAGE`                       | No       | `en-US`       | UI language (`en-US` for English, `pt-BR` for Brazilian Portuguese)                                                                                                                                              |
@@ -178,6 +178,18 @@ API keys can be generated in Immich under **Account Settings > API Keys**. Follo
 | `person.read`    | People / Face Filters       | `GET /people`                                        | Discovers recognized people and names for setup filtering (Any / All matching) and whitelist/blacklist rules.                         |
 | `tag.read`       | Asset Tag Filters           | `GET /tags`                                          | Retrieves custom asset tags for setup filtering and tag whitelist/blacklist rules.                                                    |
 | `user.read`      | Ownership & Sharing Context | `GET /users/me`                                      | Identifies the authenticated account to distinguish personal photos from shared albums and partner assets.                            |
+
+### Local Folder Configuration
+
+When using standalone folder mode (`PHOTO_PROVIDER=local`), configure `LOCAL_LIBRARIES` as a JSON map of library names to filesystem paths:
+
+```bash
+PHOTO_PROVIDER=local
+LOCAL_LIBRARIES={"Family": "/photos/family", "Travel": "/photos/travel"}
+```
+
+- **Standalone & Offline**: Scans directories recursively, extracts EXIF GPS and timestamps, and maps subfolders to hierarchical albums (e.g. `2023 / Summer / Hawaii`).
+- **Docker Read-Only Mounts**: In `docker-compose.yml`, mount your photo directories as read-only volumes (e.g. `- /path/to/photos:/photos:ro`).
 
 ---
 

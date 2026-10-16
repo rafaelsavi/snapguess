@@ -127,8 +127,9 @@ async def health(metadata_store: MetadataStore = Depends(get_metadata_store)) ->
 @router.get('/ui-config', response_model=UiConfigResponse)
 async def ui_config(request: Request) -> dict[str, object]:
     settings = request.app.state.settings
-    immich_web_url = settings.immich_server_url.removesuffix('/api')
+    immich_web_url = settings.immich_server_url.removesuffix('/api') if settings.immich_server_url else ''
     return {
+        'photo_provider': settings.photo_provider,
         'language': settings.language,
         'score_max_points': SCORE_MAX_POINTS,
         'version': APP_VERSION,

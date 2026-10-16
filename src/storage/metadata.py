@@ -428,6 +428,14 @@ class MetadataStore:
         rows = self._db.fetch_all('SELECT id FROM albums WHERE library_name = ?', (library_name,))
         return {str(r['id']) for r in rows}
 
+    def get_asset_mtimes(self, library_name: str) -> dict[str, str]:
+        """Return a mapping of asset ID to updated timestamp/mtime for delta synchronization."""
+        rows = self._db.fetch_all(
+            'SELECT id, immich_updated_at FROM assets WHERE library_name = ?',
+            (library_name,),
+        )
+        return {str(r['id']): str(r['immich_updated_at']) for r in rows if r.get('immich_updated_at')}
+
     def upsert_people(self, library_name: str, people: list[dict[str, str]]) -> None:
         """Insert or update recognized people metadata for a library."""
         rows = [

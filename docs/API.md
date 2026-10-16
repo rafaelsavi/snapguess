@@ -28,7 +28,7 @@ Response:
 ```json
 {
   "status": "ok",
-  "version": "4.2.0",
+  "version": "4.3.0",
   "database": "connected"
 }
 ```
@@ -41,10 +41,11 @@ Response:
 
 ```json
 {
+  "photo_provider": "immich",
   "language": "EN",
   "score_max_points": 100,
   "immich_web_url": "https://immich.example.com",
-  "version": "4.2.0",
+  "version": "4.3.0",
   "tile_config": {
     "streets_url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     "streets_attribution": "&copy; OpenStreetMap",
@@ -94,12 +95,14 @@ Response:
 }
 ```
 
-Libraries whose API key failed validation at startup are reported in
-`unavailable` and omitted from `libraries`. A bad key no longer stops the app.
+Libraries that fail validation at startup (e.g. invalid API key for Immich
+or missing/unreadable directory for local folders) are reported in
+`unavailable` and omitted from `libraries`. A validation failure no longer
+prevents the application from starting.
 
 ### GET /api/albums?libraries={name}
 
-Returns available albums across the specified libraries (or all configured libraries if omitted). Queries the local SQLite metadata index first for 0ms response time; falls back to the Immich API if the index is unpopulated.
+Returns available albums across the specified libraries (or all configured libraries if omitted). Queries the indexed SQLite metadata store for fast response times.
 
 Response:
 
@@ -351,10 +354,11 @@ Unshuffle Response Example:
 
 ### GET /api/media/{asset_id}
 
-- Only asset IDs issued as a question in a live match are served (returns `404` for any unauthorized asset ID).
+- Serves preview thumbnails exclusively for assets associated with an active match, active challenge, match replay history, or reported photo queue (`404` for unrecognized assets).
 - Automatically resolves the asset's source library from metadata storage.
-- Proxies re-encoded preview thumbnail bytes from Immich (carries no EXIF/GPS payload).
-- If loading fails, marks the asset as invalid in `metadata.db` to prevent future selection.
+- Streams re-encoded preview thumbnail bytes via the configured photo provider (Immich or local folders) with 100% of EXIF, GPS, and camera metadata stripped for anti-cheat protection.
+- Supports HTTP conditional caching via `ETag` and `If-None-Match` (`304 Not Modified`).
+- If loading fails, automatically marks the asset as invalid in `metadata.db` to prevent future selection.
 
 ### POST /api/answer
 
