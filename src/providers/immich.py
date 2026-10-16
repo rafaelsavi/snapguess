@@ -1,26 +1,28 @@
-"""Immich API client for remote metadata fetching, authentication, and thumbnail streaming."""
+"""Immich photo provider implementing BasePhotoProvider for remote Immich API servers."""
 
 from __future__ import annotations
 
 import re
 from datetime import date, datetime
-from types import TracebackType
 from typing import Any
 
 import httpx
 
 from src.app_logging import LOGGER_IMMICH, get_logger
 from src.models import AssetAnswer, PeopleMode
+from src.providers.base import BasePhotoProvider, ProviderError
 
 logger = get_logger(LOGGER_IMMICH)
 
 
-class ImmichClientError(RuntimeError):
+class ImmichClientError(ProviderError):
     """Raised when an error occurs communicating with or authenticating to the Immich server."""
 
+    pass
 
-class ImmichClient:
-    """Asynchronous HTTP client for interacting with one or more Immich server libraries."""
+
+class ImmichPhotoProvider(BasePhotoProvider):
+    """Immich photo provider interacting with one or more remote Immich server libraries."""
 
     def __init__(
         self,
@@ -29,7 +31,7 @@ class ImmichClient:
         timeout_seconds: int = 25,
         client: httpx.AsyncClient | None = None,
     ) -> None:
-        """Initialize client with Immich server URL, library API key map, and request timeout."""
+        """Initialize provider with Immich server URL, library API key map, and request timeout."""
         url = server_url.strip().rstrip('/')
         if not url.endswith('/api'):
             url = f'{url}/api'
@@ -41,16 +43,10 @@ class ImmichClient:
         self._server_version: tuple[int, int, int] | None = None
         self._server_version_probed: bool = False
 
-    async def __aenter__(self) -> ImmichClient:
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> None:
-        await self.aclose()
+    @property
+    def provider_id(self) -> str:
+        """Unique provider identifier."""
+        return 'immich'
 
     @property
     def _http(self) -> httpx.AsyncClient:
@@ -243,7 +239,7 @@ class ImmichClient:
     @staticmethod
     def _is_shared_album(album: dict[str, Any], current_user_id: str | None = None) -> bool:
         """Return True if the album was shared with the user by someone else."""
-        owner_id = ImmichClient._extract_owner_id(album)
+        owner_id = ImmichPhotoProvider._extract_owner_id(album)
         if owner_id and current_user_id:
             return owner_id != current_user_id
 
@@ -311,7 +307,7 @@ class ImmichClient:
             elif isinstance(raw.get('items'), list):
                 items = [x for x in raw['items'] if isinstance(x, dict)]
 
-        return [ImmichClient._unwrap_asset(item) for item in items]
+        return [ImmichPhotoProvider._unwrap_asset(item) for item in items]
 
     async def get_asset_bytes(self, library_name: str, asset_id: str) -> tuple[bytes, str]:
         """Download thumbnail preview bytes and content type for an asset."""
@@ -357,7 +353,7 @@ class ImmichClient:
             return False
 
         # 2. Location mode check (valid non-zero lat/lng)
-        exif = ImmichClient._exif(asset)
+        exif = ImmichPhotoProvider._exif(asset)
         if location_mode:
             lat = exif.get('latitude')
             lon = exif.get('longitude')
@@ -372,7 +368,7 @@ class ImmichClient:
                 return False
 
         # 3. Date mode & min/max bounds check
-        capture_dt = ImmichClient.extract_capture_datetime(asset)
+        capture_dt = ImmichPhotoProvider.extract_capture_datetime(asset)
         if date_mode and capture_dt is None:
             return False
 
@@ -495,7 +491,7 @@ class ImmichClient:
     @staticmethod
     def extract_answer(asset: dict[str, Any]) -> AssetAnswer:
         """Construct an AssetAnswer instance from asset metadata and EXIF dictionary."""
-        exif = ImmichClient._exif(asset)
+        exif = ImmichPhotoProvider._exif(asset)
 
         lat: float | None = None
         lon: float | None = None
@@ -512,7 +508,7 @@ class ImmichClient:
                 lat = None
                 lon = None
 
-        capture_dt = ImmichClient.extract_capture_datetime(asset)
+        capture_dt = ImmichPhotoProvider.extract_capture_datetime(asset)
         city = str(exif.get('city', '')).strip() if exif.get('city') else None
         state = str(exif.get('state', '')).strip() if exif.get('state') else None
         country = str(exif.get('country', '')).strip() if exif.get('country') else None
@@ -529,7 +525,7 @@ class ImmichClient:
     @staticmethod
     def extract_capture_datetime(asset: dict[str, Any]) -> datetime | None:
         """Parse capture datetime from asset EXIF or file timestamp properties."""
-        exif = ImmichClient._exif(asset)
+        exif = ImmichPhotoProvider._exif(asset)
         date_str = (
             exif.get('dateTimeOriginal')
             or asset.get('fileCreatedAt')

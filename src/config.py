@@ -166,6 +166,7 @@ class AppSettings:
     # 1. Immich Connection & Credentials
     immich_server_url: str
     immich_libraries: dict[str, str]
+    photo_provider: str = 'immich'
 
     # 2. Application & Server Network
     app_title: str = 'SnapGuess'
@@ -227,6 +228,13 @@ class AppSettings:
         # Normalize and validate Immich server URL
         normalized_url = _normalize_url(self.immich_server_url, 'IMMICH_SERVER_URL')
         object.__setattr__(self, 'immich_server_url', normalized_url)
+
+        # Validate photo_provider
+        valid_providers = {'immich'}
+        norm_provider = self.photo_provider.strip().lower()
+        if norm_provider not in valid_providers:
+            raise ConfigError(f'PHOTO_PROVIDER must be one of {sorted(valid_providers)}, got {self.photo_provider!r}')
+        object.__setattr__(self, 'photo_provider', norm_provider)
 
         # Resolve data path to absolute filesystem path
         object.__setattr__(self, 'data_path', self.data_path.expanduser().resolve())
@@ -361,6 +369,9 @@ def load_settings() -> AppSettings:
         'immich_server_url': server_url,
         'immich_libraries': _parse_library_map(raw_libraries),
     }
+
+    if val := _get_env('PHOTO_PROVIDER'):
+        kwargs['photo_provider'] = val.strip().lower()
 
     # Application & Server
     if val := _get_env('APP_HOST'):

@@ -1087,7 +1087,7 @@ def test_challenge_start_locks_player_name_when_configured(tmp_path: Path) -> No
     )
     immich = FakeImmichClient(_create_mock_assets(25))
     app = create_app(settings=settings)
-    app.state.immich_client = immich
+    app.state.photo_provider = immich
     seed_test_metadata(app.state.metadata_store, 'family', immich)
 
     with TestClient(app) as test_client:

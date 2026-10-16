@@ -286,7 +286,7 @@ async def test_challenge_individual_icon_colors_e2e(page: Page, e2e_server: str)
     # Type name and verify avatar initial updates dynamically
     await page.locator('#player-name-input').fill('Alice')
     await expect(avatar_preview).to_have_text('A')
-    await page.wait_for_timeout(250)
+    await avatar_preview.evaluate('el => Promise.all(el.getAnimations().map(a => a.finished))')
 
     # Get avatar background color for Player 1
     p1_bg_color = await avatar_preview.evaluate('el => getComputedStyle(el).backgroundColor')
@@ -310,7 +310,7 @@ async def test_challenge_individual_icon_colors_e2e(page: Page, e2e_server: str)
     await expect(avatar_preview2).to_be_visible()
     await page2.locator('#player-name-input').fill('Bob')
     await expect(avatar_preview2).to_have_text('B')
-    await page2.wait_for_timeout(250)
+    await avatar_preview2.evaluate('el => Promise.all(el.getAnimations().map(a => a.finished))')
 
     p2_bg_color = await avatar_preview2.evaluate('el => getComputedStyle(el).backgroundColor')
     # Player 2 must have an individual, distinct color from Player 1
@@ -378,10 +378,8 @@ async def test_challenges_hub_standings_drawer_col_rank(page: Page, e2e_server: 
     # Verify col-rank text
     rank_cells = page.locator('.standings-table td.col-rank')
     await expect(rank_cells.first).to_be_visible()
-    rank_text = await rank_cells.first.text_content()
-    assert rank_text is not None
-    assert 'unknown' not in rank_text.lower()
-    assert '1' in rank_text
+    await expect(rank_cells.first).not_to_contain_text('unknown', ignore_case=True)
+    await expect(rank_cells.first).to_contain_text('1')
 
 
 async def test_challenge_multi_tab_session_isolation_and_standings_on_reload(page: Page, e2e_server: str) -> None:
@@ -575,12 +573,9 @@ async def test_challenge_opponent_reveal_pin_and_distance_error(page: Page, e2e_
     await expect(bob_row).to_be_visible()
 
     # - Bob's distance error is visible and NOT "-"
-    bob_row_text = await bob_row.text_content()
-    assert bob_row_text is not None
-    # Distance error should contain km or m
-    assert 'km' in bob_row_text or 'm' in bob_row_text, f'Bob distance error missing: {bob_row_text}'
+    await expect(bob_row).to_contain_text(re.compile(r'\b(?:\d+\s*(?:km|m)|km|m)\b'))
     # Date guess should NOT be "no guess"
-    assert 'no guess' not in bob_row_text.lower(), f'Bob date guess missing: {bob_row_text}'
+    await expect(bob_row).not_to_contain_text('no guess', ignore_case=True)
 
     # - Ambient live pill updates to 2/2 answered
     live_pill = page.locator('#challenge-round-live-status')
@@ -591,9 +586,7 @@ async def test_challenge_opponent_reveal_pin_and_distance_error(page: Page, e2e_
     await expect(p2_reveal_map.locator('.player-pin:has-text("A")')).to_be_visible(timeout=8000)
     alice_row = page2.locator('#reveal-table tbody tr:has-text("Alice")')
     await expect(alice_row).to_be_visible()
-    alice_row_text = await alice_row.text_content()
-    assert alice_row_text is not None
-    assert 'km' in alice_row_text or 'm' in alice_row_text, f'Alice distance error missing: {alice_row_text}'
+    await expect(alice_row).to_contain_text(re.compile(r'\b(?:\d+\s*(?:km|m)|km|m)\b'))
 
     await page2.close()
 

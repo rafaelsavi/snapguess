@@ -11,11 +11,11 @@ from cachetools import TTLCache
 
 from src.api.routes import FILTERS_CACHE_TTL_SECONDS, _filters_cache, invalidate_filters_cache
 from src.game.selector import load_asset_pool, select_pinpoint_round_asset
-from src.immich.client import ImmichClient
 from src.models import (
     GameSetupRequest,
     SyncStatus,
 )
+from src.providers.immich import ImmichPhotoProvider
 from src.storage.db import DatabaseManager
 from src.storage.metadata import MetadataStore
 from src.storage.session import MatchState
@@ -372,9 +372,9 @@ async def test_selector_respects_diversity_on_round_selection() -> None:
     state = MatchState(match_id='test-match', setup=setup)
     state.played_asset_ids.add('a1')
     state.asset_pool = {
-        'a1': ImmichClient.extract_answer(asset1),
-        'a2': ImmichClient.extract_answer(asset2_close),
-        'a3': ImmichClient.extract_answer(asset3_far),
+        'a1': ImmichPhotoProvider.extract_answer(asset1),
+        'a2': ImmichPhotoProvider.extract_answer(asset2_close),
+        'a3': ImmichPhotoProvider.extract_answer(asset3_far),
     }
 
     round_asset = await select_pinpoint_round_asset(

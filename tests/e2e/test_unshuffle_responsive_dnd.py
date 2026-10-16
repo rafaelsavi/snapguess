@@ -112,10 +112,7 @@ async def test_unshuffle_responsive_layouts_and_orientation_swap(page: Page) -> 
     # 2. Samsung Galaxy Z Fold 7 Landscape (1092 x 984 >= 1024px)
     # -------------------------------------------------------------------------
     await page.set_viewport_size({'width': 1092, 'height': 984})
-    await page.wait_for_timeout(100)
-
-    disp_fold_land = await cards_list.evaluate('el => getComputedStyle(el).display')
-    assert disp_fold_land == 'grid', 'Z Fold 7 landscape must be in single row horizontal mode'
+    await expect(cards_list).to_have_css('display', 'grid')
     await expect(oldest_header).to_contain_text('⬅️')
     await expect(first_card.locator('button.shuffle-rank-btn').first).to_have_text('◀')
 
@@ -126,15 +123,10 @@ async def test_unshuffle_responsive_layouts_and_orientation_swap(page: Page) -> 
     # 3. Samsung Galaxy Z Fold 7 Portrait (984 x 1092 < 1024px)
     # -------------------------------------------------------------------------
     await page.set_viewport_size({'width': 984, 'height': 1092})
-    await page.wait_for_timeout(100)
 
     # Must dynamically switch to vertical column!
-    disp_fold_port = await cards_list.evaluate('el => getComputedStyle(el).display')
-    assert disp_fold_port == 'flex', f'Z Fold 7 portrait must be in flex mode, got {disp_fold_port}'
-    flex_dir_fold_port = await cards_list.evaluate('el => getComputedStyle(el).flexDirection')
-    assert flex_dir_fold_port == 'column', (
-        f'Z Fold 7 portrait must be in vertical column mode, got {flex_dir_fold_port}'
-    )
+    await expect(cards_list).to_have_css('display', 'flex')
+    await expect(cards_list).to_have_css('flex-direction', 'column')
 
     # Header and footer have vertical emojis
     await expect(oldest_header).to_contain_text('⬆️')
@@ -143,13 +135,10 @@ async def test_unshuffle_responsive_layouts_and_orientation_swap(page: Page) -> 
     # Buttons must dynamically switch to ▲ and ▼, stacked vertically to save space
     await expect(first_card.locator('button.shuffle-rank-btn').first).to_have_text('▲')
     await expect(first_card.locator('button.shuffle-rank-btn').last).to_have_text('▼')
-    btn_up_y = await first_card.locator('button.shuffle-rank-btn').first.evaluate(
-        'el => el.getBoundingClientRect().top'
+    btn_tops = await first_card.locator('button.shuffle-rank-btn').evaluate_all(
+        'btns => btns.map(el => el.getBoundingClientRect().top)'
     )
-    btn_down_y = await first_card.locator('button.shuffle-rank-btn').last.evaluate(
-        'el => el.getBoundingClientRect().top'
-    )
-    assert btn_down_y > btn_up_y, 'Rank buttons should be stacked vertically (▲ above ▼) in vertical mode'
+    assert btn_tops[1] > btn_tops[0], 'Rank buttons should be stacked vertically (▲ above ▼) in vertical mode'
 
     btn_up_w = await first_card.locator('button.shuffle-rank-btn').first.evaluate(
         'el => el.getBoundingClientRect().width'
@@ -161,9 +150,8 @@ async def test_unshuffle_responsive_layouts_and_orientation_swap(page: Page) -> 
     assert abs(btn_up_h - 38) < 1.0, f'Expected 38px height for vertical rank button, got {btn_up_h}'
 
     # Cards must be arranged vertically: card 1 top > card 0 top
-    card0_y = await cards.nth(0).evaluate('el => el.getBoundingClientRect().top')
-    card1_y = await cards.nth(1).evaluate('el => el.getBoundingClientRect().top')
-    assert card1_y > card0_y, 'Cards should be arranged vertically stacked'
+    card_tops = await cards.evaluate_all('rows => rows.map(el => el.getBoundingClientRect().top)')
+    assert card_tops[1] > card_tops[0], 'Cards should be arranged vertically stacked'
 
     # Max-width on medium screen allows wider cards up to 680px
     max_w = await cards_list.evaluate('el => parseFloat(getComputedStyle(el).maxWidth)')
@@ -176,23 +164,16 @@ async def test_unshuffle_responsive_layouts_and_orientation_swap(page: Page) -> 
     # 4. Standard Mobile Phone (360 x 800)
     # -------------------------------------------------------------------------
     await page.set_viewport_size({'width': 360, 'height': 800})
-    await page.wait_for_timeout(100)
-
-    disp_mobile = await cards_list.evaluate('el => getComputedStyle(el).display')
-    assert disp_mobile == 'flex', 'Mobile screen must be in flex mode'
-    flex_dir_mobile = await cards_list.evaluate('el => getComputedStyle(el).flexDirection')
-    assert flex_dir_mobile == 'column', 'Mobile screen must be in vertical column mode'
+    await expect(cards_list).to_have_css('display', 'flex')
+    await expect(cards_list).to_have_css('flex-direction', 'column')
     await expect(oldest_header).to_contain_text('⬆️')
     await expect(first_card.locator('button.shuffle-rank-btn').first).to_have_text('▲')
 
     # Sorting buttons stacked vertically on mobile
-    btn_mob_up_y = await first_card.locator('button.shuffle-rank-btn').first.evaluate(
-        'el => el.getBoundingClientRect().top'
+    btn_mob_tops = await first_card.locator('button.shuffle-rank-btn').evaluate_all(
+        'btns => btns.map(el => el.getBoundingClientRect().top)'
     )
-    btn_mob_down_y = await first_card.locator('button.shuffle-rank-btn').last.evaluate(
-        'el => el.getBoundingClientRect().top'
-    )
-    assert btn_mob_down_y > btn_mob_up_y, 'Rank buttons must be stacked vertically on mobile'
+    assert btn_mob_tops[1] > btn_mob_tops[0], 'Rank buttons must be stacked vertically on mobile'
 
     overflow = await page.evaluate('() => document.documentElement.scrollWidth > document.documentElement.clientWidth')
     assert not overflow, 'Viewport should have no horizontal overflow on 360px mobile'
@@ -257,8 +238,7 @@ async def test_unshuffle_mouse_and_touch_drag_and_drop(page: Page) -> None:
     await expect(reordered_cards.nth(2).locator('img')).to_have_attribute('src', img0 or '')
 
     # Aria-live polite region must announce movement
-    live_text = await page.locator('#shuffle-live').text_content()
-    assert live_text and '3' in live_text, f"Live region should announce moved position, got '{live_text}'"
+    await expect(page.locator('#shuffle-live')).to_contain_text('3')
 
     # -------------------------------------------------------------------------
     # 2. Touch Drag-and-Drop on Mobile: Touch drag card 0 down to card 1
@@ -428,24 +408,22 @@ async def test_unshuffle_location_mode_vertical_stacking(page: Page) -> None:
 
     cards = page.locator('#shuffle-cards-list .shuffle-card-row')
     await expect(cards).to_have_count(3)
+    await page.wait_for_timeout(200)
 
     first_card = cards.nth(0)
     pin_chips = first_card.locator('.shuffle-pin-chip')
     await expect(pin_chips).to_have_count(3)
 
-    # Pin chips must be stacked vertically (A above B above C)
-    pin0_y = await pin_chips.nth(0).evaluate('el => el.getBoundingClientRect().top')
-    pin1_y = await pin_chips.nth(1).evaluate('el => el.getBoundingClientRect().top')
-    pin2_y = await pin_chips.nth(2).evaluate('el => el.getBoundingClientRect().top')
-    assert pin1_y > pin0_y, 'Pin B should be below Pin A (stacked vertically)'
-    assert pin2_y > pin1_y, 'Pin C should be below Pin B (stacked vertically)'
+    # Pin chips must be stacked vertically (A above B above C), evaluated in a single animation frame
+    pin_tops = await pin_chips.evaluate_all('chips => chips.map(el => el.getBoundingClientRect().top)')
+    assert pin_tops[1] > pin_tops[0], 'Pin B should be below Pin A (stacked vertically)'
+    assert pin_tops[2] > pin_tops[1], 'Pin C should be below Pin B (stacked vertically)'
 
-    # Sorting buttons must also be stacked vertically (▲ above ▼)
+    # Sorting buttons must also be stacked vertically (▲ above ▼), evaluated atomically
     rank_btns = first_card.locator('button.shuffle-rank-btn')
     await expect(rank_btns).to_have_count(2)
-    btn_up_y = await rank_btns.first.evaluate('el => el.getBoundingClientRect().top')
-    btn_down_y = await rank_btns.last.evaluate('el => el.getBoundingClientRect().top')
-    assert btn_down_y > btn_up_y, 'Down button should be below Up button (stacked vertically)'
+    btn_tops = await rank_btns.evaluate_all('btns => btns.map(el => el.getBoundingClientRect().top)')
+    assert btn_tops[1] > btn_tops[0], 'Down button should be below Up button (stacked vertically)'
 
 
 async def test_unshuffle_touch_scroll_conflict_prevention(page: Page) -> None:
