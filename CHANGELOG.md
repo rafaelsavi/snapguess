@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.0] - 2026-10-16
+
+### Added
+
+- **Standalone Local Folder Photo Provider (`PHOTO_PROVIDER=local`)**: Play SnapGuess entirely standalone without requiring Immich or an external photo server by configuring `LOCAL_LIBRARIES={"Family": "/photos/family"}`. Features automated offline reverse-geocoding, relative subfolder album mapping (e.g. `2023 Summer / Hawaii`), on-demand thumbnail generation with strict anti-cheat metadata stripping, and microsecond incremental filesystem change detection.
+
 ## [4.2.0] - 2026-10-15
 
 ### Added

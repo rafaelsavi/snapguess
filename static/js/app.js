@@ -568,6 +568,18 @@ async function initUiConfig() {
 
 function applyUiConfig(config) {
   if (!config) return;
+  if (config.photo_provider) {
+    state.photoProvider = config.photo_provider;
+    if (config.photo_provider !== "immich") {
+      const sourcesRow = document.querySelector(".filter-sources-row");
+      if (sourcesRow) {
+        sourcesRow.style.display = "none";
+      }
+      if (el.includeSharedCheckbox) {
+        el.includeSharedCheckbox.checked = false;
+      }
+    }
+  }
   if (config.immich_web_url) {
     state.immichWebUrl = config.immich_web_url;
   }

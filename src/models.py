@@ -1462,6 +1462,7 @@ class UiConfigResponse(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
+    photo_provider: str = 'immich'
     language: str
     score_max_points: int
     version: str

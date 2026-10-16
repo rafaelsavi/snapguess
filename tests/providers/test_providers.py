@@ -9,6 +9,7 @@ from src.providers import (
     BasePhotoProvider,
     ImmichClientError,
     ImmichPhotoProvider,
+    LocalFolderPhotoProvider,
     ProviderError,
     create_photo_provider,
 )
@@ -77,6 +78,19 @@ def test_create_photo_provider_immich() -> None:
     assert isinstance(provider, ImmichPhotoProvider)
     assert provider.provider_id == 'immich'
     assert provider.list_libraries() == ['default']
+
+
+def test_create_photo_provider_local(tmp_path: pytest.TempPathFactory) -> None:
+    """Verify factory returns LocalFolderPhotoProvider when photo_provider is 'local'."""
+    lib_path = str(tmp_path)
+    settings = AppSettings(
+        photo_provider='local',
+        local_libraries={'local_fam': lib_path},
+    )
+    provider = create_photo_provider(settings)
+    assert isinstance(provider, LocalFolderPhotoProvider)
+    assert provider.provider_id == 'local'
+    assert provider.list_libraries() == ['local_fam']
 
 
 def test_create_photo_provider_unsupported(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -5,6 +5,7 @@ from __future__ import annotations
 from src.config import AppSettings
 from src.providers.base import BasePhotoProvider, ProviderError
 from src.providers.immich import ImmichPhotoProvider
+from src.providers.local import LocalFolderPhotoProvider
 
 
 def create_photo_provider(settings: AppSettings) -> BasePhotoProvider:
@@ -15,6 +16,11 @@ def create_photo_provider(settings: AppSettings) -> BasePhotoProvider:
         return ImmichPhotoProvider(
             server_url=settings.immich_server_url,
             library_keys=settings.immich_libraries,
+        )
+
+    if provider_type == 'local':
+        return LocalFolderPhotoProvider(
+            libraries=settings.local_libraries,
         )
 
     raise ProviderError(f"Unsupported PHOTO_PROVIDER: '{settings.photo_provider}'")

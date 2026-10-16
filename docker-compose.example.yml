@@ -12,6 +12,8 @@ services:
     volumes:
       # Persistent SQLite data directory (metadata.db, leaderboard.db)
       - ./data:/app/data
+      # When PHOTO_PROVIDER=local: Mount local photo directories as read-only volumes
+      # - /path/to/my/photos:/photos:ro
     networks:
       - snapguess-net
     # Security: Do NOT mount /var/run/docker.sock
