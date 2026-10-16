@@ -179,6 +179,18 @@ API keys can be generated in Immich under **Account Settings > API Keys**. Follo
 | `tag.read`       | Asset Tag Filters           | `GET /tags`                                          | Retrieves custom asset tags for setup filtering and tag whitelist/blacklist rules.                                                    |
 | `user.read`      | Ownership & Sharing Context | `GET /users/me`                                      | Identifies the authenticated account to distinguish personal photos from shared albums and partner assets.                            |
 
+### Local Folder Configuration
+
+When using standalone folder mode (`PHOTO_PROVIDER=local`), configure `LOCAL_LIBRARIES` as a JSON map of library names to filesystem paths:
+
+```bash
+PHOTO_PROVIDER=local
+LOCAL_LIBRARIES={"Family": "/photos/family", "Travel": "/photos/travel"}
+```
+
+- **Standalone & Offline**: Scans directories recursively, extracts EXIF GPS and timestamps, and maps subfolders to hierarchical albums (e.g. `2023 / Summer / Hawaii`).
+- **Docker Read-Only Mounts**: In `docker-compose.yml`, mount your photo directories as read-only volumes (e.g. `- /path/to/photos:/photos:ro`).
+
 ---
 
 ## 🛠️ Development
