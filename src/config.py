@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import math
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -103,21 +103,22 @@ def _parse_comma_set(value: str | None) -> frozenset[str]:
     return frozenset(item.strip().lower() for item in value.split(',') if item.strip())
 
 
-def _parse_library_map(value: str) -> dict[str, str]:
-    """Parse JSON mapping of library names to Immich API keys."""
+def _parse_library_map(value: str, env_name: str = 'IMMICH_LIBRARIES') -> dict[str, str]:
+    """Parse JSON mapping of library names to Immich API keys or local directory paths."""
     try:
         parsed = json.loads(value)
     except json.JSONDecodeError as exc:
-        raise ConfigError('IMMICH_LIBRARIES must be valid JSON object mapping library names to API keys') from exc
+        raise ConfigError(f'{env_name} must be valid JSON object mapping library names to values') from exc
     if not isinstance(parsed, dict) or not parsed:
-        raise ConfigError('IMMICH_LIBRARIES must be a non-empty JSON object')
+        raise ConfigError(f'{env_name} must be a non-empty JSON object')
 
     normalized: dict[str, str] = {}
     for key, token in parsed.items():
         if not isinstance(key, str) or not key.strip():
-            raise ConfigError('IMMICH_LIBRARIES keys must be non-empty strings')
+            raise ConfigError(f'{env_name} keys must be non-empty strings')
         if not isinstance(token, str) or not token.strip():
-            raise ConfigError(f"IMMICH_LIBRARIES value for '{key}' must be a non-empty API key string")
+            suffix = 'non-empty API key' if env_name == 'IMMICH_LIBRARIES' else 'non-empty directory path'
+            raise ConfigError(f"{env_name} value for '{key}' must be a {suffix}")
         normalized[key.strip()] = token.strip()
     return normalized
 
@@ -163,9 +164,10 @@ def _sanitize_tile_attribution(value: str) -> str:
 class AppSettings:
     """Validated, immutable application settings loaded from environment or configuration."""
 
-    # 1. Immich Connection & Credentials
-    immich_server_url: str
-    immich_libraries: dict[str, str]
+    # 1. Photo Provider & Connection Credentials
+    immich_server_url: str = ''
+    immich_libraries: dict[str, str] = field(default_factory=dict)
+    local_libraries: dict[str, str] = field(default_factory=dict)
     photo_provider: str = 'immich'
 
     # 2. Application & Server Network
@@ -225,16 +227,22 @@ class AppSettings:
     )
 
     def __post_init__(self) -> None:
-        # Normalize and validate Immich server URL
-        normalized_url = _normalize_url(self.immich_server_url, 'IMMICH_SERVER_URL')
-        object.__setattr__(self, 'immich_server_url', normalized_url)
-
         # Validate photo_provider
-        valid_providers = {'immich'}
+        valid_providers = {'immich', 'local'}
         norm_provider = self.photo_provider.strip().lower()
         if norm_provider not in valid_providers:
             raise ConfigError(f'PHOTO_PROVIDER must be one of {sorted(valid_providers)}, got {self.photo_provider!r}')
         object.__setattr__(self, 'photo_provider', norm_provider)
+
+        if norm_provider == 'immich':
+            # Normalize and validate Immich server URL
+            normalized_url = _normalize_url(self.immich_server_url, 'IMMICH_SERVER_URL')
+            object.__setattr__(self, 'immich_server_url', normalized_url)
+            if not self.immich_libraries:
+                raise ConfigError('IMMICH_LIBRARIES is required when PHOTO_PROVIDER is immich')
+        elif norm_provider == 'local':
+            if not self.local_libraries:
+                raise ConfigError('LOCAL_LIBRARIES is required when PHOTO_PROVIDER is local')
 
         # Resolve data path to absolute filesystem path
         object.__setattr__(self, 'data_path', self.data_path.expanduser().resolve())
@@ -356,22 +364,26 @@ def load_settings() -> AppSettings:
     """Load, parse, validate, and return the application configuration from environment variables."""
     load_dotenv()
 
-    # Required settings
-    server_url = os.getenv('IMMICH_SERVER_URL', '').strip()
-    if not server_url:
-        raise ConfigError('IMMICH_SERVER_URL is required')
+    # Provider-specific required settings
+    provider = os.getenv('PHOTO_PROVIDER', 'immich').strip().lower()
+    kwargs: dict[str, Any] = {'photo_provider': provider}
 
-    raw_libraries = os.getenv('IMMICH_LIBRARIES', '').strip()
-    if not raw_libraries:
-        raise ConfigError('IMMICH_LIBRARIES is required')
+    if provider == 'immich':
+        server_url = os.getenv('IMMICH_SERVER_URL', '').strip()
+        if not server_url:
+            raise ConfigError('IMMICH_SERVER_URL is required')
 
-    kwargs: dict[str, Any] = {
-        'immich_server_url': server_url,
-        'immich_libraries': _parse_library_map(raw_libraries),
-    }
+        raw_libraries = os.getenv('IMMICH_LIBRARIES', '').strip()
+        if not raw_libraries:
+            raise ConfigError('IMMICH_LIBRARIES is required')
 
-    if val := _get_env('PHOTO_PROVIDER'):
-        kwargs['photo_provider'] = val.strip().lower()
+        kwargs['immich_server_url'] = server_url
+        kwargs['immich_libraries'] = _parse_library_map(raw_libraries, 'IMMICH_LIBRARIES')
+    elif provider == 'local':
+        raw_local_libs = os.getenv('LOCAL_LIBRARIES', '').strip()
+        if not raw_local_libs:
+            raise ConfigError('LOCAL_LIBRARIES is required when PHOTO_PROVIDER is local')
+        kwargs['local_libraries'] = _parse_library_map(raw_local_libs, 'LOCAL_LIBRARIES')
 
     # Application & Server
     if val := _get_env('APP_HOST'):

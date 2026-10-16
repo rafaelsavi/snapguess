@@ -441,6 +441,10 @@ class SyncEngine:
 
     async def sync_library(self, library_name: str, *, force_full: bool = False) -> None:
         """Perform metadata synchronization (delta or full) for a specific library."""
+        if getattr(self._provider, 'provider_id', '') == 'local':
+            await self._sync_local_library(library_name, force_full=force_full)
+            return
+
         current_state = self._metadata_store.get_sync_state(library_name)
         has_synced = self._metadata_store.has_synced_assets([library_name])
         last_immich_updated_at = current_state.get('last_immich_updated_at')
@@ -945,6 +949,157 @@ class SyncEngine:
             raise
         except Exception as exc:
             logger.error('Error during metadata sync for %s: %s', library_name, exc, exc_info=True)
+            self._metadata_store.set_sync_state(
+                library_name,
+                status=SyncStatus.error,
+                sync_stage=SyncStage.idle,
+                error=str(exc),
+            )
+            raise
+        finally:
+            self._last_sync_completed_at[library_name] = time.monotonic()
+
+    async def _sync_local_library(self, library_name: str, *, force_full: bool = False) -> None:
+        """Perform local filesystem scan, EXIF metadata extraction, and indexing for a library."""
+        current_state = self._metadata_store.get_sync_state(library_name)
+        has_synced = self._metadata_store.has_synced_assets([library_name])
+        last_sync_at = current_state.get('last_sync_at')
+
+        is_delta = (not force_full) and has_synced and bool(last_sync_at)
+        sync_mode = SyncMode.delta if is_delta else SyncMode.full
+        pruned_count = 0
+
+        logger.info('Starting %s metadata sync for local library: %s', sync_mode.value, library_name)
+        sync_start = time.monotonic()
+        self._metadata_store.set_sync_state(
+            library_name,
+            status=SyncStatus.syncing,
+            sync_mode=sync_mode,
+            sync_stage=SyncStage.checking_updates if is_delta else SyncStage.scanning_assets,
+            error=None,
+            synced_assets=0,
+            total_assets=0,
+        )
+
+        try:
+            self._sync_warnings.pop(library_name, None)
+            await self._provider.validate_access(library_name)
+
+            cached_mtimes: dict[str, str] = {}
+            if is_delta:
+                cached_mtimes = self._metadata_store.get_asset_mtimes(library_name)
+
+            asset_dicts, albums_data, asset_albums, all_seen_ids = await asyncio.to_thread(
+                self._provider.scan_library_files,
+                library_name,
+                cached_mtimes,
+                is_delta=is_delta,
+            )
+
+            # 1. Upsert & prune albums
+            if albums_data:
+                self._metadata_store.upsert_albums(library_name, albums_data)
+            if not is_delta:
+                known_album_ids = {a['id'] for a in albums_data}
+                self._metadata_store.prune_missing_albums(library_name, known_album_ids)
+
+            # 2. Upsert assets in batches
+            self._metadata_store.set_sync_state(
+                library_name,
+                status=SyncStatus.syncing,
+                sync_mode=sync_mode,
+                sync_stage=SyncStage.indexing_assets,
+                synced_assets=len(asset_dicts),
+                total_assets=len(all_seen_ids),
+            )
+
+            chunk_size = 500
+            album_links_by_aid: dict[str, list[tuple[str, str]]] = {}
+            for aid, alb_id in asset_albums:
+                album_links_by_aid.setdefault(aid, []).append((aid, alb_id))
+
+            for i in range(0, len(asset_dicts), chunk_size):
+                chunk = asset_dicts[i : i + chunk_size]
+                chunk_albums = [link for a in chunk for link in album_links_by_aid.get(a['id'], [])]
+                self._metadata_store.upsert_assets_batch(library_name, chunk, [], chunk_albums, [])
+
+            # 3. Prune deleted assets in full sync
+            if not is_delta:
+                self._metadata_store.set_sync_state(
+                    library_name,
+                    status=SyncStatus.syncing,
+                    sync_mode=sync_mode,
+                    sync_stage=SyncStage.pruning,
+                )
+                pruned_count = self._metadata_store.prune_missing_assets(library_name, all_seen_ids)
+                if pruned_count > 0:
+                    logger.info('Pruned %d deleted asset(s) from local library %s', pruned_count, library_name)
+
+            # 4. Finalize sync
+            self._metadata_store.set_sync_state(
+                library_name,
+                status=SyncStatus.syncing,
+                sync_mode=sync_mode,
+                sync_stage=SyncStage.finalizing,
+            )
+            now_iso = datetime.now(UTC).isoformat()
+            duration_sec = round(time.monotonic() - sync_start, 2)
+            db_total = self._metadata_store.count_library_assets(library_name)
+            last_full_at = now_iso if not is_delta else current_state.get('last_full_sync_at')
+
+            self._metadata_store.set_sync_state(
+                library_name,
+                status=SyncStatus.idle,
+                sync_stage=SyncStage.idle,
+                last_sync_at=now_iso,
+                last_full_sync_at=last_full_at,
+                last_immich_updated_at=now_iso,
+                sync_mode=sync_mode,
+                last_sync_duration_seconds=duration_sec,
+                synced_assets=db_total,
+                total_assets=db_total,
+                error=None,
+            )
+            self._last_sync_summaries[library_name] = {
+                'library_name': library_name,
+                'sync_mode': sync_mode.value,
+                'assets_synced': len(all_seen_ids),
+                'total_assets': db_total,
+                'duration_seconds': duration_sec,
+                'albums_synced': len(albums_data),
+                'tags_synced': 0,
+                'pruned_assets': pruned_count,
+                'completed_at': now_iso,
+            }
+            logger.info(
+                'Successfully finished %s metadata sync for local %s (%d assets in db, %d scanned in %.2fs)',
+                sync_mode.value,
+                library_name,
+                db_total,
+                len(all_seen_ids),
+                duration_sec,
+            )
+
+            self._metadata_store.db.checkpoint(mode='TRUNCATE')
+            self._metadata_store.db.optimize()
+
+            if self._on_sync_complete is not None:
+                try:
+                    self._on_sync_complete(library_name)
+                except Exception as cb_exc:
+                    logger.warning('on_sync_complete callback failed for library %s: %s', library_name, cb_exc)
+
+        except asyncio.CancelledError:
+            logger.warning('Local metadata sync for %s was cancelled', library_name)
+            self._metadata_store.set_sync_state(
+                library_name,
+                status=SyncStatus.idle,
+                sync_stage=SyncStage.idle,
+                error='Sync cancelled',
+            )
+            raise
+        except Exception as exc:
+            logger.error('Error during local metadata sync for %s: %s', library_name, exc, exc_info=True)
             self._metadata_store.set_sync_state(
                 library_name,
                 status=SyncStatus.error,

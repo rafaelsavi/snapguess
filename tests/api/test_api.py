@@ -86,6 +86,7 @@ def test_ui_config_exposes_layout_parameters(client: TestClient) -> None:
 
     assert response.status_code == 200
     body = response.json()
+    assert body['photo_provider'] == 'immich'
     assert body['language'] == 'EN'
     assert body['score_max_points'] == 100
     assert 'immich_web_url' in body
@@ -1169,6 +1170,7 @@ def test_ui_config_returns_runtime_metadata(tmp_path: Path) -> None:
     res = client.get('/api/ui-config')
     assert res.status_code == 200
     data = res.json()
+    assert data['photo_provider'] == 'immich'
     assert data['language'] == 'EN'
     assert data['score_max_points'] == 100
     assert 'version' in data

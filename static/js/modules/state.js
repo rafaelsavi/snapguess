@@ -22,6 +22,7 @@ export const state = {
   gameMode: "pinpoint",
   players: [],
   language: getInitialLanguagePreference(),
+  photoProvider: "immich",
   immichWebUrl: null,
   tileConfig: null,
   audioEnabled: true,
