@@ -35,7 +35,7 @@ snapguess/
 │   ├── api/
 │   │   ├── auth_routes.py Identity and role introspection endpoint (/api/auth/me).
 │   │   ├── routes.py    Standard local match API endpoints (setup, question, answer, result).
-│   │   └── challenge_routes.py Async & hybrid multiplayer challenge endpoints (create, start, question, answer, leaderboard, deactivate).
+│   │   └── challenge_routes.py Async & hybrid multiplayer challenge endpoints (create, start, question, answer, leaderboard, replay, flag, deactivate).
 │   ├── game/            Modular game mode system and session orchestration.
 │   │   ├── modes.py     BaseGameModeEngine, PinpointEngine,
 │   │   │                UnshuffleEngine, and GameModeRegistry.
@@ -272,12 +272,23 @@ POST /api/challenge/{capability_token}/answer
   └── Records guess in match_round_guesses and authoritative round total in match_rounds
   └── Returns immediate personal reveal scores and true coordinates/dates for that round
 
-GET /api/challenge/{capability_token}/leaderboard
+GET /play/api/{capability_token}/leaderboard
   └── Polled every 3s during reveal screen and finisher intermission
   └── Enforces Fog of War:
       - Unauthenticated callers on active matches receive redacted history ([])
       - Active players only receive round guesses/history for rounds <= completed_round
       - Concluded challenges or finished players receive full match history and guesses
+
+GET /play/api/{capability_token}/replay
+  └── Scoped match replay endpoint for challenge participants and spectators
+  └── Enforces Fog of War:
+      - Active challenges require valid X-Player-Token header (or ?token=) proving player completed all rounds
+      - Concluded/expired challenges permit public access
+  └── Automatically rewrites photo media URLs to /play/media/{capability_token}/{asset_id} for reverse proxy compatibility
+
+POST /play/api/{capability_token}/flag
+  └── In-game photo inconsistency reporting (GPS error, wrong date, broken image)
+  └── Scoped to challenge photo seed; accessible without host/creator role
 ```
 
 ---

@@ -3115,7 +3115,11 @@ class LeaderboardStore:
             )
         return items
 
-    def get_match_replay(self, match_id: str) -> MatchReplayResponse | None:
+    def get_match_replay(
+        self,
+        match_id: str,
+        capability_token: str | None = None,
+    ) -> MatchReplayResponse | None:
         """Query and reconstruct full round-by-round replay data with player guesses and running scores."""
         ch_row = None
         challenge_id = None
@@ -3143,6 +3147,11 @@ class LeaderboardStore:
         if not challenge_id and match_row.get('challenge_id'):
             challenge_id = match_row['challenge_id']
             ch_row = self._db.fetch_one('SELECT * FROM challenges WHERE challenge_id = ?', (challenge_id,))
+
+        if not capability_token and ch_row and ch_row.get('capability_token'):
+            capability_token = ch_row['capability_token']
+
+        media_prefix = f'/play/media/{capability_token}' if capability_token else '/api/media'
 
         challenge_title: str | None = None
         challenge_creator: str | None = None
@@ -3266,7 +3275,7 @@ class LeaderboardStore:
                         unique_pids[pid] = {
                             'asset_id': pid,
                             'true_pin_id': None,
-                            'media_url': f'/api/media/{pid}',
+                            'media_url': f'{media_prefix}/{pid}',
                             'actual_latitude': g.get('actual_latitude'),
                             'actual_longitude': g.get('actual_longitude'),
                             'actual_date': g.get('actual_date'),
@@ -3340,7 +3349,7 @@ class LeaderboardStore:
 
             player_guesses.sort(key=lambda pg: (-pg.cumulative_score, pg.player_name.lower()))
 
-            media_url = f'/api/media/{first_g["asset_id"]}' if first_g.get('asset_id') else None
+            media_url = f'{media_prefix}/{first_g["asset_id"]}' if first_g.get('asset_id') else None
             rounds_data.append(
                 MatchReplayRound(
                     round_number=r_idx + 1,
@@ -3465,6 +3474,7 @@ class LeaderboardStore:
             challenge_id=challenge_id,
             challenge_title=challenge_title,
             challenge_creator=challenge_creator,
+            capability_token=capability_token,
             is_concluded=is_concluded,
             winners=winners,
             players=players,

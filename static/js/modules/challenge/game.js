@@ -56,8 +56,8 @@ export const challengeGame = {
       state.gameMode = challengeSession.challengeData.game_mode || "pinpoint";
       state.mapBounds = challengeSession.challengeData.map_bounds || null;
 
-      // Check for existing session in this tab first (strictly isolated per tab)
-      const savedSession = challengeSession.loadSession(capabilityToken, { tabOnly: true });
+      // Check for existing session (tab-scoped sessionStorage with localStorage fallback)
+      const savedSession = challengeSession.loadSession(capabilityToken);
       if (savedSession) {
         challengeSession.sessionToken = savedSession.token;
         challengeSession.sessionPlayerName = savedSession.playerName;

@@ -16,7 +16,7 @@ The application divides permissions across three distinct roles:
 
 - **Creator (Host)**: Complete administrative control over game parameters, library configurations, photo moderation, challenge creation, leaderboard directories, and match history.
 - **User (Registered Player)**: Access to community leaderboards, historical match replays, player directory profiles, and active challenge lobbies. Cannot modify library sources, generate API tokens, or moderate flagged photos.
-- **Guest (Visitor)**: Temporary or unauthenticated player participating via challenge links or room codes. Replays, global leaderboards, and directory profiles are hidden to preserve player privacy.
+- **Guest (Visitor)**: Temporary or unauthenticated player participating via challenge links or room codes. Historical replays (`/replays`), global leaderboards, and directory profiles are hidden to preserve player privacy. However, upon completing an invited challenge match, guests can view their immediate post-match summary, awards, and round-by-round replay for that specific challenge seed via the capability route (`/play/api/{capability_token}/replay`).
 
 ---
 

@@ -730,7 +730,23 @@ export async function showMatchSummaryByMatchId(
     }
   } else if (challengeData) {
     // Mode: Challenge Summary
-    if (matchId) {
+    const capToken =
+      challengeData.capability_token ||
+      challengeSession?.challengeData?.capability_token;
+
+    if (capToken) {
+      try {
+        const headers = {};
+        if (challengeSession?.sessionToken) {
+          headers["X-Player-Token"] = challengeSession.sessionToken;
+        }
+        const replayRes = await fetch(`/play/api/${encodeURIComponent(capToken)}/replay`, { headers });
+        if (replayRes.ok) {
+          replayData = await replayRes.json();
+          _currentMatchData = replayData;
+        }
+      } catch (_) {}
+    } else if (matchId) {
       try {
         const replayRes = await fetch(`/api/match/${encodeURIComponent(matchId)}/replay`);
         if (replayRes.ok) {
