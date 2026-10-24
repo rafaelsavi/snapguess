@@ -155,6 +155,15 @@ SnapGuess implements defense-in-depth protections for challenge matches:
 - Active answer duration (`time_taken_seconds`) is tracked client-side and validated on the backend.
 - Submissions exceeding `round_length_seconds + 5.0s` (network latency grace window) are flagged or rejected to prevent client-side timer tampering.
 
+### 5. Capability-Scoped Replay & Post-Game Access
+
+- When viewing post-game summaries (`/play/:token/summary`), players fetch complete match replay records via `GET /play/api/{capability_token}/replay`.
+- **Fog of War Verification**:
+  - While a challenge is active, callers must provide a valid participant session token (`X-Player-Token` header or `?token=` parameter) proving that the player has completed all rounds. Incomplete attempts or unauthenticated requests are rejected with HTTP 403.
+  - When a challenge concludes or expires, the finalized replay becomes publicly viewable to all participants and spectators holding the link.
+- **Media URL Rewriting**:
+  - Replay records automatically rewrite round photo media URLs to `/play/media/{capability_token}/{asset_id}`, ensuring guest players can view photos and inspect the World Journey Map without exposing private `/api/media/*` host routes or requiring host authentication behind reverse proxies.
+
 ---
 
 ## 5. Reverse Proxy & Zero Trust Deployment

@@ -28,7 +28,7 @@ Response:
 ```json
 {
   "status": "ok",
-  "version": "4.3.0",
+  "version": "4.3.1",
   "database": "connected"
 }
 ```
@@ -45,7 +45,7 @@ Response:
   "language": "EN",
   "score_max_points": 100,
   "immich_web_url": "https://immich.example.com",
-  "version": "4.3.0",
+  "version": "4.3.1",
   "tile_config": {
     "streets_url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     "streets_attribution": "&copy; OpenStreetMap",
@@ -1032,6 +1032,73 @@ Response (`200 OK`):
       "actual_date": "2023-07-22",
       "actual_city": "São Paulo",
       "actual_country": "Brazil"
+    }
+  ]
+}
+```
+
+### GET /play/api/{capability_token}/replay
+
+Returns detailed round-by-round replay records, actual coordinates/dates, and running player guess histories scoped to the challenge capability token. Used by challenge participants and guests on the Grand Reveal / Summary screen.
+
+Enforces Fog of War:
+- If the challenge is active, requires a valid `X-Player-Token` header (or `?token=` parameter) proving the participant has finished all rounds.
+- If the challenge is concluded or expired, returns the finalized replay for spectators and participants.
+- All media photo URLs in `rounds_data` are automatically scoped to `/play/media/{capability_token}/{asset_id}`, allowing guests to load photos without requiring host authentication.
+
+Headers:
+
+- `X-Player-Token` *(optional if concluded)*: Participant player session token.
+
+Response (`200 OK`):
+
+```json
+{
+  "match_id": "ch_9f8e2a1b3c4d5e6f",
+  "played_at": "2026-09-03T12:00:00Z",
+  "play_mode": "challenge",
+  "game_mode": "pinpoint",
+  "rounds": 5,
+  "round_length": "1m",
+  "location_mode": true,
+  "date_mode": true,
+  "challenge_id": "ch_9f8e2a1b3c4d5e6f",
+  "challenge_title": "Summer Vacation",
+  "challenge_creator": "Host",
+  "capability_token": "ch_9f8e2a1b3c4d5e6f",
+  "is_concluded": false,
+  "winners": ["Alice"],
+  "players": [
+    {
+      "player_name": "Alice",
+      "total_score": 450,
+      "location_score": 230,
+      "date_score": 220,
+      "rank": 1,
+      "is_winner": true,
+      "completed_rounds": 5,
+      "is_finished": true
+    }
+  ],
+  "rounds_data": [
+    {
+      "round_number": 1,
+      "game_mode": "pinpoint",
+      "media_url": "/play/media/ch_9f8e2a1b3c4d5e6f/asset-uuid-101",
+      "actual_latitude": -23.5510,
+      "actual_longitude": -46.6340,
+      "actual_date": "2023-07-22",
+      "player_guesses": [
+        {
+          "player_name": "Alice",
+          "round_score": 94,
+          "cumulative_score": 94,
+          "guess_latitude": -23.5505,
+          "guess_longitude": -46.6333,
+          "distance_km": 1.25,
+          "time_taken_seconds": 12.5
+        }
+      ]
     }
   ]
 }

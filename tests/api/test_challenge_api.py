@@ -6,7 +6,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from conftest import FakeImmichClient, build_client, make_asset, seed_test_metadata
+from fastapi.testclient import TestClient
 
+from src.config import AppSettings
+from src.main import create_app
 from src.models import UnshuffleAnswerItem
 from src.storage.challenge import deterministic_player_color
 
@@ -1316,3 +1319,170 @@ def test_challenge_unshuffle_multiplayer_perfect_score_round_and_standings(tmp_p
     assert sum(bob_photo_scores) == 100
     assert sorted(alice_photo_scores) == [33, 33, 34]
     assert sorted(bob_photo_scores) == [33, 33, 34]
+
+
+def test_challenge_replay_capability_endpoint_and_fog_of_war(tmp_path: Path) -> None:
+    """Verify capability-scoped replay endpoint, Fog of War, and media proxy URL rewriting."""
+    immich = FakeImmichClient(_create_mock_assets(25))
+    client = build_client(tmp_path, immich)
+
+    create_res = client.post(
+        '/api/challenge/create',
+        json={'creator_name': 'Host', 'game_mode': 'pinpoint', 'round_count': 3},
+    )
+    assert create_res.status_code == 200
+    ch_data = create_res.json()
+    token = ch_data['capability_token']
+    ch_id = ch_data['challenge_id']
+
+    # 1. Non-existent challenge returns 404
+    assert client.get('/play/api/nonexistent_token/replay').status_code == 404
+
+    # 2. Start Alice and Bob
+    alice = client.post(f'/play/api/{token}/start', json={'player_name': 'Alice'}).json()
+    alice_token = alice['session_token']
+    bob = client.post(f'/play/api/{token}/start', json={'player_name': 'Bob'}).json()
+    _ = bob['session_token']
+
+    # 3. Active challenge: anonymous request without player token returns 403
+    res_anon = client.get(f'/play/api/{token}/replay')
+    assert res_anon.status_code == 403
+    assert 'Challenge is still active' in res_anon.json()['detail']
+
+    # 4. Active challenge: invalid player token returns 401
+    res_invalid = client.get(
+        f'/play/api/{token}/replay',
+        headers={'X-Player-Token': 'bogus-token-123'},
+    )
+    assert res_invalid.status_code == 401
+
+    # 5. Alice completes only round 0 and 1 (out of 3): replay request returns 403
+    client.post(
+        f'/play/api/{token}/answer',
+        headers={'X-Player-Token': alice_token},
+        json={
+            'round_index': 0,
+            'guessed_latitude': 10.0,
+            'guessed_longitude': 20.0,
+            'guessed_year': 2020,
+            'guessed_month': 1,
+            'time_taken_seconds': 5.0,
+        },
+    )
+    client.post(
+        f'/play/api/{token}/answer',
+        headers={'X-Player-Token': alice_token},
+        json={
+            'round_index': 1,
+            'guessed_latitude': 12.0,
+            'guessed_longitude': 22.0,
+            'guessed_year': 2020,
+            'guessed_month': 1,
+            'time_taken_seconds': 4.0,
+        },
+    )
+    res_alice_incomplete = client.get(
+        f'/play/api/{token}/replay',
+        headers={'X-Player-Token': alice_token},
+    )
+    assert res_alice_incomplete.status_code == 403
+    assert 'Must complete all challenge rounds' in res_alice_incomplete.json()['detail']
+
+    # 6. Alice completes round 2 (now finished all 3 rounds): replay request succeeds
+    client.post(
+        f'/play/api/{token}/answer',
+        headers={'X-Player-Token': alice_token},
+        json={
+            'round_index': 2,
+            'guessed_latitude': 14.0,
+            'guessed_longitude': 24.0,
+            'guessed_year': 2020,
+            'guessed_month': 1,
+            'time_taken_seconds': 3.5,
+        },
+    )
+    res_alice_complete = client.get(
+        f'/play/api/{token}/replay',
+        headers={'X-Player-Token': alice_token},
+    )
+    assert res_alice_complete.status_code == 200
+    replay = res_alice_complete.json()
+    assert replay['challenge_id'] == ch_id
+    assert replay['capability_token'] == token
+    assert len(replay['rounds_data']) == 3
+    # Verify media URLs are capability-scoped for reverse proxy compatibility
+    for rd in replay['rounds_data']:
+        assert rd['media_url'].startswith(f'/play/media/{token}/')
+
+    # 7. Also works with query parameter ?token=
+    res_query = client.get(f'/play/api/{token}/replay?token={alice_token}')
+    assert res_query.status_code == 200
+
+    # 8. Deactivated or concluded challenge allows public access
+    db_mgr = client.app.state.leaderboard_db_manager
+    with db_mgr.connection() as conn:
+        conn.execute('UPDATE challenges SET is_active = 0 WHERE challenge_id = ?', (ch_id,))
+
+    res_concluded = client.get(f'/play/api/{token}/replay')
+    assert res_concluded.status_code == 200
+    assert res_concluded.json()['challenge_id'] == ch_id
+
+
+def test_challenge_replay_guest_access_vs_direct_replay(tmp_path: Path) -> None:
+    """Invited guests can view replay via capability endpoint even when blocked on /api/match."""
+    immich = FakeImmichClient(_create_mock_assets(25))
+    settings = AppSettings(
+        immich_server_url='https://placeholder.example.com/api',
+        immich_libraries={'family': 'token'},
+        data_path=tmp_path,
+        auth_mode='cloudflare',
+        cf_creator_emails=frozenset({'admin@example.com'}),
+        cf_user_emails=frozenset({'player@example.com'}),
+    )
+    app = create_app(settings=settings)
+    app.state.photo_provider = immich
+    if hasattr(app.state, 'sync_engine'):
+        app.state.sync_engine._provider = immich
+    if hasattr(app.state, 'metadata_store'):
+        seed_test_metadata(app.state.metadata_store, 'family', immich)
+
+    with TestClient(app) as cf_client:
+        # Create challenge as admin
+        create_res = cf_client.post(
+            '/api/challenge/create',
+            headers={'cf-access-authenticated-user-email': 'admin@example.com', 'cf-access-user-name': 'Admin'},
+            json={'creator_name': 'Admin', 'game_mode': 'pinpoint', 'round_count': 3},
+        )
+        assert create_res.status_code == 200
+        token = create_res.json()['capability_token']
+        ch_id = create_res.json()['challenge_id']
+
+        # Guest joins and plays all 3 rounds
+        guest_start = cf_client.post(f'/play/api/{token}/start', json={'player_name': 'GuestBob'}).json()
+        guest_token = guest_start['session_token']
+
+        for r_idx in range(3):
+            cf_client.post(
+                f'/play/api/{token}/answer',
+                headers={'X-Player-Token': guest_token},
+                json={
+                    'round_index': r_idx,
+                    'guessed_latitude': 10.0 + r_idx,
+                    'guessed_longitude': 20.0 + r_idx,
+                    'guessed_year': 2020,
+                    'guessed_month': 1,
+                    'time_taken_seconds': 5.0,
+                },
+            )
+
+        # 1. Calling /api/match/{ch_id}/replay without user role yields 403 Forbidden
+        direct_res = cf_client.get(f'/api/match/{ch_id}/replay')
+        assert direct_res.status_code == 403
+
+        # 2. Calling capability-scoped /play/api/{token}/replay with player token yields 200 OK
+        cap_res = cf_client.get(
+            f'/play/api/{token}/replay',
+            headers={'X-Player-Token': guest_token},
+        )
+        assert cap_res.status_code == 200
+        assert cap_res.json()['challenge_id'] == ch_id
