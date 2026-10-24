@@ -143,12 +143,23 @@ async def test_multiplayer_podium_and_winner_resolution(page: Page) -> None:
     await page.locator('#round-count button[data-value="5"]').click()
 
     # Open modal, add second player Bob, start match
-    await page.locator('#prepare-game-btn').click()
+    prepare_btn = page.locator('#prepare-game-btn')
+    await expect(prepare_btn).to_be_enabled()
+    await prepare_btn.click()
+
+    modal = page.locator('#prepare-game-modal')
+    await expect(modal).to_be_visible()
+
     player_input = page.locator('#player-text-input')
     await expect(player_input).to_be_visible()
     await player_input.fill('Bob')
     await page.keyboard.press('Enter')
-    await page.locator('#start-match-btn').click()
+    await expect(page.locator('.player-chip:has-text("Bob")')).to_be_visible()
+
+    start_btn = page.locator('#start-match-btn')
+    await expect(start_btn).to_be_visible()
+    await expect(start_btn).to_be_enabled()
+    await start_btn.click()
 
     pass_overlay = page.locator('#pass-overlay')
 
