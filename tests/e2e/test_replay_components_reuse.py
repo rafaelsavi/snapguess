@@ -234,7 +234,7 @@ async def test_replay_header_challenge_vs_local(page: Page) -> None:
             'play_mode': 'challenge',
             'challenge_id': 'ch_789',
             'challenge_title': 'Summer Roadtrip 2026',
-            'challenge_creator': 'Player',
+            'challenge_creator': 'Host',
         }
     )
 
@@ -253,7 +253,7 @@ async def test_replay_header_challenge_vs_local(page: Page) -> None:
     # Heading is always "Match Replay", subtitle contains challenge title and creator name
     await expect(page.locator('#replay-heading-title')).to_have_text('Match Replay')
     await expect(page.locator('#replay-match-title .replay-challenge-title')).to_have_text('Summer Roadtrip 2026')
-    await expect(page.locator('#replay-match-title .replay-challenge-host')).to_contain_text('Player')
+    await expect(page.locator('#replay-match-title .replay-challenge-host')).to_contain_text('Host')
     await expect(page.locator('#replay-match-title .challenge-live-pill')).to_have_class(re.compile(r'\bis-finished\b'))
     await expect(page.locator('#grand-reveal-podium-section')).to_be_visible()
     await expect(page.locator('#grand-reveal-provisional')).not_to_be_visible()

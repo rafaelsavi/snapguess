@@ -103,8 +103,8 @@ export function playerColor(playerName) {
 
 /**
  * Deterministically computes 1-2 letter initials for player avatar chips.
- * 1 word -> 1 uppercase letter (e.g. "Ivana" -> "I").
- * 2+ words -> First and last word initial (e.g. "Player One" -> "RS").
+ * 1 word -> 1 uppercase letter (e.g. "Player" -> "P").
+ * 2+ words -> First and last word initial (e.g. "Player One" -> "PO").
  * Numbers -> "#N" (e.g. 0 -> "#1").
  * @param {string|number} playerName
  * @returns {string}

@@ -38,7 +38,7 @@ def test_challenge_store_creation_and_retrieval(tmp_path: Path) -> None:
     }
 
     res = store.create_challenge(
-        creator_name='Player',
+        creator_name='Host',
         libraries=['family'],
         config=config,
         asset_ids=['a1', 'a2', 'a3', 'a4', 'a5'],
@@ -49,7 +49,7 @@ def test_challenge_store_creation_and_retrieval(tmp_path: Path) -> None:
     assert res['challenge_id'].startswith('ch_')
     assert len(res['capability_token']) > 10
     assert res['title'] == 'Summer 2024 Challenge'
-    assert res['creator_name'] == 'Player'
+    assert res['creator_name'] == 'Host'
     assert res['libraries'] == ['family']
     assert res['asset_ids'] == ['a1', 'a2', 'a3', 'a4', 'a5']
     assert res['is_active'] is True
@@ -385,7 +385,7 @@ def test_challenge_standings_and_fog_of_war(tmp_path: Path) -> None:
 def test_challenge_models_validation() -> None:
     # 1. ChallengeCreateRequest
     req = ChallengeCreateRequest(
-        creator_name='Player',
+        creator_name='Host',
         title='Roadtrip',
         round_count=10,
         round_length=RoundLength.minute_1,
@@ -393,7 +393,7 @@ def test_challenge_models_validation() -> None:
         date_mode=True,
         expires_in_hours=48,
     )
-    assert req.creator_name == 'Player'
+    assert req.creator_name == 'Host'
     assert req.expires_in_hours == 48
 
     # 2. ChallengeAnswerRequest validation

@@ -556,7 +556,7 @@ def test_leaderboard_challenge_fields(tmp_path: Path) -> None:
                 'ch_test1',
                 'cap_token_123',
                 'Summer 2024 Roadtrip',
-                'Player',
+                'Host',
                 '["family"]',
                 '{}',
                 '[]',

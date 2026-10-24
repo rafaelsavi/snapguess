@@ -101,7 +101,7 @@ flowchart TD
    - Split names: `given_name` + `family_name`
 3. **Email Fallback**:
    - `Cf-Access-Authenticated-User-Email` or `X-Forwarded-Email`
-   - If no explicit name was located in headers or JWT claims, the application formats the username portion before the `@` symbol (e.g. `alex.smith@example.com` → `alex.smith`).
+   - If no explicit name was located in headers or JWT claims, the application formats the username portion before the `@` symbol (e.g. `player.one@example.com` → `player.one`).
 
 ---
 

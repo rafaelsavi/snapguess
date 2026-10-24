@@ -278,7 +278,7 @@ def test_match_replay_api(tmp_path: Path) -> None:
     # 2. Challenge replay with challenge metadata
     ch_store = client.app.state.challenge_store
     ch_rec = ch_store.create_challenge(
-        creator_name='Player',
+        creator_name='Host',
         title='Paris Vacation 2026',
         libraries=['Family'],
         config={'round_count': 2, 'game_mode': 'pinpoint', 'location_mode': True, 'date_mode': True},
@@ -333,7 +333,7 @@ def test_match_replay_api(tmp_path: Path) -> None:
     assert ch_data['play_mode'] == 'challenge'
     assert ch_data['challenge_id'] == ch_id
     assert ch_data['challenge_title'] == 'Paris Vacation 2026'
-    assert ch_data['challenge_creator'] == 'Player'
+    assert ch_data['challenge_creator'] == 'Host'
     assert len(ch_data['rounds_data']) == 1
 
     # 3. Non-existent match replay 404

@@ -38,7 +38,7 @@ def test_challenge_create_pinpoint(tmp_path: Path) -> None:
     client = build_client(tmp_path, immich)
 
     payload = {
-        'creator_name': 'Player',
+        'creator_name': 'Host',
         'title': 'Test Pinpoint Challenge',
         'game_mode': 'pinpoint',
         'round_count': 5,
@@ -56,7 +56,7 @@ def test_challenge_create_pinpoint(tmp_path: Path) -> None:
     assert len(data['capability_token']) > 10
     assert data['play_url'].endswith(f'/play/{data["capability_token"]}')
     assert data['title'] == 'Test Pinpoint Challenge'
-    assert data['creator_name'] == 'Player'
+    assert data['creator_name'] == 'Host'
     assert data['rounds'] == 5
     assert data['game_mode'] == 'pinpoint'
     assert data['created_at'] is not None
@@ -126,7 +126,7 @@ def test_challenge_detail_public_endpoint(tmp_path: Path) -> None:
     create_res = client.post(
         '/api/challenge/create',
         json={
-            'creator_name': 'Player',
+            'creator_name': 'Host',
             'title': 'Public View Test',
             'game_mode': 'pinpoint',
             'round_count': 5,
@@ -140,7 +140,7 @@ def test_challenge_detail_public_endpoint(tmp_path: Path) -> None:
     detail = detail_res.json()
 
     assert detail['title'] == 'Public View Test'
-    assert detail['creator_name'] == 'Player'
+    assert detail['creator_name'] == 'Host'
     assert detail['rounds'] == 5
     assert detail['game_mode'] == 'pinpoint'
     assert detail['total_participants'] == 0
@@ -740,7 +740,7 @@ def test_challenge_individual_player_colors_api(tmp_path: Path) -> None:
     # 1. Create challenge
     create_res = client.post(
         '/api/challenge/create',
-        json={'creator_name': 'Player', 'game_mode': 'pinpoint', 'round_count': 3},
+        json={'creator_name': 'Host', 'game_mode': 'pinpoint', 'round_count': 3},
     )
     token = create_res.json()['capability_token']
 

@@ -1651,10 +1651,12 @@ async def test_sync_engine_cooldown_behavior(meta_store: MetadataStore) -> None:
 
 def test_multi_library_isolated_sync(meta_store: MetadataStore) -> None:
     """Verify that syncing multiple libraries with overlapping assets, people, albums, and tags preserves all data."""
-    # 1. Setup Library 1: Player (assets 1, 2, 3)
-    meta_store.upsert_people('Player', [{'id': 'p1', 'name': 'Alice'}, {'id': 'p2', 'name': 'Bob'}])
-    meta_store.upsert_albums('Player', [{'id': 'alb1', 'name': 'Trip 2022'}, {'id': 'alb2', 'name': 'Family Shared'}])
-    meta_store.upsert_tags('Player', [{'id': 't1', 'name': 'Vacation'}, {'id': 't2', 'name': 'Favorites'}])
+    # 1. Setup Library 1: Main Library (assets 1, 2, 3)
+    meta_store.upsert_people('Main Library', [{'id': 'p1', 'name': 'Alice'}, {'id': 'p2', 'name': 'Bob'}])
+    meta_store.upsert_albums(
+        'Main Library', [{'id': 'alb1', 'name': 'Trip 2022'}, {'id': 'alb2', 'name': 'Family Shared'}]
+    )
+    meta_store.upsert_tags('Main Library', [{'id': 't1', 'name': 'Vacation'}, {'id': 't2', 'name': 'Favorites'}])
 
     assets_lib1 = [
         {
@@ -1692,17 +1694,17 @@ def test_multi_library_isolated_sync(meta_store: MetadataStore) -> None:
         },
     ]
     meta_store.upsert_assets_batch(
-        'Player',
+        'Main Library',
         assets_lib1,
         asset_people=[('ast-1', 'p1'), ('ast-2', 'p2')],
         asset_albums=[('ast-1', 'alb1'), ('ast-2', 'alb2')],
         asset_tags=[('ast-1', 't1'), ('ast-2', 't2')],
     )
 
-    assert meta_store.count_library_assets('Player') == 3
-    assert meta_store.get_indexed_album_ids('Player') == {'alb1', 'alb2'}
+    assert meta_store.count_library_assets('Main Library') == 3
+    assert meta_store.get_indexed_album_ids('Main Library') == {'alb1', 'alb2'}
 
-    # 2. Setup Library 2: Vacation Library (assets 2, 3 overlapping with Player, plus 4)
+    # 2. Setup Library 2: Vacation Library (assets 2, 3 overlapping with Main Library, plus 4)
     meta_store.upsert_people('Vacation Library', [{'id': 'p2', 'name': 'Bob'}, {'id': 'p3', 'name': 'Charlie'}])
     meta_store.upsert_albums(
         'Vacation Library', [{'id': 'alb2', 'name': 'Family Shared'}, {'id': 'alb3', 'name': 'Summer Event'}]
@@ -1753,36 +1755,36 @@ def test_multi_library_isolated_sync(meta_store: MetadataStore) -> None:
     )
 
     # 3. Verify BOTH libraries maintain their assets independently!
-    assert meta_store.count_library_assets('Player') == 3
+    assert meta_store.count_library_assets('Main Library') == 3
     assert meta_store.count_library_assets('Vacation Library') == 3
-    assert meta_store.get_indexed_album_ids('Player') == {'alb1', 'alb2'}
+    assert meta_store.get_indexed_album_ids('Main Library') == {'alb1', 'alb2'}
     assert meta_store.get_indexed_album_ids('Vacation Library') == {'alb2', 'alb3'}
 
     # 4. Check get_albums query separation and union
-    alb_rafael = meta_store.get_albums(['Player'])
-    assert {a['id'] for a in alb_rafael} == {'alb1', 'alb2'}
+    alb_main = meta_store.get_albums(['Main Library'])
+    assert {a['id'] for a in alb_main} == {'alb1', 'alb2'}
 
-    alb_savi = meta_store.get_albums(['Vacation Library'])
-    assert {a['id'] for a in alb_savi} == {'alb2', 'alb3'}
+    alb_vacation = meta_store.get_albums(['Vacation Library'])
+    assert {a['id'] for a in alb_vacation} == {'alb2', 'alb3'}
 
-    alb_both = meta_store.get_albums(['Player', 'Vacation Library'])
+    alb_both = meta_store.get_albums(['Main Library', 'Vacation Library'])
     assert {a['id'] for a in alb_both} == {'alb1', 'alb2', 'alb3'}
 
     # 5. Check get_tags query separation and union
-    tags_rafael = meta_store.get_tags(['Player'])
-    assert {t['id'] for t in tags_rafael} == {'t1', 't2'}
+    tags_main = meta_store.get_tags(['Main Library'])
+    assert {t['id'] for t in tags_main} == {'t1', 't2'}
 
-    tags_savi = meta_store.get_tags(['Vacation Library'])
-    assert {t['id'] for t in tags_savi} == {'t2', 't3'}
+    tags_vacation = meta_store.get_tags(['Vacation Library'])
+    assert {t['id'] for t in tags_vacation} == {'t2', 't3'}
 
-    tags_both = meta_store.get_tags(['Player', 'Vacation Library'])
+    tags_both = meta_store.get_tags(['Main Library', 'Vacation Library'])
     assert {t['id'] for t in tags_both} == {'t1', 't2', 't3'}
 
-    # 6. Test pruning on Player does not touch Vacation Library
-    # Prune Player so only ast-1 and ast-2 remain
-    deleted = meta_store.prune_missing_assets('Player', {'ast-1', 'ast-2'})
+    # 6. Test pruning on Main Library does not touch Vacation Library
+    # Prune Main Library so only ast-1 and ast-2 remain
+    deleted = meta_store.prune_missing_assets('Main Library', {'ast-1', 'ast-2'})
     assert deleted == 1
-    assert meta_store.count_library_assets('Player') == 2
+    assert meta_store.count_library_assets('Main Library') == 2
     assert meta_store.count_library_assets('Vacation Library') == 3  # Unchanged!
 
 
@@ -2199,20 +2201,20 @@ async def test_sync_engine_end_to_end_album_sharing_and_multi_library_isolation(
 
     # User IDs for each library
     user_ids = {
-        'key-Family Library': 'user-savi',
-        'key-Player': 'user-rafael',
+        'key-Owner Library': 'user-owner',
+        'key-Viewer Library': 'user-viewer',
     }
     mock_immich._current_user_id.side_effect = lambda key: user_ids.get(key)
 
-    # Album: "Favoritas", created/owned by Family Library, shared with Player (viewer)
+    # Album: "Favoritas", created/owned by Owner Library, shared with Viewer Library (viewer)
     album_data = {
         'id': 'alb-fav',
         'albumName': 'Favoritas',
         'shared': True,
         'assetCount': 1,
         'albumUsers': [
-            {'user': {'id': 'user-savi'}, 'role': 'owner'},
-            {'user': {'id': 'user-rafael'}, 'role': 'viewer'},
+            {'user': {'id': 'user-owner'}, 'role': 'owner'},
+            {'user': {'id': 'user-viewer'}, 'role': 'viewer'},
         ],
     }
 
@@ -2250,65 +2252,71 @@ async def test_sync_engine_end_to_end_album_sharing_and_multi_library_isolation(
 
     sync_engine = SyncEngine(mock_immich, meta_store)
 
-    # 1. Sync Family Library (the owner of the album)
-    await sync_engine.sync_library('Family Library', force_full=True)
+    # 1. Sync Owner Library (the owner of the album)
+    await sync_engine.sync_library('Owner Library', force_full=True)
 
-    # Assert Family Library album is marked NOT shared (isShared = 0)
-    alb_savi = db_mgr.fetch_one("SELECT is_shared FROM albums WHERE id = 'alb-fav' AND library_name = 'Family Library'")
-    assert alb_savi is not None
-    assert alb_savi['is_shared'] == 0
+    # Assert Owner Library album is marked NOT shared (isShared = 0)
+    alb_owner = db_mgr.fetch_one("SELECT is_shared FROM albums WHERE id = 'alb-fav' AND library_name = 'Owner Library'")
+    assert alb_owner is not None
+    assert alb_owner['is_shared'] == 0
 
-    # Assert Family Library asset is marked NOT shared (is_shared = 0)
-    asset_savi = db_mgr.fetch_one("SELECT is_shared FROM assets WHERE id = 'photo-1' AND library_name = 'Family Library'")
-    assert asset_savi is not None
-    assert asset_savi['is_shared'] == 0
+    # Assert Owner Library asset is marked NOT shared (is_shared = 0)
+    asset_owner = db_mgr.fetch_one(
+        "SELECT is_shared FROM assets WHERE id = 'photo-1' AND library_name = 'Owner Library'"
+    )
+    assert asset_owner is not None
+    assert asset_owner['is_shared'] == 0
 
     # Criteria with include_shared = False must find 1 eligible photo!
-    crit_savi = AssetFilterCriteria(
-        library_names=('Family Library',),
+    crit_owner = AssetFilterCriteria(
+        library_names=('Owner Library',),
         location_mode=True,
         date_mode=True,
         include_shared=False,
     )
-    assert meta_store.count_eligible_assets(crit_savi) == 1
+    assert meta_store.count_eligible_assets(crit_owner) == 1
 
-    # 2. Sync Player (viewer of the album)
-    await sync_engine.sync_library('Player', force_full=True)
+    # 2. Sync Viewer Library (viewer of the album)
+    await sync_engine.sync_library('Viewer Library', force_full=True)
 
-    # Assert Player album is marked SHARED (isShared = 1)
-    alb_rafael = db_mgr.fetch_one("SELECT is_shared FROM albums WHERE id = 'alb-fav' AND library_name = 'Player'")
-    assert alb_rafael is not None
-    assert alb_rafael['is_shared'] == 1
-
-    # Assert Player asset is marked SHARED (is_shared = 1)
-    asset_rafael = db_mgr.fetch_one("SELECT is_shared FROM assets WHERE id = 'photo-1' AND library_name = 'Player'")
-    assert asset_rafael is not None
-    assert asset_rafael['is_shared'] == 1
-
-    # Assert Family Library asset was NOT touched (still is_shared = 0)
-    asset_savi_recheck = db_mgr.fetch_one(
-        "SELECT is_shared FROM assets WHERE id = 'photo-1' AND library_name = 'Family Library'"
+    # Assert Viewer Library album is marked SHARED (isShared = 1)
+    alb_viewer = db_mgr.fetch_one(
+        "SELECT is_shared FROM albums WHERE id = 'alb-fav' AND library_name = 'Viewer Library'"
     )
-    assert asset_savi_recheck is not None
-    assert asset_savi_recheck['is_shared'] == 0
+    assert alb_viewer is not None
+    assert alb_viewer['is_shared'] == 1
 
-    # Querying Player with include_shared = False returns 0
-    crit_rafael_noshared = AssetFilterCriteria(
-        library_names=('Player',),
+    # Assert Viewer Library asset is marked SHARED (is_shared = 1)
+    asset_viewer = db_mgr.fetch_one(
+        "SELECT is_shared FROM assets WHERE id = 'photo-1' AND library_name = 'Viewer Library'"
+    )
+    assert asset_viewer is not None
+    assert asset_viewer['is_shared'] == 1
+
+    # Assert Owner Library asset was NOT touched (still is_shared = 0)
+    asset_owner_recheck = db_mgr.fetch_one(
+        "SELECT is_shared FROM assets WHERE id = 'photo-1' AND library_name = 'Owner Library'"
+    )
+    assert asset_owner_recheck is not None
+    assert asset_owner_recheck['is_shared'] == 0
+
+    # Querying Viewer Library with include_shared = False returns 0
+    crit_viewer_noshared = AssetFilterCriteria(
+        library_names=('Viewer Library',),
         location_mode=True,
         date_mode=True,
         include_shared=False,
     )
-    assert meta_store.count_eligible_assets(crit_rafael_noshared) == 0
+    assert meta_store.count_eligible_assets(crit_viewer_noshared) == 0
 
-    # Querying Player with include_shared = True returns 1
-    crit_rafael_shared = AssetFilterCriteria(
-        library_names=('Player',),
+    # Querying Viewer Library with include_shared = True returns 1
+    crit_viewer_shared = AssetFilterCriteria(
+        library_names=('Viewer Library',),
         location_mode=True,
         date_mode=True,
         include_shared=True,
     )
-    assert meta_store.count_eligible_assets(crit_rafael_shared) == 1
+    assert meta_store.count_eligible_assets(crit_viewer_shared) == 1
 
 
 @pytest.mark.asyncio
