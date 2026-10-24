@@ -85,7 +85,7 @@ The official Docker image is published to GitHub Container Registry (GHCR):
 |----------------------|------------------------------------------------------------|-----------------------------------------------------|
 | `:latest`            | Latest official stable release (multi-arch: amd64 / arm64) | `docker pull ghcr.io/rafaelsavi/snapguess:latest` |
 | `:rc`                | Latest Release Candidate build                             | `docker pull ghcr.io/rafaelsavi/snapguess:rc`     |
-| `:v4.3.2` / `:4.3.2` | Specific semantic release version                          | `docker pull ghcr.io/rafaelsavi/snapguess:v4.3.2` |
+| `:v4.3.4` / `:4.3.4` | Specific semantic release version                          | `docker pull ghcr.io/rafaelsavi/snapguess:v4.3.4` |
 | `:<sha>`             | Exact commit hash build                                    | `docker pull ghcr.io/rafaelsavi/snapguess:<sha>`  |
 
 ### Quick Start
