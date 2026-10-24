@@ -11,7 +11,7 @@ import asyncio
 import re
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 
 from src.auth.models import Role
 from src.auth.service import get_current_auth, require_role
@@ -33,6 +33,7 @@ from src.models import (
     FlagAssetResponse,
     GameMode,
     MapBounds,
+    MatchReplayResponse,
     RoundLength,
 )
 from src.providers import BasePhotoProvider, ProviderError
@@ -488,7 +489,78 @@ async def get_challenge_leaderboard(
         round_length=str(config.get('round_length', '1m')),
         filter_summary=config.get('filter_summary'),
         filter_tooltip=config.get('filter_tooltip'),
+        capability_token=capability_token,
     )
+
+
+@play_router.get(
+    '/api/{capability_token}/replay',
+    response_model=MatchReplayResponse,
+)
+async def get_challenge_replay(
+    capability_token: str,
+    x_player_token: str | None = Header(default=None),
+    token: str | None = Query(default=None),
+    challenge_store: ChallengeStore = Depends(get_challenge_store),
+    leaderboard_store: LeaderboardStore = Depends(get_leaderboard_store),
+) -> MatchReplayResponse:
+    """Capability-scoped match replay endpoint for challenge participants and spectators.
+
+    Enforces Fog of War:
+    - If the challenge is active, requires a valid player session token proving the player
+      has completed all rounds.
+    - If the challenge is concluded/expired, allows anyone holding the capability token.
+    Media URLs are automatically rewritten to /play/media/{capability_token}/{asset_id}.
+    """
+    challenge = await asyncio.to_thread(challenge_store.get_challenge_by_token, capability_token, include_inactive=True)
+    if not challenge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Challenge not found.')
+
+    is_expired = False
+    if challenge.get('expires_at'):
+        try:
+            exp = datetime.fromisoformat(challenge['expires_at'])
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=UTC)
+            if datetime.now(UTC) > exp:
+                is_expired = True
+        except Exception:
+            pass
+
+    is_stopped = not challenge.get('is_active', True)
+    is_concluded = bool(is_stopped or is_expired)
+
+    effective_player_token = x_player_token or token
+
+    if not is_concluded:
+        if not effective_player_token:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='Challenge is still active. Complete all rounds to view match replay.',
+            )
+        session = await asyncio.to_thread(challenge_store.get_player_session, effective_player_token)
+        if not session or session.get('challenge_id') != challenge['challenge_id']:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid session token.')
+
+        total_rounds = get_challenge_total_rounds(challenge)
+        if session.get('current_round', 0) < total_rounds and not session.get('completed_at'):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='Must complete all challenge rounds before viewing replay.',
+            )
+
+    replay = await asyncio.to_thread(
+        leaderboard_store.get_match_replay,
+        challenge['challenge_id'],
+        capability_token=capability_token,
+    )
+    if not replay:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Replay records not found.',
+        )
+
+    return replay
 
 
 @play_router.post('/api/{capability_token}/flag', response_model=FlagAssetResponse)

@@ -1097,6 +1097,7 @@ class MatchReplayResponse(BaseModel):
     challenge_id: str | None = None
     challenge_title: str | None = None
     challenge_creator: str | None = None
+    capability_token: str | None = None
     is_concluded: bool | None = None
     winners: list[str] = Field(default_factory=list)
     players: list[MatchSummaryPlayer] = Field(default_factory=list)
@@ -1383,6 +1384,7 @@ class ChallengeLeaderboardResponse(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     challenge_id: str
+    capability_token: str | None = None
     match_id: str | None = None
     title: str | None = None
     game_mode: GameMode

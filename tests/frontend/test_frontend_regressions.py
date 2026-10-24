@@ -3193,3 +3193,10 @@ def test_map_layer_preference_persistence() -> None:
     assert 'map.on("baselayerchange"' in maps_js
     assert 'getPreferredMapLayer()' in maps_js
     assert 'activeBaseLayer = prefLayer === "hybrid" ? base.hybrid : base.streets' in maps_js
+
+
+def test_summary_screen_capability_scoped_replay_fetch() -> None:
+    """Verify that summary.js fetches challenge replay via /play/api/{capToken}/replay with X-Player-Token."""
+    summary_js = (JS_DIR / 'modules' / 'screens' / 'summary.js').read_text(encoding='utf-8')
+    assert '/play/api/${encodeURIComponent(capToken)}/replay' in summary_js
+    assert 'headers["X-Player-Token"] = challengeSession.sessionToken' in summary_js
