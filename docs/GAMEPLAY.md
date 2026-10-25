@@ -101,7 +101,7 @@ Challenges let friends play the same game on their own devices, whenever they ar
 ### 2. Joining a Challenge
 
 - Friends open the link on mobile or desktop without needing an account.
-- **New Players**: Enter a name and see the player color and initials before joining.
+- **New Players**: Enter a name and see the player color and initials before joining. When verified identity locking (`CF_LOCK_PLAYER_NAME=true`) is enabled on the server, authenticated players have their name locked automatically with a **🔒 Verified Identity** badge.
 - **Returning Players**: If a player has played on the device before, a two-path layout offers:
   1. *Resume Active Session*: Return to the round where they left off.
   2. *Play as Someone Else*: Form to start a fresh attempt under a different name.
