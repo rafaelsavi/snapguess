@@ -26,7 +26,6 @@ export const state = {
   immichWebUrl: null,
   tileConfig: null,
   audioEnabled: true,
-  musicEnabled: true,
   scoreMaxPoints: 100,
   auth: {
     role: "creator",  // default: full access (matches AUTH_MODE=disabled backend)
@@ -117,8 +116,6 @@ export const el = {
   langIcon: document.getElementById("lang-icon"),
   audioToggleBtn: document.getElementById("audio-toggle-btn"),
   audioIcon: document.getElementById("audio-icon"),
-  musicToggleBtn: document.getElementById("music-toggle-btn"),
-  musicIcon: document.getElementById("music-icon"),
   settingsToggleBtn: document.getElementById("settings-toggle-btn"),
   settingsDropdown: document.getElementById("settings-dropdown"),
   homeNavBtn: document.getElementById("home-nav-btn"),

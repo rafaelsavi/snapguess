@@ -372,9 +372,6 @@
         <button type="button" id="audio-toggle-btn" class="audio-toggle-btn" title="Toggle Sound Effects" aria-label="Toggle Sound Effects">
           <span id="audio-icon">🔊</span>
         </button>
-        <button type="button" id="music-toggle-btn" class="audio-toggle-btn music-toggle-btn" title="Toggle Soundtrack" aria-label="Toggle Soundtrack">
-          <span id="music-icon">🎵</span>
-        </button>
       </div>
     </header>
 
@@ -383,7 +380,6 @@
       <div class="status-items">
         <span>Audio Status:</span>
         <span id="audio-enabled-badge" class="badge badge-running">🔊 SFX: Active</span>
-        <span id="music-enabled-badge" class="badge badge-running">🎵 BGM: Active</span>
         <span id="audio-ctx-badge" class="badge badge-suspended">AudioContext: Suspended</span>
       </div>
       <button type="button" id="unlock-audio-btn" class="btn-sim btn-sim-outline">
@@ -518,24 +514,6 @@
           </div>
           <button type="button" id="play-tap-btn" class="btn-sim">▶ Play Tap Blip</button>
         </div>
-      </div>
-    </section>
-
-    <!-- Procedural Soundtrack (BGM) Sequencer -->
-    <section class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-        <div>
-          <h2 style="margin: 0;">Procedural Soundtrack (BGM)</h2>
-          <p class="preset-desc" style="margin: 0.25rem 0 0 0;">Preview procedural mood transitions synthesised at runtime via Web Audio API.</p>
-        </div>
-        <span id="bgm-mood-badge" class="badge badge-suspended">Mood: Idle</span>
-      </div>
-
-      <div class="sim-buttons" style="margin-top: 1rem;">
-        <button type="button" id="bgm-mood-lobby-btn" class="btn-sim">🛋️ Lobby / Menu Pad</button>
-        <button type="button" id="bgm-mood-game-btn" class="btn-sim">🎮 Round Focus Arpeggio</button>
-        <button type="button" id="bgm-mood-tension-btn" class="btn-sim btn-sim-alt">⚡ 10s Countdown Tension</button>
-        <button type="button" id="bgm-mood-stop-btn" class="btn-sim btn-sim-outline">⏹️ Stop / Fade BGM</button>
       </div>
     </section>
 

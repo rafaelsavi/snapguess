@@ -50,11 +50,9 @@ async def test_lobby_setup_dynamic_language_switch(page: Page) -> None:
     country_search = page.locator('#country-multi-select .multi-select-search')
     await expect(country_search).to_have_attribute('placeholder', 'Search countries...')
 
-    # Audio and music button titles
+    # Audio button title
     audio_btn = page.locator('#audio-toggle-btn')
     await expect(audio_btn).to_have_attribute('title', 'Toggle Sound Effects')
-    music_btn = page.locator('#music-toggle-btn')
-    await expect(music_btn).to_have_attribute('title', 'Toggle Soundtrack')
 
     # Leaderboard scope pill & empty cell
     scope_pill = page.locator('#leaderboard-scope-pill')
@@ -77,7 +75,6 @@ async def test_lobby_setup_dynamic_language_switch(page: Page) -> None:
     await expect(library_search).to_have_attribute('placeholder', 'Pesquisar bibliotecas...')
     await expect(country_search).to_have_attribute('placeholder', 'Pesquisar países...')
     await expect(audio_btn).to_have_attribute('title', 'Efeitos de Som: Ativados')
-    await expect(music_btn).to_have_attribute('title', 'Trilha Sonora: Ativada')
     await expect(scope_pill).to_contain_text('Toda a Biblioteca')
     await expect(empty_cell).to_contain_text('Nenhum jogo registrado para esta configuração ainda.')
 
@@ -90,7 +87,6 @@ async def test_lobby_setup_dynamic_language_switch(page: Page) -> None:
     await expect(sync_btn).to_have_attribute('title', re.compile(r'Sync( metadata)?|Metadata not yet synced'))
     await expect(library_search).to_have_attribute('placeholder', 'Search libraries...')
     await expect(audio_btn).to_have_attribute('title', 'Sound Effects: Enabled')
-    await expect(music_btn).to_have_attribute('title', 'Soundtrack: Enabled')
     await expect(scope_pill).to_contain_text('Full Library')
 
 
@@ -458,7 +454,6 @@ async def test_settings_menu_dropdown_interaction(page: Page) -> None:
     settings_menu = page.locator('#settings-menu')
     lang_btn = page.locator('#lang-toggle-btn')
     audio_btn = page.locator('#audio-toggle-btn')
-    music_btn = page.locator('#music-toggle-btn')
 
     await expect(settings_toggle).to_be_visible()
     await expect(settings_menu).not_to_be_visible()
@@ -485,7 +480,6 @@ async def test_settings_menu_dropdown_interaction(page: Page) -> None:
     await expect(settings_toggle).to_have_attribute('aria-expanded', 'true')
     await expect(lang_btn).to_be_visible()
     await expect(audio_btn).to_be_visible()
-    await expect(music_btn).to_be_visible()
 
     # 3. Click Toggle: clicking settings-icon again closes menu
     await settings_icon.click()

@@ -1,7 +1,7 @@
 import { state, el, saveActiveMatchSession, loadActiveMatchSession } from "../state.js";
 import { api } from "../api.js";
 import { t, showAlert } from "../i18n.js";
-import { playSubmitTone, setBgmMood } from "../audio.js";
+import { playSubmitTone } from "../audio.js";
 import { updateSubmitState } from "../maps.js";
 import { renderRoundMeta } from "../formatters.js";
 import { clearTimer, resetTimerBar, startTimer, refreshTimerLanguage } from "../timer.js";
@@ -148,7 +148,6 @@ export async function loadQuestion() {
   state.guessedLatLng = null;
   state.timedOut = false;
   state.currentQuestion = null;
-  setBgmMood("game");
 
   if (el.revealUi) el.revealUi.classList.add("hidden");
   if (el.guessingUi) el.guessingUi.classList.remove("hidden");

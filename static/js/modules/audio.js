@@ -1,8 +1,5 @@
 import { state, el } from "./state.js";
 import { t } from "./i18n.js";
-import { setMusicEnabled, setBgmMood, getBgmMood, onAudioUnlocked } from "./bgm.js";
-
-export { setBgmMood, getBgmMood };
 
 let audioCtx = null;
 let hasUserGesture = false;
@@ -24,19 +21,8 @@ function getInitialAudioPreference() {
   }
 }
 
-function getInitialMusicPreference() {
-  try {
-    const stored = localStorage.getItem("snapguess_music") ?? localStorage.getItem("immich_quiz_music");
-    if (stored === null) return true;
-    return stored === "1";
-  } catch (_) {
-    return true;
-  }
-}
-
 function initializeAudioState() {
   state.audioEnabled = getInitialAudioPreference();
-  state.musicEnabled = getInitialMusicPreference();
   updateAudioUi();
 }
 
@@ -53,7 +39,6 @@ function removeUnlockListeners() {
 function handleUserGesture() {
   hasUserGesture = true;
   unlockAudioContext();
-  onAudioUnlocked();
   if (audioCtx && audioCtx.state === "running") {
     removeUnlockListeners();
   }
@@ -380,19 +365,6 @@ export function toggleAudio() {
   }
 }
 
-export function toggleMusic() {
-  if (hasUserActivation()) {
-    unlockAudioContext();
-  }
-  state.musicEnabled = !state.musicEnabled;
-  localStorage.setItem("snapguess_music", state.musicEnabled ? "1" : "0");
-  setMusicEnabled(state.musicEnabled);
-  updateAudioUi();
-  if (state.musicEnabled && hasUserActivation()) {
-    playTone(523.25, "triangle", 0.1, 0.08);
-  }
-}
-
 export function updateAudioUi() {
   if (el.audioIcon) {
     el.audioIcon.textContent = state.audioEnabled ? "🔊" : "🔇";
@@ -401,13 +373,5 @@ export function updateAudioUi() {
     const titleText = state.audioEnabled ? t("audio.enabled") : t("audio.muted");
     el.audioToggleBtn.setAttribute("title", titleText);
     el.audioToggleBtn.setAttribute("aria-label", titleText);
-  }
-  if (el.musicIcon) {
-    el.musicIcon.textContent = state.musicEnabled ? "🎵" : "🔇";
-  }
-  if (el.musicToggleBtn) {
-    const musicTitle = state.musicEnabled ? t("music.enabled") : t("music.muted");
-    el.musicToggleBtn.setAttribute("title", musicTitle);
-    el.musicToggleBtn.setAttribute("aria-label", musicTitle);
   }
 }

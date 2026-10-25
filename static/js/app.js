@@ -24,7 +24,7 @@ import {
   getLocale,
   normalizeLanguage,
 } from "./modules/i18n.js";
-import { toggleAudio, toggleMusic, updateAudioUi, setBgmMood } from "./modules/audio.js";
+import { toggleAudio, updateAudioUi } from "./modules/audio.js";
 import { api, getAuthMe, hasRole } from "./modules/api.js";
 import {
   toggleMapFullscreen,
@@ -221,23 +221,6 @@ async function handleRoute(route) {
     state.activeLeaderboardConfig = null;
   }
 
-  if (
-    route.type === RouteType.LOBBY ||
-    route.type === RouteType.PLAYERS ||
-    route.type === RouteType.REPLAYS ||
-    route.type === RouteType.PLAYER_PROFILE ||
-    route.type === RouteType.GAME_REPLAY ||
-    route.type === RouteType.CHALLENGES ||
-    route.type === RouteType.REPORTED
-  ) {
-    setBgmMood("lobby");
-  } else if (
-    route.type === RouteType.GAME_SUMMARY ||
-    route.type === RouteType.CHALLENGE_SUMMARY
-  ) {
-    setBgmMood("reveal");
-  }
-
   switch (route.type) {
     case RouteType.PLAYERS: {
       challenge.reset();
@@ -419,11 +402,6 @@ bindClick(el.langToggleBtn, () => {
 
 bindClick(el.audioToggleBtn, () => {
   toggleAudio();
-  updateAudioUi();
-});
-
-bindClick(el.musicToggleBtn, () => {
-  toggleMusic();
   updateAudioUi();
 });
 

@@ -3215,11 +3215,12 @@ def test_play_route_cloudflare_bypass_boot_endpoints() -> None:
     assert 'const defaultRole = window.location.pathname.startsWith("/play/") ? "guest" : "creator";' in app_js
 
 
-def test_ambient_soundtrack_and_tactile_cues_architecture() -> None:
-    """Verify that procedural Web Audio soundtrack and tactile cues are fully wired across all modules."""
+def test_sound_effects_and_tactile_cues_architecture() -> None:
+    """Verify that sound effects and tactile cues are fully wired and soundtracks are removed."""
     import json
 
-    bgm_js = (JS_DIR / 'modules' / 'bgm.js').read_text(encoding='utf-8')
+    assert not (JS_DIR / 'modules' / 'bgm.js').exists(), 'bgm.js should be removed'
+
     audio_js = (JS_DIR / 'modules' / 'audio.js').read_text(encoding='utf-8')
     state_js = (JS_DIR / 'modules' / 'state.js').read_text(encoding='utf-8')
     common_js = (JS_DIR / 'modules' / 'screens' / 'common.js').read_text(encoding='utf-8')
@@ -3227,46 +3228,42 @@ def test_ambient_soundtrack_and_tactile_cues_architecture() -> None:
     playground_html = AUDIO_PLAYGROUND_HTML.read_text(encoding='utf-8')
     playground_js = (STATIC_DIR / 'js' / 'audio-playground.js').read_text(encoding='utf-8')
 
-    # 1. bgm.js exports
-    assert 'export function setBgmMood(' in bgm_js
-    assert 'export function setMusicEnabled(' in bgm_js
-    assert 'export function getBgmMood(' in bgm_js
-    assert 'export function onAudioUnlocked(' in bgm_js
-    assert 'LOBBY_CHORDS' in bgm_js
-    assert 'GAME_ARPEGGIO' in bgm_js
-    assert 'TENSION_STEPS' in bgm_js
-
-    # 2. audio.js exports & storage migration
-    assert 'export function toggleMusic()' in audio_js
+    # 1. audio.js exports sound effects & tactile cues only
     assert 'export function playTapSound()' in audio_js
     assert 'export function playTransitionWhoosh()' in audio_js
-    assert 'snapguess_audio' in audio_js
-    assert 'snapguess_music' in audio_js
+    assert 'export function playSubmitTone()' in audio_js
+    assert 'export function playTick(' in audio_js
+    assert 'export function playBuzzer()' in audio_js
+    assert 'export function playChime()' in audio_js
+    assert 'export function playVictoryFanfare()' in audio_js
+    assert 'export function playPinDropSound()' in audio_js
+    assert 'export function playScoreRollupTick(' in audio_js
+    assert 'export function toggleAudio()' in audio_js
+    assert 'setBgmMood' not in audio_js
+    assert 'toggleMusic' not in audio_js
 
-    # 3. state.js wiring
-    assert 'musicEnabled: true,' in state_js
-    assert 'musicToggleBtn: document.getElementById("music-toggle-btn")' in state_js
-    assert 'musicIcon: document.getElementById("music-icon")' in state_js
+    # 2. state.js wiring
+    assert 'musicEnabled' not in state_js
+    assert 'musicToggleBtn' not in state_js
 
-    # 4. Markup integration
-    assert 'id="music-toggle-btn"' in index_html
-    assert 'id="music-icon"' in index_html
-    assert 'id="music-toggle-btn"' in playground_html
-    assert 'id="bgm-mood-badge"' in playground_html
+    # 3. Markup integration
+    assert 'id="music-toggle-btn"' not in index_html
+    assert 'id="music-icon"' not in index_html
+    assert 'id="music-toggle-btn"' not in playground_html
+    assert 'id="bgm-mood-badge"' not in playground_html
+    assert 'setupBgmSequencer' not in playground_js
 
-    # 5. Screen transition whoosh in common.js
+    # 4. Screen transition whoosh in common.js
     assert 'playTransitionWhoosh' in common_js
 
-    # 6. Playground sequencer
-    assert 'setupBgmSequencer()' in playground_js
-
-    # 7. 4-file locale parity for music keys
+    # 5. 4-file locale parity for removed music keys
     en_json = json.loads(LOCALES_DIR.joinpath('en-US.json').read_text(encoding='utf-8'))
     pt_json = json.loads(LOCALES_DIR.joinpath('pt-BR.json').read_text(encoding='utf-8'))
     en_js = (JS_DIR / 'modules' / 'locales' / 'en_US.js').read_text(encoding='utf-8')
     pt_js = (JS_DIR / 'modules' / 'locales' / 'pt_BR.js').read_text(encoding='utf-8')
+    assert len(en_json) == len(pt_json)
     for k in ('music.enabled', 'music.muted', 'music.toggle_title'):
-        assert k in en_json, f'{k} missing in en-US.json'
-        assert k in pt_json, f'{k} missing in pt-BR.json'
-        assert f'"{k}"' in en_js, f'"{k}" missing in en_US.js'
-        assert f'"{k}"' in pt_js, f'"{k}" missing in pt_BR.js'
+        assert k not in en_json, f'{k} should not be in en-US.json'
+        assert k not in pt_json, f'{k} should not be in pt-BR.json'
+        assert f'"{k}"' not in en_js, f'"{k}" should not be in en_US.js'
+        assert f'"{k}"' not in pt_js, f'"{k}" should not be in pt_BR.js'

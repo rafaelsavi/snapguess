@@ -9,7 +9,6 @@ import { getActiveMode } from "../modes/index.js";
 import { showCard } from "./common.js";
 import { loadQuestion } from "./game.js";
 import { challenge } from "../challenge/index.js";
-import { setBgmMood } from "../audio.js";
 
 export async function showRoundReveal(roundNumber) {
   const reveal = await api("/api/round/result", {
@@ -57,7 +56,6 @@ export async function showRoundReveal(roundNumber) {
 
   state.lastReveal = reveal;
   state.currentScreen = "reveal";
-  setBgmMood("reveal");
   showCard(el.gameCard);
   if (el.leaderboardCard) {
     el.leaderboardCard.classList.add("hidden");
