@@ -15,10 +15,10 @@
 
 <p align="center">
   <a href="#-key-features">Key Features</a> •
-  <a href="#-quick-start-30-seconds">Quick Start</a> •
+  <a href="#quick-start">Quick Start</a> •
   <a href="#-game-modes">Game Modes</a> •
   <a href="#-self-hosting">Self-Hosting</a> •
-  <a href="#-role-based-access-control-cloudflare-zero-trust">RBAC & Security</a> •
+  <a href="#-role-based-access-control-zero-trust">RBAC & Security</a> •
   <a href="#-documentation">Documentation</a>
 </p>
 
@@ -85,7 +85,7 @@ The official Docker image is published to GitHub Container Registry (GHCR):
 |----------------------|------------------------------------------------------------|-----------------------------------------------------|
 | `:latest`            | Latest official stable release (multi-arch: amd64 / arm64) | `docker pull ghcr.io/rafaelsavi/snapguess:latest` |
 | `:rc`                | Latest Release Candidate build                             | `docker pull ghcr.io/rafaelsavi/snapguess:rc`     |
-| `:v4.3.4` / `:4.3.4` | Specific semantic release version                          | `docker pull ghcr.io/rafaelsavi/snapguess:v4.3.4` |
+| `:v4.3.5` / `:4.3.5` | Specific semantic release version                          | `docker pull ghcr.io/rafaelsavi/snapguess:v4.3.5` |
 | `:<sha>`             | Exact commit hash build                                    | `docker pull ghcr.io/rafaelsavi/snapguess:<sha>`  |
 
 ### Quick Start
@@ -109,6 +109,7 @@ Use the example files:
 | `AUTH_MODE`                      | No       | `disabled`    | Access control mode (`disabled` for single-tenant / full host access; `cloudflare` for Zero Trust header enforcement)                                                                                            |
 | `CF_CREATOR_EMAILS`              | No       | —             | Comma-separated emails granted Creator role (game creation, filter setup, library inspection, reported asset moderation)                                                                                         |
 | `CF_USER_EMAILS`                 | No       | —             | Comma-separated emails granted User role (join & play challenges, explore stats directory, view match replays)                                                                                                   |
+| `CF_LOCK_PLAYER_NAME`            | No       | `false`       | Strictly enforce verified reverse proxy / Cloudflare Access display names for challenge players (disabling custom nickname inputs)                                                                               |
 | `DATA_PATH`                      | No       | `data`        | Directory for SQLite persistence (`metadata.db` and `leaderboard.db`)                                                                                                                                            |
 | `AUTO_SYNC_ON_STARTUP`           | No       | `true`        | Auto-trigger metadata sync in the background on server startup                                                                                                                                                   |
 | `AUTO_DELTA_SYNC_INTERVAL_HOURS` | No       | `6`           | Interval in hours for periodic delta metadata sync (`0` disables)                                                                                                                                                |
@@ -126,6 +127,12 @@ Use the example files:
 | `EXCLUDE_FLAGGED_ASSETS`         | No       | `true`        | Exclude reported photos with metadata inconsistencies from question pools (default: true)                                                                                                                        |
 | `DATE_LOWER_BOUND`               | No       | —             | Inclusive lower date bound (`YYYY-MM-DD`) for photos fetched into quiz rounds                                                                                                                                    |
 | `DATE_UPPER_BOUND`               | No       | —             | Inclusive upper date bound (`YYYY-MM-DD`) for photos fetched into quiz rounds                                                                                                                                    |
+| `TILE_URL_STREETS`               | No       | OpenStreetMap | Custom map tile URL template for street view (e.g. Mapbox, self-hosted tile server)                                                                                                                               |
+| `TILE_ATTRIBUTION_STREETS`       | No       | `&copy; OpenStreetMap` | Custom HTML attribution string for street map tiles                                                                                                                                                       |
+| `TILE_URL_SATELLITE`             | No       | Esri World    | Custom map tile URL template for satellite imagery view                                                                                                                                                           |
+| `TILE_ATTRIBUTION_SATELLITE`     | No       | `Tiles &copy; Esri...` | Custom HTML attribution string for satellite map tiles                                                                                                                                                   |
+| `TILE_URL_HYBRID_BOUNDARIES`     | No       | Esri Boundaries | Custom map tile URL template for hybrid overlay boundaries                                                                                                                                                       |
+| `TILE_URL_HYBRID_ROADS`          | No       | Esri Transport | Custom map tile URL template for hybrid overlay roads                                                                                                                                                            |
 
 ---
 
@@ -142,6 +149,7 @@ SnapGuess features a zero-trust, role-based access control (RBAC) architecture t
 - **Local / Single-Player**: Default mode (`AUTH_MODE=disabled`) automatically grants full Creator access with display name `'Host'`.
 - **Zero Trust / Production**: Set `AUTH_MODE=cloudflare` to enforce verified identity headers from Cloudflare Access or a reverse proxy. Unrecognized callers receive the Guest role.
 - **Allowlists**: Specify authorized emails or usernames in `CF_CREATOR_EMAILS` and `CF_USER_EMAILS`.
+- **Identity Locking**: Set `CF_LOCK_PLAYER_NAME=true` to enforce verified reverse proxy or Cloudflare Access display names in challenge matches, preventing nickname collisions or impersonation on leaderboards and in replay archives.
 
 📖 **For complete Cloudflare Access setup, OIDC display name mapping, and reverse proxy configs (Caddy, Nginx, Traefik), see [`docs/AUTH.md`](docs/AUTH.md).**
 
@@ -217,6 +225,7 @@ An interactive playground is available at [`/audio-playground`](http://localhost
 ## 📚 Documentation
 
 - [CHANGELOG.md](CHANGELOG.md) — Release history and notable changes
+- [docs/AUTH.md](docs/AUTH.md) — Authentication architecture, Cloudflare Zero Trust setup, and reverse proxy guides
 - [docs/GAMEPLAY.md](docs/GAMEPLAY.md) — Gameplay rules, setup parameters, and UI walkthrough
 - [docs/CHALLENGES.md](docs/CHALLENGES.md) — Multiplayer challenge mode guide, capability tokens, and architecture
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Module design, anti-cheat boundary, and data flow

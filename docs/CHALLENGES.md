@@ -86,7 +86,7 @@ Grand Reveal Summary (/play/:token/summary)
 
 ### 1. Landing & Session Resume (`/play/:token`)
 
-- **New Players**: Enter a player name. An avatar circle dynamically previews the participant's initial and assigned color palette in real-time.
+- **New Players**: Enter a player name. An avatar circle dynamically previews the participant's initial and assigned color palette in real-time. When `CF_LOCK_PLAYER_NAME=true` is enabled, authenticated reverse proxy / Cloudflare Access players have their verified name locked automatically with a **🔒 Verified Identity** badge.
 - **Returning Players**: If a player has an active session on the device, a two-path card appears:
   1. *Resume Active Session*: Shows player avatar, name, and a one-click resume button to continue where they left off.
   2. *Play as Someone Else*: Form to start a fresh attempt under a different name (ideal for shared family tablets or computers).

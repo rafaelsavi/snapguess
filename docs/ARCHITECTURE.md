@@ -382,6 +382,7 @@ The application enforces a 3-tier hierarchical role architecture:
   - Identifiers matching `CF_USER_EMAILS` receive `User`.
   - Unrecognized or missing headers resolve to `Guest`.
   - User display name resolves from custom name headers, JWT claims, or falls back to capitalized email prefix.
+  - **Identity Locking (`CF_LOCK_PLAYER_NAME=true`)**: Strictly locks challenge participants to their verified reverse proxy / Cloudflare Access display names, preventing nickname spoofing and ensuring all match history reliably links to their profile in the replays catalog and player directory.
 - **Backend Enforcement**: FastAPI routes are protected via `dependencies=[Depends(require_role(min_role))]`, rejecting unauthorized callers with HTTP 403 Forbidden.
 - **Client-Side Guards**: Navigation router enforces `ROUTE_MIN_ROLES`, redirecting unauthorized URL transitions to `/` with localized user-friendly toast alerts.
 - **Full Specification**: See [`docs/AUTH.md`](AUTH.md) for detailed claim extraction hierarchy, reverse proxy integration (Caddy, Nginx), and local testing protocols.
