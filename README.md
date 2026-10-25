@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/rafaelsavi/snapguess/releases"><img src="https://img.shields.io/github/v/release/rafaelsavi/snapguess?color=blue&logo=github&label=release" alt="GitHub Release"></a>
   <a href="https://github.com/rafaelsavi/snapguess/pkgs/container/snapguess"><img src="https://img.shields.io/badge/docker-ghcr.io%2Frafaelsavi%2Fsnapguess-blue?logo=docker" alt="GHCR Container"></a>
-  <a href="https://github.com/rafaelsavi/snapguess/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/rafaelsavi/snapguess/ci.yml?branch=main&label=CI&logo=githubactions" alt="CI Status"></a>
+  <a href="https://github.com/rafaelsavi/snapguess/actions/workflows/ci.yml"><img src="https://github.com/rafaelsavi/snapguess/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI Status"></a>
   <a href="https://github.com/immich-app/immich"><img src="https://img.shields.io/badge/immich-v3.2.0+-5c6bc0?logo=googlephotos" alt="Immich Compatibility"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/i18n-en--US%20%7C%20pt--BR-orange" alt="Supported Locales">
@@ -134,7 +134,7 @@ Use the example files:
 SnapGuess features a zero-trust, role-based access control (RBAC) architecture to separate host administration from player gameplay:
 
 | Role | Lobby View | Challenges Hub | Stats & Directory | Replay Viewer | Library Config & Moderation |
-|:---|:---|:---|:---|:---|:---|
+| :--- | :--- | :--- | :--- | :--- | :--- |
 | **👑 Creator** | Setup Card (full filters) | Create, Manage & Play | Full Access | Full Access | Full Access |
 | **👥 Player (User)** | Welcome Card (code input) | Join & Play | Full Access | Full Access | Restricted |
 | **🎟️ Guest** | Welcome Card (code input) | Direct Link / Code Play | Restricted | Restricted | Restricted |

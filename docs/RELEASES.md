@@ -69,7 +69,7 @@ Update the version string in [`pyproject.toml`](../pyproject.toml):
 ```toml
 [project]
 name = "snapguess"
-version = "4.3.0"
+version = "4.3.4"
 ```
 
 ### Step 4: Document Changes in `CHANGELOG.md`
@@ -77,7 +77,7 @@ version = "4.3.0"
 Add a new release section right under the document preamble in [`CHANGELOG.md`](../CHANGELOG.md):
 
 ```markdown
-## [4.3.0] - 2026-10-16
+## [4.3.4] - 2026-10-24
 
 ### Added
 - Feature description here...
