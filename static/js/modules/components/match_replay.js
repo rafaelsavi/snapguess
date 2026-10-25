@@ -35,6 +35,7 @@ import { openReportModal } from "./report_modal.js";
 import { isPhotoLightboxOpen } from "./lightbox.js";
 import { renderRevealTableHeaders, renderRevealTableRows } from "./reveal_table.js";
 import { RoundStage } from "./round_stage.js";
+import { playScrubberClick } from "../audio.js";
 
 /**
  * Strategy contract for rendering round replay maps and scoring tables.
@@ -682,7 +683,9 @@ export class MatchReplayViewer {
   goToRound(idx, { startAtLastPhoto = false, swipeAnimation = null } = {}) {
     if (!this.matchData || !Array.isArray(this.matchData.rounds_data)) return;
     if (idx < 0 || idx >= this.matchData.rounds_data.length) return;
-
+    if (this.currentRoundIndex !== idx) {
+      playScrubberClick();
+    }
     this.currentRoundIndex = idx;
     this.renderCurrentRound({ startAtLastPhoto, swipeAnimation });
 

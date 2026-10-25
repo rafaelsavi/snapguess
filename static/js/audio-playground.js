@@ -10,6 +10,8 @@ import {
   playScoreRollupTick,
   playTapSound,
   playTransitionWhoosh,
+  playCardSnapSound,
+  playScrubberClick,
   toggleAudio,
   unlockAudioContext,
   getAudioContext,
@@ -30,6 +32,8 @@ const playPinBtn = document.getElementById("play-pin-btn");
 const playRollupBtn = document.getElementById("play-rollup-btn");
 const playWhooshBtn = document.getElementById("play-whoosh-btn");
 const playTapBtn = document.getElementById("play-tap-btn");
+const playCardSnapBtn = document.getElementById("play-cardsnap-btn");
+const playScrubberBtn = document.getElementById("play-scrubber-btn");
 
 const synthFreq = document.getElementById("synth-freq");
 const synthFreqNum = document.getElementById("synth-freq-num");
@@ -272,6 +276,24 @@ function setupPresets() {
       playTapSound();
       triggerVisualizer(510, "sine", 0.025);
       logEvent("playTapSound()", "680 ➔ 340 Hz • Sine • 0.025s");
+    });
+  }
+
+  if (playCardSnapBtn) {
+    playCardSnapBtn.addEventListener("click", () => {
+      unlockAudioContext();
+      playCardSnapSound();
+      triggerVisualizer(220, "triangle", 0.035);
+      logEvent("playCardSnapSound()", "320 ➔ 120 Hz • Triangle • 0.035s");
+    });
+  }
+
+  if (playScrubberBtn) {
+    playScrubberBtn.addEventListener("click", () => {
+      unlockAudioContext();
+      playScrubberClick();
+      triggerVisualizer(850, "sine", 0.018);
+      logEvent("playScrubberClick()", "1100 ➔ 550 Hz • Sine • 0.018s");
     });
   }
 }

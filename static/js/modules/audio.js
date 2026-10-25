@@ -353,6 +353,54 @@ export function playTransitionWhoosh() {
   } catch (_) {}
 }
 
+export function playCardSnapSound() {
+  if (!shouldPlay()) return;
+  haptic(12);
+  try {
+    const ctx = getAudioContext();
+    if (!ctx || ctx.state !== "running") return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(320, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.035);
+
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.035);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.035);
+  } catch (_) {}
+}
+
+export function playScrubberClick() {
+  if (!shouldPlay()) return;
+  haptic(8);
+  try {
+    const ctx = getAudioContext();
+    if (!ctx || ctx.state !== "running") return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1100, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(550, ctx.currentTime + 0.018);
+
+    gain.gain.setValueAtTime(0.09, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.018);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.018);
+  } catch (_) {}
+}
+
 export function toggleAudio() {
   if (hasUserActivation()) {
     unlockAudioContext();

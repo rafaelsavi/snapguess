@@ -3231,6 +3231,8 @@ def test_sound_effects_and_tactile_cues_architecture() -> None:
     # 1. audio.js exports sound effects & tactile cues only
     assert 'export function playTapSound()' in audio_js
     assert 'export function playTransitionWhoosh()' in audio_js
+    assert 'export function playCardSnapSound()' in audio_js
+    assert 'export function playScrubberClick()' in audio_js
     assert 'export function playSubmitTone()' in audio_js
     assert 'export function playTick(' in audio_js
     assert 'export function playBuzzer()' in audio_js
@@ -3251,10 +3253,18 @@ def test_sound_effects_and_tactile_cues_architecture() -> None:
     assert 'id="music-icon"' not in index_html
     assert 'id="music-toggle-btn"' not in playground_html
     assert 'id="bgm-mood-badge"' not in playground_html
+    assert 'id="play-cardsnap-btn"' in playground_html
+    assert 'id="play-scrubber-btn"' in playground_html
+    assert 'playCardSnapSound' in playground_js
+    assert 'playScrubberClick' in playground_js
     assert 'setupBgmSequencer' not in playground_js
 
-    # 4. Screen transition whoosh in common.js
+    # 4. Tactile audio triggers in gameplay & replay components
     assert 'playTransitionWhoosh' in common_js
+    unshuffle_js = (JS_DIR / 'modules' / 'modes' / 'unshuffle.js').read_text(encoding='utf-8')
+    assert 'playCardSnapSound()' in unshuffle_js
+    match_replay_js = (JS_DIR / 'modules' / 'components' / 'match_replay.js').read_text(encoding='utf-8')
+    assert 'playScrubberClick()' in match_replay_js
 
     # 5. 4-file locale parity for removed music keys
     en_json = json.loads(LOCALES_DIR.joinpath('en-US.json').read_text(encoding='utf-8'))
