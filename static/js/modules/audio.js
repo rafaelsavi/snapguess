@@ -1,5 +1,8 @@
 import { state, el } from "./state.js";
 import { t } from "./i18n.js";
+import { setMusicEnabled, setBgmMood, getBgmMood, onAudioUnlocked } from "./bgm.js";
+
+export { setBgmMood, getBgmMood };
 
 let audioCtx = null;
 let hasUserGesture = false;
@@ -13,7 +16,17 @@ export function hasUserActivation() {
 
 function getInitialAudioPreference() {
   try {
-    const stored = localStorage.getItem("snapguess_audio");
+    const stored = localStorage.getItem("snapguess_audio") ?? localStorage.getItem("immich_quiz_audio");
+    if (stored === null) return true;
+    return stored === "1";
+  } catch (_) {
+    return true;
+  }
+}
+
+function getInitialMusicPreference() {
+  try {
+    const stored = localStorage.getItem("snapguess_music") ?? localStorage.getItem("immich_quiz_music");
     if (stored === null) return true;
     return stored === "1";
   } catch (_) {
@@ -23,6 +36,7 @@ function getInitialAudioPreference() {
 
 function initializeAudioState() {
   state.audioEnabled = getInitialAudioPreference();
+  state.musicEnabled = getInitialMusicPreference();
   updateAudioUi();
 }
 
@@ -39,6 +53,7 @@ function removeUnlockListeners() {
 function handleUserGesture() {
   hasUserGesture = true;
   unlockAudioContext();
+  onAudioUnlocked();
   if (audioCtx && audioCtx.state === "running") {
     removeUnlockListeners();
   }
@@ -303,6 +318,56 @@ export function playVictoryFanfare() {
   } catch (_) { }
 }
 
+export function playTapSound() {
+  if (!shouldPlay()) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx || ctx.state !== "running") return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(680, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(340, ctx.currentTime + 0.025);
+    gain.gain.setValueAtTime(0.06, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.025);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.025);
+  } catch (_) {}
+}
+
+export function playTransitionWhoosh() {
+  if (!shouldPlay()) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx || ctx.state !== "running") return;
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(140, ctx.currentTime);
+
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(240, ctx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(750, ctx.currentTime + 0.06);
+    filter.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 0.14);
+    filter.Q.setValueAtTime(1.8, ctx.currentTime);
+
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.14);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.14);
+  } catch (_) {}
+}
+
 export function toggleAudio() {
   if (hasUserActivation()) {
     unlockAudioContext();
@@ -315,6 +380,19 @@ export function toggleAudio() {
   }
 }
 
+export function toggleMusic() {
+  if (hasUserActivation()) {
+    unlockAudioContext();
+  }
+  state.musicEnabled = !state.musicEnabled;
+  localStorage.setItem("snapguess_music", state.musicEnabled ? "1" : "0");
+  setMusicEnabled(state.musicEnabled);
+  updateAudioUi();
+  if (state.musicEnabled && hasUserActivation()) {
+    playTone(523.25, "triangle", 0.1, 0.08);
+  }
+}
+
 export function updateAudioUi() {
   if (el.audioIcon) {
     el.audioIcon.textContent = state.audioEnabled ? "🔊" : "🔇";
@@ -323,5 +401,13 @@ export function updateAudioUi() {
     const titleText = state.audioEnabled ? t("audio.enabled") : t("audio.muted");
     el.audioToggleBtn.setAttribute("title", titleText);
     el.audioToggleBtn.setAttribute("aria-label", titleText);
+  }
+  if (el.musicIcon) {
+    el.musicIcon.textContent = state.musicEnabled ? "🎵" : "🔇";
+  }
+  if (el.musicToggleBtn) {
+    const musicTitle = state.musicEnabled ? t("music.enabled") : t("music.muted");
+    el.musicToggleBtn.setAttribute("title", musicTitle);
+    el.musicToggleBtn.setAttribute("aria-label", musicTitle);
   }
 }

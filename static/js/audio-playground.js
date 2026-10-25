@@ -8,7 +8,12 @@ import {
   playVictoryFanfare,
   playPinDropSound,
   playScoreRollupTick,
+  playTapSound,
+  playTransitionWhoosh,
   toggleAudio,
+  toggleMusic,
+  setBgmMood,
+  getBgmMood,
   unlockAudioContext,
   getAudioContext,
   updateAudioUi,
@@ -16,6 +21,7 @@ import {
 
 // DOM Elements
 const audioEnabledBadge = document.getElementById("audio-enabled-badge");
+const musicEnabledBadge = document.getElementById("music-enabled-badge");
 const audioCtxBadge = document.getElementById("audio-ctx-badge");
 const unlockAudioBtn = document.getElementById("unlock-audio-btn");
 
@@ -26,6 +32,14 @@ const playChimeBtn = document.getElementById("play-chime-btn");
 const playFanfareBtn = document.getElementById("play-fanfare-btn");
 const playPinBtn = document.getElementById("play-pin-btn");
 const playRollupBtn = document.getElementById("play-rollup-btn");
+const playWhooshBtn = document.getElementById("play-whoosh-btn");
+const playTapBtn = document.getElementById("play-tap-btn");
+
+const bgmMoodBadge = document.getElementById("bgm-mood-badge");
+const bgmMoodLobbyBtn = document.getElementById("bgm-mood-lobby-btn");
+const bgmMoodGameBtn = document.getElementById("bgm-mood-game-btn");
+const bgmMoodTensionBtn = document.getElementById("bgm-mood-tension-btn");
+const bgmMoodStopBtn = document.getElementById("bgm-mood-stop-btn");
 
 const synthFreq = document.getElementById("synth-freq");
 const synthFreqNum = document.getElementById("synth-freq-num");
@@ -99,7 +113,20 @@ function updateStatusBadges() {
   const isEnabled = state.audioEnabled;
   if (audioEnabledBadge) {
     audioEnabledBadge.className = `badge ${isEnabled ? "badge-running" : "badge-muted"}`;
-    audioEnabledBadge.textContent = isEnabled ? "🔊 Enabled" : "🔇 Muted";
+    audioEnabledBadge.textContent = isEnabled ? "🔊 SFX: Active" : "🔇 SFX: Muted";
+  }
+
+  const isMusicEnabled = state.musicEnabled;
+  if (musicEnabledBadge) {
+    musicEnabledBadge.className = `badge ${isMusicEnabled ? "badge-running" : "badge-muted"}`;
+    musicEnabledBadge.textContent = isMusicEnabled ? "🎵 BGM: Active" : "🔇 BGM: Muted";
+  }
+
+  if (bgmMoodBadge) {
+    const mood = getBgmMood();
+    const isMoodActive = mood !== "idle" && mood !== "reveal" && mood !== "summary";
+    bgmMoodBadge.className = `badge ${isMoodActive ? "badge-running" : "badge-suspended"}`;
+    bgmMoodBadge.textContent = `Mood: ${mood.charAt(0).toUpperCase() + mood.slice(1)}`;
   }
 
   const ctx = getAudioContext();
@@ -250,6 +277,24 @@ function setupPresets() {
         if (stepCount > 10) clearInterval(interval);
       }, 50);
       logEvent("playScoreRollupTick()", "580 ➔ 1100 Hz • Ascending ticker sequence");
+    });
+  }
+
+  if (playWhooshBtn) {
+    playWhooshBtn.addEventListener("click", () => {
+      unlockAudioContext();
+      playTransitionWhoosh();
+      triggerVisualizer(500, "triangle", 0.14);
+      logEvent("playTransitionWhoosh()", "240 ➔ 750 ➔ 180 Hz • Bandpass Sweep • 0.14s");
+    });
+  }
+
+  if (playTapBtn) {
+    playTapBtn.addEventListener("click", () => {
+      unlockAudioContext();
+      playTapSound();
+      triggerVisualizer(510, "sine", 0.025);
+      logEvent("playTapSound()", "680 ➔ 340 Hz • Sine • 0.025s");
     });
   }
 }
@@ -468,12 +513,60 @@ function setupSimulators() {
   }
 }
 
+function setupBgmSequencer() {
+  if (bgmMoodLobbyBtn) {
+    bgmMoodLobbyBtn.addEventListener("click", () => {
+      unlockAudioContext();
+      setBgmMood("lobby");
+      updateStatusBadges();
+      logEvent("setBgmMood('lobby')", "Lobby / Menu Pad • ~58 BPM • Cmaj7 ➔ Am9 ➔ Fmaj7 ➔ G");
+    });
+  }
+
+  if (bgmMoodGameBtn) {
+    bgmMoodGameBtn.addEventListener("click", () => {
+      unlockAudioContext();
+      setBgmMood("game");
+      updateStatusBadges();
+      logEvent("setBgmMood('game')", "Round Focus Arpeggio • 72 BPM • Marimba Pluck Pattern");
+    });
+  }
+
+  if (bgmMoodTensionBtn) {
+    bgmMoodTensionBtn.addEventListener("click", () => {
+      unlockAudioContext();
+      setBgmMood("tension");
+      updateStatusBadges();
+      logEvent("setBgmMood('tension')", "10s Tension • 84 BPM • Sub Heartbeat & Open Filter");
+    });
+  }
+
+  if (bgmMoodStopBtn) {
+    bgmMoodStopBtn.addEventListener("click", () => {
+      setBgmMood("idle");
+      updateStatusBadges();
+      logEvent("setBgmMood('idle')", "Soundtrack faded to silence");
+    });
+  }
+}
+
 // Global UI setup
 function setupGlobal() {
   if (el.audioToggleBtn) {
     el.audioToggleBtn.addEventListener("click", () => {
       toggleAudio();
+      updateAudioUi();
+      updateStatusBadges();
       logEvent("toggleAudio()", `Global audio toggled to ${state.audioEnabled ? "Enabled" : "Muted"}`);
+    });
+  }
+
+  if (el.musicToggleBtn) {
+    el.musicToggleBtn.addEventListener("click", () => {
+      toggleMusic();
+      updateAudioUi();
+      updateStatusBadges();
+      logEvent("toggleMusic()", `Soundtrack toggled to ${state.musicEnabled ? "Active" : "Muted"}`);
     });
   }
 
@@ -507,6 +600,7 @@ function setupGlobal() {
 // Initialize on DOM ready
 document.addEventListener("DOMContentLoaded", () => {
   setupPresets();
+  setupBgmSequencer();
   setupSynth();
   setupCountdownTimer();
   setupSimulators();

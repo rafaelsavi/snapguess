@@ -131,6 +131,7 @@ snapguess/
         ├── admin.js     Admin modal, match termination, and challenge management actions.
         ├── api.js       API HTTP request client.
         ├── audio.js     Zero-dependency Web Audio sound synthesizer engine.
+        ├── bgm.js       Procedural Web Audio soundtrack engine with state-driven mood transitions.
         ├── effects.js   Canvas confetti, animations, and visual transitions.
         ├── formatters.js Distance/date formatters, player identity/name resolution, profile-linked standings cells, relative time formatters, and string helpers.
         ├── i18n.js      Multi-language translation engine (EN/PT), live switcher, and locale-aware date formatting with Today/Yesterday labels.

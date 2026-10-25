@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Ambient Procedural Soundtrack**: Enjoy an immersive, zero-download synthesized musical background that dynamically adapts to game state, transitioning smoothly from warm chords in the lobby and discovery melodies during rounds, to an intensifying heartbeat rhythm during the final countdown and celebratory harmony upon round reveal.
+- **Dedicated Soundtrack Mute Control**: Mute or unmute the ambient background music independently from gameplay sound effects via the settings dropdown menu on both desktop and mobile devices.
+- **Tactile Audio Cues**: Added subtle, high-fidelity sound feedback when navigating between screens and adjusting game setup options or dates.
+
 ## [4.3.6] - 2026-10-29
 
 ### Fixed

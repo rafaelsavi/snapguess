@@ -1,6 +1,6 @@
 import { state, el } from "./state.js";
 import { t } from "./i18n.js";
-import { playTick, playBuzzer } from "./audio.js";
+import { playTick, playBuzzer, setBgmMood } from "./audio.js";
 import { updateSubmitState } from "./maps.js";
 
 let _getActiveModeFn = null;
@@ -284,6 +284,7 @@ function updateTimerUi(remainingMs, totalSec, shouldPlayTick = true) {
 
     if (shouldPlayTick && isTickBoundary && clampedSec <= 10 && clampedSec > 0) {
       playTick(clampedSec);
+      setBgmMood("tension");
     }
   } else {
     // Keep fullscreen timer fill widths & continuous gradient in sync on sub-second frames
@@ -393,6 +394,7 @@ export function startTimer(roundLength, getActiveModeFn = null, initialRemaining
 
   const total = parseRoundDurationSeconds(roundLength);
   if (total === null) {
+    setBgmMood("game");
     const unlimitedText = t("game.timer_unlimited");
     if (el.timerLabel) {
       el.timerLabel.textContent = unlimitedText;
@@ -411,6 +413,8 @@ export function startTimer(roundLength, getActiveModeFn = null, initialRemaining
   if (typeof initialRemainingSeconds === "number" && !isNaN(initialRemainingSeconds)) {
     remaining = Math.max(0, Math.min(total, initialRemainingSeconds));
   }
+
+  setBgmMood(remaining <= 10 ? "tension" : "game");
 
   state.timerRemainingSeconds = remaining;
   state.timerLastTickedSec = Math.ceil(remaining);

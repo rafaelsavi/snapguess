@@ -6,6 +6,9 @@ import { t } from "../i18n.js";
 import { challenge } from "../challenge/index.js";
 import { clearActivityToasts } from "../components/activity_toast.js";
 import { showConfirmDialog } from "../components/dialog.js";
+import { playTransitionWhoosh } from "../audio.js";
+
+let lastVisibleCard = null;
 
 export function clearRevealAnimation() {
   if (state.revealAnimationFrameId !== null) {
@@ -20,6 +23,12 @@ export function clearRevealAnimation() {
 
 export function showCard(cardEl) {
   clearRevealAnimation();
+  if (cardEl && cardEl !== lastVisibleCard) {
+    if (lastVisibleCard !== null) {
+      playTransitionWhoosh();
+    }
+    lastVisibleCard = cardEl;
+  }
   [
     el.setupCard,
     el.homeCard,
