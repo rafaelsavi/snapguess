@@ -5,11 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [4.4.0] - 2026-10-29
 
 ### Added
 
-- **Tactile Audio Cues**: Added subtle, high-fidelity sound feedback when navigating between screens and interacting with controls.
+- **Tactile Audio Cues**: Added subtle, high-fidelity sound feedback when navigating between screens, reordering photos in Unshuffle mode (tactile card snap), scrubbing match replays (mechanical reel tick), and interacting with controls.
 
 ## [4.3.6] - 2026-10-29
 
