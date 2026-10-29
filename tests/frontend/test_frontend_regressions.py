@@ -3200,3 +3200,14 @@ def test_summary_screen_capability_scoped_replay_fetch() -> None:
     summary_js = (JS_DIR / 'modules' / 'screens' / 'summary.js').read_text(encoding='utf-8')
     assert '/play/api/${encodeURIComponent(capToken)}/replay' in summary_js
     assert 'headers["X-Player-Token"] = challengeSession.sessionToken' in summary_js
+
+
+def test_play_route_cloudflare_bypass_boot_endpoints() -> None:
+    """Verify /play/* routes use /play/api/auth/me and /play/api/ui-config and fall back to guest role."""
+    api_js = (JS_DIR / 'modules' / 'api.js').read_text(encoding='utf-8')
+    app_js = (JS_DIR / 'app.js').read_text(encoding='utf-8')
+
+    assert '"/play/api/auth/me"' in api_js
+    assert 'const fallbackRole = isPlayRoute ? "guest" : "creator";' in api_js
+    assert '"/play/api/ui-config"' in app_js
+    assert 'const defaultRole = window.location.pathname.startsWith("/play/") ? "guest" : "creator";' in app_js

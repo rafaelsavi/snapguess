@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import time
 from typing import Any
 
 from fastapi import Depends, HTTPException, Request, status
@@ -32,6 +33,7 @@ _CF_NAME_HEADERS = (
 )
 
 _CF_JWT_HEADER = 'cf-access-jwt-assertion'
+_CF_AUTH_COOKIE = 'CF_Authorization'
 
 
 def _extract_identity_from_jwt(jwt_token: str) -> tuple[str | None, str | None]:
@@ -51,6 +53,10 @@ def _extract_identity_from_jwt(jwt_token: str) -> tuple[str | None, str | None]:
     try:
         data = json.loads(base64.urlsafe_b64decode(payload_b64.encode('ascii')))
         if not isinstance(data, dict):
+            return None, None
+
+        exp = data.get('exp')
+        if isinstance(exp, (int, float)) and exp < time.time():
             return None, None
 
         # Build list of candidate claim containers to support Cloudflare's
@@ -129,8 +135,10 @@ def _resolve_role_cloudflare(request: Request) -> AuthContext:
             raw_name = val.strip()
             break
 
-    # 3. If name or email is missing, check Cloudflare JWT assertion
-    if jwt_token := request.headers.get(_CF_JWT_HEADER):
+    # 3. If name or email is missing, check Cloudflare JWT assertion header or CF_Authorization cookie
+    #    (On Cloudflare Bypass paths like /play/*, Cloudflare omits Cf-Access-* headers,
+    #    but the browser still sends the CF_Authorization session cookie on the same domain.)
+    if jwt_token := (request.headers.get(_CF_JWT_HEADER) or request.cookies.get(_CF_AUTH_COOKIE)):
         jwt_name, jwt_email = _extract_identity_from_jwt(jwt_token)
         if not raw_name and jwt_name:
             raw_name = jwt_name

@@ -10,10 +10,13 @@ from __future__ import annotations
 import asyncio
 import re
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 
-from src.auth.models import Role
+from src.api.auth_routes import get_current_user
+from src.api.routes import ui_config
+from src.auth.models import AuthContext, Role
 from src.auth.service import get_current_auth, require_role
 from src.game.challenge_service import ChallengeService, get_challenge_total_rounds
 from src.models import (
@@ -35,6 +38,7 @@ from src.models import (
     MapBounds,
     MatchReplayResponse,
     RoundLength,
+    UiConfigResponse,
 )
 from src.providers import BasePhotoProvider, ProviderError
 from src.storage.challenge import ChallengeStore
@@ -194,6 +198,21 @@ async def deactivate_challenge(
 # =====================================================================
 # Public Player & Game Routes (/play/api & /play/media)
 # =====================================================================
+
+
+@play_router.get('/api/auth/me')
+async def get_play_current_user(
+    request: Request,
+    auth: AuthContext = Depends(get_current_auth),
+) -> dict[str, Any]:
+    """Public auth context endpoint scoped under /play/api for Cloudflare Bypass compatibility."""
+    return await get_current_user(request=request, auth=auth)
+
+
+@play_router.get('/api/ui-config', response_model=UiConfigResponse)
+async def get_play_ui_config(request: Request) -> dict[str, object]:
+    """Public UI configuration endpoint scoped under /play/api for Cloudflare Bypass compatibility."""
+    return await ui_config(request=request)
 
 
 @play_router.get('/api/{capability_token}', response_model=ChallengeDetailResponse)

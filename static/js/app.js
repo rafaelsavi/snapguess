@@ -559,7 +559,8 @@ function refreshActiveScreenLanguage() {
 
 async function initUiConfig() {
   try {
-    const config = await api("/api/ui-config");
+    const isPlayRoute = typeof window !== "undefined" && window.location.pathname.startsWith("/play/");
+    const config = await api(isPlayRoute ? "/play/api/ui-config" : "/api/ui-config");
     applyUiConfig(config);
   } catch (err) {
     console.warn("Using default UI config:", err);
@@ -848,16 +849,17 @@ function initHomeCard() {
   });
 
   // ---------- Auth init: fetch role and apply UI visibility ----------
+  const defaultRole = window.location.pathname.startsWith("/play/") ? "guest" : "creator";
   try {
     const authData = await getAuthMe();
-    state.auth.role = authData.role || "creator";
+    state.auth.role = authData.role || defaultRole;
     state.auth.email = authData.email || null;
     state.auth.name = authData.name || null;
     state.auth.authenticated = Boolean(authData.authenticated);
     state.auth.lock_player_name = Boolean(authData.lock_player_name);
   } catch (err) {
-    console.warn("Auth fetch failed, defaulting to creator:", err);
-    state.auth.role = "creator";
+    console.warn(`Auth fetch failed, defaulting to ${defaultRole}:`, err);
+    state.auth.role = defaultRole;
   }
   applyAuthUi();
 

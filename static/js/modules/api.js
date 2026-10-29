@@ -18,8 +18,11 @@ export function hasRole(minRole) {
  * @returns {Promise<{role: string, email: string|null, name: string|null, authenticated: boolean}>}
  */
 export async function getAuthMe() {
-  const resp = await fetch("/api/auth/me");
-  if (!resp.ok) return { role: "creator", email: null, name: null, authenticated: false };
+  const isPlayRoute = typeof window !== "undefined" && window.location.pathname.startsWith("/play/");
+  const endpoint = isPlayRoute ? "/play/api/auth/me" : "/api/auth/me";
+  const fallbackRole = isPlayRoute ? "guest" : "creator";
+  const resp = await fetch(endpoint);
+  if (!resp.ok) return { role: fallbackRole, email: null, name: null, authenticated: false };
   return resp.json();
 }
 

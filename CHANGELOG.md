@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.6] - 2026-10-29
+
+### Fixed
+
+- **Cloudflare Zero Trust Challenge Access & Player Identity**: Fixed role and identity detection on public challenge links (`/play/*`) when using Cloudflare Access bypass rules so signed-in players keep their verified identity and role while unauthenticated guests cleanly load in guest mode without blocked boot requests.
+
 ## [4.3.5] - 2026-10-25
 
 ### Changed
