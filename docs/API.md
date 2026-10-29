@@ -33,9 +33,9 @@ Response:
 }
 ```
 
-### GET /api/ui-config
+### GET /api/ui-config (and GET /play/api/ui-config)
 
-Returns frontend configuration parameters, tile layer settings, and application version:
+Returns frontend configuration parameters, tile layer settings, and application version (also exposed under `/play/api/ui-config` for public Cloudflare Bypass challenge routes):
 
 Response:
 
@@ -57,9 +57,9 @@ Response:
 }
 ```
 
-### GET /api/auth/me
+### GET /api/auth/me (and GET /play/api/auth/me)
 
-Returns the resolved role, authenticated email, display name, and authentication status for the current request.
+Returns the resolved role, authenticated email, display name, and authentication status for the current request (also exposed under `/play/api/auth/me` for public Cloudflare Bypass challenge routes).
 
 Response:
 

@@ -404,3 +404,56 @@ def test_auth_me_lock_player_name(tmp_path: Path) -> None:
         assert data['role'] == 'user'
         assert data['name'] == 'Verified Player'
         assert data['lock_player_name'] is True
+
+
+def test_cloudflare_bypass_cookie_fallback_and_play_boot_routes(tmp_path: Path) -> None:
+    """Verify CF_Authorization cookie fallback on Cloudflare Bypass routes (/play/api/*)."""
+    import time
+
+    user_email = 'player@example.com'
+    settings = AppSettings(
+        immich_server_url='https://placeholder.example.com/api',
+        immich_libraries={'family': 'token'},
+        data_path=tmp_path,
+        auth_mode='cloudflare',
+        cf_user_emails=frozenset({user_email}),
+        cf_lock_player_name=True,
+    )
+    app = create_app(settings=settings)
+    app.state.photo_provider = FakeImmichClient()
+
+    def _make_jwt(claims: dict[str, object]) -> str:
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(claims).encode('utf-8')).decode('ascii').rstrip('=')
+        return f'header.{payload_b64}.signature'
+
+    with TestClient(app) as client:
+        # 1. Unauthenticated guest on /play/api/auth/me and /play/api/ui-config
+        resp = client.get('/play/api/auth/me')
+        assert resp.status_code == 200
+        assert resp.json()['role'] == 'guest'
+        assert resp.json()['authenticated'] is False
+
+        cfg_resp = client.get('/play/api/ui-config')
+        assert cfg_resp.status_code == 200
+        assert 'tile_config' in cfg_resp.json()
+
+        # 2. Logged-in User visiting a Cloudflare Bypass path (/play/api/auth/me) with CF_Authorization cookie only
+        valid_jwt = _make_jwt({'email': user_email, 'name': 'Maria Savi', 'exp': int(time.time()) + 3600})
+        client.cookies.set('CF_Authorization', valid_jwt)
+        resp = client.get('/play/api/auth/me')
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data['role'] == 'user'
+        assert data['email'] == user_email
+        assert data['name'] == 'Maria Savi'
+        assert data['authenticated'] is True
+        assert data['lock_player_name'] is True
+
+        # 3. Expired CF_Authorization cookie falls back to unauthenticated guest
+        expired_jwt = _make_jwt({'email': user_email, 'name': 'Maria Savi', 'exp': int(time.time()) - 60})
+        client.cookies.set('CF_Authorization', expired_jwt)
+        resp = client.get('/play/api/auth/me')
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data['role'] == 'guest'
+        assert data['authenticated'] is False

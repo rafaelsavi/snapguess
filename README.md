@@ -15,6 +15,7 @@
 
 <p align="center">
   <a href="#-key-features">Key Features</a> •
+  <a href="#-screenshots">Screenshots</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#-game-modes">Game Modes</a> •
   <a href="#-self-hosting">Self-Hosting</a> •
@@ -23,6 +24,10 @@
 </p>
 
 ---
+
+<p align="center">
+  <img src="docs/assets/gameplay.gif" alt="SnapGuess Gameplay Showcase" width="100%">
+</p>
 
 <p align="center">
   <em>Challenge your memory of where and when your photos were taken. See distance vectors, score rollups, and exact capture dates.</em>
@@ -42,6 +47,20 @@
 - **🛡️ Anti-Cheat & Privacy-First**: All EXIF, GPS coordinates, and camera metadata are stripped server-side before client delivery.
 - **🔐 Granular Role-Based Access Control**: Native Cloudflare Zero Trust and reverse proxy integration with three permission tiers (👑 Creator, 👥 Player, 🎟️ Guest).
 - **🌓 Clear & Dark Themes + i18n**: Aesthetic design with automatic dark/light theme switching and bilingual support in English (`en-US`) and Brazilian Portuguese (`pt-BR`).
+
+---
+
+## 📸 Screenshots
+
+|                                      🎮 Setup Lobby & Smart Filters                                       |                                      🎯 Pinpoint Interactive Guessing                                      |
+|:---------------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------------------:|
+|                      [![Setup Lobby](docs/assets/home.webp)](docs/assets/home.webp)                       |       [![Pinpoint Gameplay](docs/assets/gameplay_pinpoint.webp)](docs/assets/gameplay_pinpoint.webp)       |
+| *Bento setup grid, cascade filters (album, date range, country, city, people), and live preflight count.* | *High-res photo preview, interactive Leaflet world map with drop pin, date selector, and countdown timer.* |
+
+|                                🗺️ Round Reveal & Distance Vectors                                 |                                  🏆 Winner Podium & Review Deck                                   |
+|:-------------------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------:|
+|          [![Round Reveal](docs/assets/round_reveal.webp)](docs/assets/round_reveal.webp)          |       [![Summary Podium](docs/assets/summary_podium.webp)](docs/assets/summary_podium.webp)       |
+| *True photo location star, player pins, dashed distance vectors, and itemized scoring breakdown.* | *Winner podium with metallic rank badges (1st, 2nd, 3rd), dynamic performance awards, standings table, and 3-tab review deck.* |
 
 ---
 
@@ -214,6 +233,9 @@ uv run pytest tests/e2e
 uv run ruff check .
 uv run ruff format --check
 uv run mypy src
+
+# Generate documentation screenshots and animated gameplay GIF (100% anonymized synthetic artwork)
+uv run python scripts/generate_screenshots.py
 ```
 
 ### Audio Testing Playground

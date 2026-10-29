@@ -95,10 +95,11 @@ flowchart TD
    - `X-Forwarded-Preferred-Username`
    - `X-Forwarded-User`
    - `Cf-Access-User-Name`
-2. **Cloudflare Access JWT Assertion (`Cf-Access-Jwt-Assertion`)**:
+2. **Cloudflare Access JWT Assertion (`Cf-Access-Jwt-Assertion` Header or `CF_Authorization` Cookie)**:
    - Root payload claims: `name`, `preferred_username`, `user_name`, `nickname`, `display_name`
    - Nested claim objects: `oidc_fields`, `identity`, `identity.oidc_fields`, `custom`, `custom_claims`, `user_identity`
    - Split names: `given_name` + `family_name`
+   - *Bypass Route Support*: When `/play/*` is configured with a Cloudflare Access `Bypass` policy so anonymous guests can join via invite links without logging in, Cloudflare omits `Cf-Access-*` request headers on `/play/*` requests. SnapGuess automatically falls back to reading the browser's `CF_Authorization` session cookie so authenticated **Users** and **Creators** preserve their verified identity and role on `/play/*` routes.
 3. **Email Fallback**:
    - `Cf-Access-Authenticated-User-Email` or `X-Forwarded-Email`
    - If no explicit name was located in headers or JWT claims, the application formats the username portion before the `@` symbol (e.g. `player.one@example.com` → `player.one`).
