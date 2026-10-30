@@ -13,7 +13,7 @@ export function hasUserActivation() {
 
 function getInitialAudioPreference() {
   try {
-    const stored = localStorage.getItem("snapguess_audio");
+    const stored = localStorage.getItem("snapguess_audio") ?? localStorage.getItem("immich_quiz_audio");
     if (stored === null) return true;
     return stored === "1";
   } catch (_) {
@@ -301,6 +301,104 @@ export function playVictoryFanfare() {
       }, n.delay * 1000);
     });
   } catch (_) { }
+}
+
+export function playTapSound() {
+  if (!shouldPlay()) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx || ctx.state !== "running") return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(680, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(340, ctx.currentTime + 0.025);
+    gain.gain.setValueAtTime(0.06, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.025);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.025);
+  } catch (_) {}
+}
+
+export function playTransitionWhoosh() {
+  if (!shouldPlay()) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx || ctx.state !== "running") return;
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(140, ctx.currentTime);
+
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(240, ctx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(750, ctx.currentTime + 0.06);
+    filter.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 0.14);
+    filter.Q.setValueAtTime(1.8, ctx.currentTime);
+
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.14);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.14);
+  } catch (_) {}
+}
+
+export function playCardSnapSound() {
+  if (!shouldPlay()) return;
+  haptic(12);
+  try {
+    const ctx = getAudioContext();
+    if (!ctx || ctx.state !== "running") return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(320, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.035);
+
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.035);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.035);
+  } catch (_) {}
+}
+
+export function playScrubberClick() {
+  if (!shouldPlay()) return;
+  haptic(8);
+  try {
+    const ctx = getAudioContext();
+    if (!ctx || ctx.state !== "running") return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1100, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(550, ctx.currentTime + 0.018);
+
+    gain.gain.setValueAtTime(0.09, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.018);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.018);
+  } catch (_) {}
 }
 
 export function toggleAudio() {

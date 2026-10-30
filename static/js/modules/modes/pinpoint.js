@@ -24,7 +24,7 @@ import {
   launchGoldConfetti,
   launchStarBurst,
 } from "../effects.js";
-import { playChime, playPinDropSound } from "../audio.js";
+import { playChime, playPinDropSound, playTapSound } from "../audio.js";
 import { renderRevealTableHeaders, renderRevealTableRows } from "../components/reveal_table.js";
 import { RoundStage } from "../components/round_stage.js";
 import { openReportModal } from "../components/report_modal.js";
@@ -132,7 +132,16 @@ function initDateDropdowns() {
 
   if (!el.dateGuessYear.dataset.changeBound) {
     el.dateGuessYear.dataset.changeBound = "true";
-    el.dateGuessYear.addEventListener("change", () => renderMonthOptions(true));
+    el.dateGuessYear.addEventListener("change", () => {
+      playTapSound();
+      renderMonthOptions(true);
+    });
+  }
+  if (!el.dateGuessMonth.dataset.changeBound) {
+    el.dateGuessMonth.dataset.changeBound = "true";
+    el.dateGuessMonth.addEventListener("change", () => {
+      playTapSound();
+    });
   }
 }
 

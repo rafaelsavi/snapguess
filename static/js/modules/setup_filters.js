@@ -13,6 +13,7 @@ import {
   readGameSettings,
   writeGameSettings,
 } from "./game_settings.js";
+import { playTapSound } from "./audio.js";
 
 export { GAME_SETTINGS_STORAGE_KEY };
 
@@ -375,6 +376,7 @@ function initModeSelector() {
       btn.addEventListener("click", () => {
         const mode = btn.getAttribute("data-mode");
         if (mode) {
+          playTapSound();
           setMode(mode);
         }
       });

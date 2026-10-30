@@ -10,6 +10,7 @@ import { openPhotoLightbox, closePhotoLightbox, isPhotoLightboxOpen } from "../c
 import { renderRevealTableHeaders, renderRevealTableRows } from "../components/reveal_table.js";
 import { RoundStage } from "../components/round_stage.js";
 import { challenge } from "../challenge/index.js";
+import { playCardSnapSound } from "../audio.js";
 
 let shuffleMarkers = {}; // pinId -> Leaflet marker
 let spiderLines = {};    // pinId -> L.polyline connector line
@@ -104,6 +105,7 @@ function reorderPhoto(fromIndex, toIndex, containerEl, questionData, focusDirect
   const [movedId] = orderedIds.splice(fromIndex, 1);
   orderedIds.splice(toIndex, 0, movedId);
 
+  playCardSnapSound();
   announceReorder(toIndex);
 
   renderPhotoCardsList(containerEl, questionData, {

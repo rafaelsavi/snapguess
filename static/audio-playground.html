@@ -368,16 +368,18 @@
         <h1>Audio Testing Playground</h1>
         <p>Simulate, audit, and custom-synthesize sound effects for SnapGuess</p>
       </div>
-      <button type="button" id="audio-toggle-btn" class="audio-toggle-btn" title="Toggle Sound Effects" aria-label="Toggle Sound Effects">
-        <span id="audio-icon">🔊</span>
-      </button>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <button type="button" id="audio-toggle-btn" class="audio-toggle-btn" title="Toggle Sound Effects" aria-label="Toggle Sound Effects">
+          <span id="audio-icon">🔊</span>
+        </button>
+      </div>
     </header>
 
     <!-- Audio Context & System Status Bar -->
     <div class="status-bar">
       <div class="status-items">
         <span>Audio Status:</span>
-        <span id="audio-enabled-badge" class="badge badge-running">🔊 Enabled</span>
+        <span id="audio-enabled-badge" class="badge badge-running">🔊 SFX: Active</span>
         <span id="audio-ctx-badge" class="badge badge-suspended">AudioContext: Suspended</span>
       </div>
       <button type="button" id="unlock-audio-btn" class="btn-sim btn-sim-outline">
@@ -486,6 +488,57 @@
             <div class="preset-meta">F4-A4-C5-F5 • Triangle • 0.65s • Gain 0.22</div>
           </div>
           <button type="button" id="play-fanfare-btn" class="btn-sim">▶ Play Fanfare</button>
+        </div>
+        <!-- Whoosh -->
+        <div class="preset-card">
+          <div>
+            <div class="preset-header">
+              <h3 class="preset-title">💨 Screen Whoosh</h3>
+              <span class="preset-badge">playTransitionWhoosh()</span>
+            </div>
+            <p class="preset-desc">Subtle bandpass frequency sweep triggered when transitioning between game views and hub screens.</p>
+            <div class="preset-meta">240 ➔ 750 ➔ 180 Hz • Bandpass Filter • 0.14s • Gain 0.05</div>
+          </div>
+          <button type="button" id="play-whoosh-btn" class="btn-sim">▶ Play Whoosh</button>
+        </div>
+
+        <!-- Tap Blip -->
+        <div class="preset-card">
+          <div>
+            <div class="preset-header">
+              <h3 class="preset-title">👆 UI Tap Blip</h3>
+              <span class="preset-badge">playTapSound()</span>
+            </div>
+            <p class="preset-desc">Ultra-fast micro-click confirmation played when selecting modes, date dropdowns, or filters.</p>
+            <div class="preset-meta">680 ➔ 340 Hz • Sine • 0.025s • Gain 0.06</div>
+          </div>
+          <button type="button" id="play-tap-btn" class="btn-sim">▶ Play Tap Blip</button>
+        </div>
+
+        <!-- Card Snap -->
+        <div class="preset-card">
+          <div>
+            <div class="preset-header">
+              <h3 class="preset-title">🃏 Card Snap / Thud</h3>
+              <span class="preset-badge">playCardSnapSound()</span>
+            </div>
+            <p class="preset-desc">Subtle resonant thud played when dropping or swapping photos in Unshuffle chronological mode.</p>
+            <div class="preset-meta">320 ➔ 120 Hz • Triangle • 0.035s • Gain 0.18</div>
+          </div>
+          <button type="button" id="play-cardsnap-btn" class="btn-sim">▶ Play Card Snap</button>
+        </div>
+
+        <!-- Scrubber Click -->
+        <div class="preset-card">
+          <div>
+            <div class="preset-header">
+              <h3 class="preset-title">🎞️ Replay Scrubber Click</h3>
+              <span class="preset-badge">playScrubberClick()</span>
+            </div>
+            <p class="preset-desc">Mechanical tick played when stepping forward or backward through rounds in the Match Replay viewer.</p>
+            <div class="preset-meta">1100 ➔ 550 Hz • Sine • 0.018s • Gain 0.09</div>
+          </div>
+          <button type="button" id="play-scrubber-btn" class="btn-sim">▶ Play Scrubber Click</button>
         </div>
       </div>
     </section>
