@@ -751,5 +751,6 @@ export default {
   "dialog.confirm_title": "Confirmation",
   "dialog.alert_title": "Notice",
   "dialog.error_title": "Error",
-  "dialog.prompt_title": "Input Required"
+  "dialog.prompt_title": "Input Required",
+  "footer.github_title": "View on GitHub"
 };

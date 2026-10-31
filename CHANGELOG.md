@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.4.1] - 2026-10-31
+
+### Added
+
+- **Footer Repository Navigation**: Added a subtle, accessible link to the public GitHub repository in the application footer next to the version badge, making project resources easily accessible across all screen modes.
+
 ## [4.4.0] - 2026-10-29
 
 ### Added
