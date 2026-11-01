@@ -116,8 +116,8 @@ def _resolve_role_cloudflare(request: Request) -> AuthContext:
 
     Priority:
     1. Email or Name in ``CF_CREATOR_EMAILS`` → Creator
-    2. Email or Name in ``CF_USER_EMAILS``    → User
-    3. No header / unrecognised               → Guest
+    2. Any other authenticated identity       → User
+    3. No identity headers or JWT             → Guest
     """
     settings = request.app.state.settings
 
