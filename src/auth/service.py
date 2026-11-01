@@ -116,8 +116,8 @@ def _resolve_role_cloudflare(request: Request) -> AuthContext:
 
     Priority:
     1. Email or Name in ``CF_CREATOR_EMAILS`` → Creator
-    2. Email or Name in ``CF_USER_EMAILS``    → User
-    3. No header / unrecognised               → Guest
+    2. Any other authenticated identity       → User
+    3. No identity headers or JWT             → Guest
     """
     settings = request.app.state.settings
 
@@ -182,12 +182,8 @@ def _resolve_role_cloudflare(request: Request) -> AuthContext:
     if identifiers & settings.cf_creator_emails:
         return AuthContext(role=Role.CREATOR, email=email, name=name)
 
-    if identifiers & settings.cf_user_emails:
-        return AuthContext(role=Role.USER, email=email, name=name)
-
-    # Authenticated via proxy/Cloudflare but identifier not in any allow-list → Guest
-    logger.info('Authenticated identity (%s, %s) not in any allow-list, assigned Guest role', email, name)
-    return AuthContext(role=Role.GUEST, email=email, name=name)
+    # Any authenticated identity that is not in CF_CREATOR_EMAILS is a registered player (User)
+    return AuthContext(role=Role.USER, email=email, name=name)
 
 
 def _resolve_role_disabled(settings: Any = None) -> AuthContext:

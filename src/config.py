@@ -179,7 +179,6 @@ class AppSettings:
     # 3. Access Control
     auth_mode: str = 'disabled'
     cf_creator_emails: frozenset[str] = frozenset()
-    cf_user_emails: frozenset[str] = frozenset()
     cf_lock_player_name: bool = False
 
     # 4. Global Filter Safeguards
@@ -253,11 +252,6 @@ class AppSettings:
         if norm_auth not in valid_auth_modes:
             raise ConfigError(f'AUTH_MODE must be one of {sorted(valid_auth_modes)}, got {self.auth_mode!r}')
         object.__setattr__(self, 'auth_mode', norm_auth)
-
-        # Validate email overlap between creator and user lists
-        overlap = self.cf_creator_emails & self.cf_user_emails
-        if overlap:
-            raise ConfigError(f'CF_CREATOR_EMAILS and CF_USER_EMAILS cannot overlap: {", ".join(sorted(overlap))}')
 
         # Validate network port
         if not (1 <= self.app_port <= 65535):
@@ -398,8 +392,6 @@ def load_settings() -> AppSettings:
         kwargs['auth_mode'] = val.strip().lower()
     if val := _get_env('CF_CREATOR_EMAILS'):
         kwargs['cf_creator_emails'] = _parse_comma_set(val)
-    if val := _get_env('CF_USER_EMAILS'):
-        kwargs['cf_user_emails'] = _parse_comma_set(val)
     if val := _get_env('CF_LOCK_PLAYER_NAME'):
         kwargs['cf_lock_player_name'] = _parse_bool(val, 'CF_LOCK_PLAYER_NAME')
 

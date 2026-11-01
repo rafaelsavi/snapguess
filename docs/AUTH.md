@@ -27,8 +27,7 @@ Access control is configured via environment variables:
 | Variable | Default | Description |
 | :--- | :--- | :--- |
 | `AUTH_MODE` | `disabled` | Set to `cloudflare` (or `cf`) to enforce Zero Trust identity checks. Set to `disabled` for local single-player / trust-all setups. |
-| `CF_CREATOR_EMAILS` | `""` | Comma-separated list of emails or usernames granted the **Creator** role. |
-| `CF_USER_EMAILS` | `""` | Comma-separated list of emails or usernames granted the **User** role. |
+| `CF_CREATOR_EMAILS` | `""` | Comma-separated list of emails or usernames granted the **Creator** role. All other authenticated visitors receive the **User** role. |
 | `CF_LOCK_PLAYER_NAME` | `false` | When `true`, challenge gameplay strictly enforces verified reverse proxy / Cloudflare Access display names, disabling custom player name inputs. |
 
 ### Single-Player / Disabled Mode (`AUTH_MODE=disabled`)
@@ -44,9 +43,8 @@ When `AUTH_MODE` is unset or set to `disabled`:
 When `AUTH_MODE=cloudflare`:
 
 - Every incoming request must provide identity headers from an upstream reverse proxy or Cloudflare Access.
-- Email or username matching against `CF_CREATOR_EMAILS` assigns **Creator**.
-- Email or username matching against `CF_USER_EMAILS` assigns **User**.
-- Valid incoming identities not listed in either allowlist are assigned the **Guest** role.
+- Email or username matching against `CF_CREATOR_EMAILS` assigns the **Creator** role.
+- All other authenticated visitors automatically receive the **User** role.
 - If no identity headers are present, the request defaults to an unauthenticated **Guest**.
 
 ### Player Name Auto-Defaulting & Identity Locking

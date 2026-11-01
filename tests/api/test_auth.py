@@ -70,7 +70,6 @@ def test_resolve_role_cloudflare_resolution() -> None:
         data_path=Path('/tmp'),
         auth_mode='cloudflare',
         cf_creator_emails=frozenset({'creator@example.com'}),
-        cf_user_emails=frozenset({'user1@example.com', 'user2@example.com'}),
     )
 
     app = FastAPI()
@@ -103,16 +102,16 @@ def test_resolve_role_cloudflare_resolution() -> None:
     assert ctx.email == 'creator@example.com'
     assert ctx.authenticated
 
-    # 4. User email -> User
+    # 4. Any authenticated non-creator email -> User
     ctx = _resolve_role_cloudflare(make_req('user1@example.com'))
     assert ctx.role == Role.USER
     assert ctx.email == 'user1@example.com'
     assert ctx.authenticated
 
-    # 5. Unknown email -> Guest (with email preserved)
-    ctx = _resolve_role_cloudflare(make_req('stranger@example.com'))
-    assert ctx.role == Role.GUEST
-    assert ctx.email == 'stranger@example.com'
+    # 5. Any other authenticated email -> User
+    ctx = _resolve_role_cloudflare(make_req('player2@example.com'))
+    assert ctx.role == Role.USER
+    assert ctx.email == 'player2@example.com'
     assert ctx.authenticated
 
 
@@ -175,7 +174,6 @@ def test_auth_me_and_route_rbac_cloudflare_mode(tmp_path: Path) -> None:
         data_path=tmp_path,
         auth_mode='cloudflare',
         cf_creator_emails=frozenset({creator_email}),
-        cf_user_emails=frozenset({user_email}),
     )
     app = create_app(settings=settings)
     app.state.photo_provider = FakeImmichClient()
@@ -250,7 +248,6 @@ def test_resolve_role_name_headers_and_jwt() -> None:
         data_path=Path('/tmp'),
         auth_mode='cloudflare',
         cf_creator_emails=frozenset({'creator@example.com', 'admin_user'}),
-        cf_user_emails=frozenset({'user1@example.com', 'alice'}),
     )
     app = FastAPI()
     app.state.settings = settings
@@ -326,11 +323,17 @@ def test_resolve_role_name_headers_and_jwt() -> None:
     assert ctx.name == 'Alice Wonderland'
     assert ctx.authenticated is True
 
-    # 7. Unknown username only -> Guest with name preserved
+    # 7. Authenticated non-creator username only -> User with name preserved
     ctx = _resolve_role_cloudflare(make_req({'x-user-name': 'stranger'}))
-    assert ctx.role == Role.GUEST
+    assert ctx.role == Role.USER
     assert ctx.name == 'stranger'
     assert ctx.authenticated is True
+
+    # 8. Unauthenticated request with no headers -> Guest
+    ctx = _resolve_role_cloudflare(make_req({}))
+    assert ctx.role == Role.GUEST
+    assert ctx.name is None
+    assert ctx.authenticated is False
 
 
 def test_resolve_role_loopback_dev_parameters() -> None:
@@ -381,7 +384,6 @@ def test_auth_me_lock_player_name(tmp_path: Path) -> None:
         immich_libraries={'family': 'token'},
         data_path=tmp_path,
         auth_mode='cloudflare',
-        cf_user_emails=frozenset({user_email}),
         cf_lock_player_name=True,
     )
     app = create_app(settings=settings)
@@ -416,7 +418,6 @@ def test_cloudflare_bypass_cookie_fallback_and_play_boot_routes(tmp_path: Path) 
         immich_libraries={'family': 'token'},
         data_path=tmp_path,
         auth_mode='cloudflare',
-        cf_user_emails=frozenset({user_email}),
         cf_lock_player_name=True,
     )
     app = create_app(settings=settings)
