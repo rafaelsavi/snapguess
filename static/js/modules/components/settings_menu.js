@@ -4,6 +4,8 @@
  * for the consolidated settings gear dropdown.
  */
 
+import { playTapSound } from "../audio.js";
+
 let _initialized = false;
 
 export function initSettingsMenu() {
@@ -32,6 +34,7 @@ export function initSettingsMenu() {
       e.preventDefault();
       e.stopPropagation();
     }
+    playTapSound();
     const isOpen = dropdown.classList.contains("open");
     if (isOpen) {
       closeMenu();

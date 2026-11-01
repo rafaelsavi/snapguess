@@ -112,6 +112,7 @@ html.game-mode-active #pwa-install-banner {
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 0.5rem;
 }
 
 .app-version-badge {
@@ -123,6 +124,23 @@ html.game-mode-active #pwa-install-banner {
   opacity: 0.45;
   letter-spacing: 0.05em;
   user-select: none;
+}
+
+.app-footer-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  opacity: 0.45;
+  text-decoration: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  line-height: 1;
+}
+
+.app-footer-link:hover,
+.app-footer-link:focus-visible {
+  opacity: 0.9;
+  transform: translateY(-1px);
 }
 
 .grid-2 {

@@ -6,6 +6,7 @@
 
 import { t, registerAlertDialogHandler } from "../i18n.js";
 import { activateFocusTrap, deactivateFocusTrap } from "./focus_trap.js";
+import { playTapSound } from "../audio.js";
 
 let _modalEl = null;
 let _titleEl = null;
@@ -43,6 +44,7 @@ export function initDialogModal() {
 
   if (_confirmBtn) {
     _confirmBtn.addEventListener("click", () => {
+      playTapSound();
       if (_currentMode === "prompt") {
         const val = _promptInputEl ? _promptInputEl.value : "";
         closeDialog(val);
@@ -54,12 +56,14 @@ export function initDialogModal() {
 
   if (_cancelBtn) {
     _cancelBtn.addEventListener("click", () => {
+      playTapSound();
       closeDialog(_currentMode === "prompt" ? null : false);
     });
   }
 
   if (_closeBtn) {
     _closeBtn.addEventListener("click", () => {
+      playTapSound();
       closeDialog(_currentMode === "prompt" ? null : false);
     });
   }

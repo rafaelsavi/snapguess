@@ -6,6 +6,5 @@ This document lists planned features, design ideas, and technical debt items for
 
 ## 🚀 Prioritized TODO List
 
-- Add link to GitHub page in app
 - Verify readme badges
 - Review monetization strategy

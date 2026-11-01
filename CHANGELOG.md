@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.0] - 2026-11-01
+
+### Added
+
+- **Comprehensive Button & Action Sound Effects**: Added tactile audio feedback across all interactive controls—including match round count and timer duration pills, setup filter toggles, player roster addition and removal, pass-and-play readiness confirmation, and primary round navigation.
+- **Unshuffle Mode Perfect Round Reward**: Players achieving a 100% score on a round in Album Shuffle (Unshuffle) mode now trigger the celebratory reward chime, starburst, and gold confetti animations matching Pinpoint mode.
+
+### Removed
+
+- **Legacy Audio Testing Playground**: Removed the standalone testing playground (`/audio-playground`) in favor of direct in-game sound integration.
+
+## [4.4.1] - 2026-10-31
+
+### Added
+
+- **Footer Repository Navigation**: Added a subtle, accessible link to the public GitHub repository in the application footer next to the version badge, making project resources easily accessible across all screen modes.
+
 ## [4.4.0] - 2026-10-29
 
 ### Added

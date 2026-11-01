@@ -2,6 +2,7 @@ import { state } from "../state.js";
 import { t } from "../i18n.js";
 import { playerColor, playerInitial } from "../formatters.js";
 import { attachPlayerAutocomplete } from "./player_autocomplete.js";
+import { playTapSound } from "../audio.js";
 
 /**
  * Modern Player Input Component
@@ -236,6 +237,7 @@ export class PlayerInput {
     }
 
     this.players.push(name);
+    playTapSound();
     this.textInput.value = "";
     this.autocomplete?.close();
     this._updateAddBtnState();
@@ -251,6 +253,7 @@ export class PlayerInput {
   removePlayer(index) {
     if (index >= 0 && index < this.players.length) {
       this.players.splice(index, 1);
+      playTapSound();
       this._clearFeedback();
       this._sync();
     }

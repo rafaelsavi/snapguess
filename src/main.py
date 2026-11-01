@@ -230,10 +230,6 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     async def index(request: Request) -> HTMLResponse:
         return _serve_spa(request)
 
-    @app.get('/audio-playground')
-    async def audio_playground() -> FileResponse:
-        return FileResponse(static_path / 'audio-playground.html', media_type='text/html')
-
     @app.get('/favicon.ico')
     async def favicon() -> FileResponse:
         return FileResponse(static_path / 'favicons' / 'favicon.ico', media_type='image/x-icon')
