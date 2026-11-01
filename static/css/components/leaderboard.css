@@ -112,6 +112,13 @@
   max-width: 100%;
   box-sizing: border-box;
   flex-shrink: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.match-meta-item:focus-visible {
+  outline: 2px solid var(--accent, #0f7c7f);
+  outline-offset: 1px;
 }
 
 .match-meta-item:hover {
@@ -247,6 +254,89 @@
   color: #475569;
 }
 
+/* Match Meta Tooltip Bubble for Mobile & Tap Interaction */
+.match-meta-tooltip {
+  position: fixed;
+  z-index: 10000;
+  max-width: min(320px, calc(100vw - 20px));
+  background: var(--ink, #1f2a44);
+  color: #ffffff;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  pointer-events: auto;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  transform: scale(0.95);
+  word-break: break-word;
+  box-sizing: border-box;
+}
+
+.match-meta-tooltip.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.match-meta-tooltip::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: inherit;
+  transform: rotate(45deg);
+}
+
+.match-meta-tooltip.pos-top::after {
+  bottom: -4px;
+  left: var(--arrow-left, 50%);
+  margin-left: -4px;
+}
+
+.match-meta-tooltip.pos-bottom::after {
+  top: -4px;
+  left: var(--arrow-left, 50%);
+  margin-left: -4px;
+}
+
+.match-meta-tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+  font-size: 0.82rem;
+  margin-bottom: 0.3rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.match-meta-tooltip-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.match-meta-tooltip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-height: 200px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.match-meta-tooltip-list li {
+  line-height: 1.3;
+}
+
+.match-meta-tooltip-desc {
+  line-height: 1.35;
+}
+
 /* Dark Mode Adjustments for Match Meta Specifications */
 [data-theme="dark"] .match-meta-category {
   background: var(--bg-surface-secondary, #0f172a);
@@ -347,6 +437,17 @@
   background: #1e293b;
   border-color: #475569;
   color: #94a3b8;
+}
+
+[data-theme="dark"] .match-meta-tooltip {
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .match-meta-tooltip-header {
+  border-bottom-color: rgba(255, 255, 255, 0.12);
 }
 
 .table-scroll {

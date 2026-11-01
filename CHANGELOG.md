@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.1] - 2026-11-01
+
+### Added
+
+- **Mobile Match Spec & Filter Chip Tooltips**: Tapping any match specification or filter chip on mobile devices now opens a clean, floating tooltip bubble—revealing the complete breakdown of condensed items (such as the full album, place, or player roster) or game setup details with tap-to-dismiss.
+
 ## [4.5.0] - 2026-11-01
 
 ### Added

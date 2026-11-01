@@ -23,15 +23,27 @@ export function renderMatchMetaItemsHtml(items) {
   if (!items || items.length === 0) return "";
   return items
     .map(
-      (item) => `
-    <div class="match-meta-item meta-${escapeHtml(item.type)}" title="${escapeHtml(item.title || item.val)}">
+      (item) => {
+        const rawListAttr = item.rawList && item.rawList.length > 0
+          ? ` data-meta-list="${escapeHtml(JSON.stringify(item.rawList))}"`
+          : "";
+        return `
+    <div class="match-meta-item meta-${escapeHtml(item.type)}"
+         title="${escapeHtml(item.title || item.val)}"
+         data-tooltip="${escapeHtml(item.title || item.val)}"
+         data-label="${escapeHtml(item.label || "")}"
+         data-val="${escapeHtml(item.val || "")}"
+         role="button"
+         tabindex="0"
+         aria-label="${escapeHtml(item.title || item.val)}"${rawListAttr}>
       <span class="match-meta-item-icon" aria-hidden="true">${item.icon}</span>
       <div class="match-meta-item-body">
         <span class="match-meta-item-label">${escapeHtml(item.label)}</span>
         <span class="match-meta-item-val">${escapeHtml(item.val)}</span>
       </div>
     </div>
-  `
+  `;
+      }
     )
     .join("");
 }
@@ -134,6 +146,7 @@ export function getMatchMetaCategories(data) {
       label: libLabel,
       val: libVal,
       title: `${libLabel}: ${libVal}`,
+      rawList: libraries,
     });
   }
 
@@ -150,6 +163,7 @@ export function getMatchMetaCategories(data) {
       label: placesLabel,
       val: placesVal,
       title: `${placesLabel}: ${placesList.join(", ")}`,
+      rawList: placesList,
     });
   }
 
@@ -164,6 +178,7 @@ export function getMatchMetaCategories(data) {
       label: albumsLabel,
       val: albumVal,
       title: `${albumsLabel}: ${albumNames.join(", ")}`,
+      rawList: albumNames,
     });
   }
 
@@ -178,6 +193,7 @@ export function getMatchMetaCategories(data) {
       label: peopleLabel,
       val: pVal,
       title: `${peopleLabel}: ${personNames.join(", ")}`,
+      rawList: personNames,
     });
   }
 
@@ -265,3 +281,165 @@ export function renderMatchMeta(container, data) {
   if (!container) return;
   container.innerHTML = buildMatchMetaHtml(data);
 }
+
+let _tooltipEl = null;
+let _activeChip = null;
+
+function ensureTooltipEl() {
+  if (_tooltipEl && document.body.contains(_tooltipEl)) return _tooltipEl;
+  let el = document.getElementById("match-meta-tooltip");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "match-meta-tooltip";
+    el.className = "match-meta-tooltip";
+    el.setAttribute("role", "tooltip");
+    el.setAttribute("aria-hidden", "true");
+    document.body.appendChild(el);
+  }
+  _tooltipEl = el;
+  return _tooltipEl;
+}
+
+export function hideMatchMetaTooltip() {
+  if (_tooltipEl) {
+    _tooltipEl.classList.remove("visible");
+    _tooltipEl.setAttribute("aria-hidden", "true");
+  }
+  if (_activeChip) {
+    if (_activeChip.dataset.originalTitle) {
+      _activeChip.setAttribute("title", _activeChip.dataset.originalTitle);
+      delete _activeChip.dataset.originalTitle;
+    }
+    _activeChip.removeAttribute("aria-describedby");
+    _activeChip = null;
+  }
+}
+
+export function showMatchMetaTooltip(chip) {
+  if (!chip) return;
+  if (_activeChip === chip) {
+    hideMatchMetaTooltip();
+    return;
+  }
+  hideMatchMetaTooltip();
+
+  const tooltipEl = ensureTooltipEl();
+  const rawTitle = chip.getAttribute("data-tooltip") || chip.getAttribute("title") || "";
+  const label = chip.getAttribute("data-label") || "";
+  const val = chip.getAttribute("data-val") || "";
+  const icon = chip.querySelector(".match-meta-item-icon")?.textContent || "";
+  let list = null;
+  if (chip.dataset.metaList) {
+    try {
+      list = JSON.parse(chip.dataset.metaList);
+    } catch {
+      list = null;
+    }
+  }
+
+  let contentHtml = "";
+  if (list && list.length > 1) {
+    const listItems = list.map((item) => `<li>• ${escapeHtml(item)}</li>`).join("");
+    contentHtml = `
+      <div class="match-meta-tooltip-header">
+        <span class="match-meta-tooltip-icon">${escapeHtml(icon)}</span>
+        <span class="match-meta-tooltip-title">${escapeHtml(label)} (${list.length})</span>
+      </div>
+      <ul class="match-meta-tooltip-list">${listItems}</ul>
+    `;
+  } else if (label) {
+    const displayTitle = label ? (val && val !== label ? `${label}: ${val}` : label) : val;
+    contentHtml = `
+      <div class="match-meta-tooltip-header">
+        <span class="match-meta-tooltip-icon">${escapeHtml(icon)}</span>
+        <span class="match-meta-tooltip-title">${escapeHtml(displayTitle)}</span>
+      </div>
+      ${rawTitle && rawTitle !== val && rawTitle !== displayTitle ? `<div class="match-meta-tooltip-desc">${escapeHtml(rawTitle)}</div>` : ""}
+    `;
+  } else {
+    contentHtml = `<div class="match-meta-tooltip-desc">${escapeHtml(rawTitle)}</div>`;
+  }
+
+  tooltipEl.innerHTML = contentHtml;
+
+  if (chip.hasAttribute("title")) {
+    chip.dataset.originalTitle = chip.getAttribute("title");
+    chip.removeAttribute("title");
+  }
+
+  _activeChip = chip;
+  chip.setAttribute("aria-describedby", "match-meta-tooltip");
+
+  tooltipEl.style.visibility = "hidden";
+  tooltipEl.classList.add("visible");
+  tooltipEl.setAttribute("aria-hidden", "false");
+
+  const chipRect = chip.getBoundingClientRect();
+  const tipWidth = tooltipEl.offsetWidth;
+  const tipHeight = tooltipEl.offsetHeight;
+  const viewportWidth = window.innerWidth;
+
+  const chipCenter = chipRect.left + chipRect.width / 2;
+  let left = chipCenter - tipWidth / 2;
+  const minLeft = 10;
+  const maxLeft = viewportWidth - tipWidth - 10;
+  left = Math.max(minLeft, Math.min(left, maxLeft));
+
+  const arrowLeft = Math.max(12, Math.min(chipCenter - left, tipWidth - 12));
+  tooltipEl.style.setProperty("--arrow-left", `${arrowLeft}px`);
+
+  const spaceAbove = chipRect.top;
+  const gap = 8;
+  if (spaceAbove >= tipHeight + gap + 10) {
+    tooltipEl.style.top = `${chipRect.top - tipHeight - gap}px`;
+    tooltipEl.classList.remove("pos-bottom");
+    tooltipEl.classList.add("pos-top");
+  } else {
+    tooltipEl.style.top = `${chipRect.bottom + gap}px`;
+    tooltipEl.classList.remove("pos-top");
+    tooltipEl.classList.add("pos-bottom");
+  }
+
+  tooltipEl.style.left = `${left}px`;
+  tooltipEl.style.visibility = "visible";
+}
+
+let _tooltipsInitialized = false;
+export function initMatchMetaTooltips() {
+  if (_tooltipsInitialized || typeof document === "undefined") return;
+  _tooltipsInitialized = true;
+
+  document.addEventListener("click", (e) => {
+    const chip = e.target.closest(".match-meta-item");
+    if (chip) {
+      e.stopPropagation();
+      showMatchMetaTooltip(chip);
+      return;
+    }
+    if (_activeChip && !_tooltipEl?.contains(e.target)) {
+      hideMatchMetaTooltip();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      hideMatchMetaTooltip();
+    } else if ((e.key === "Enter" || e.key === " ") && e.target.closest(".match-meta-item")) {
+      e.preventDefault();
+      showMatchMetaTooltip(e.target.closest(".match-meta-item"));
+    }
+  });
+
+  window.addEventListener("scroll", () => {
+    if (_activeChip) hideMatchMetaTooltip();
+  }, { passive: true });
+
+  window.addEventListener("resize", () => {
+    if (_activeChip) hideMatchMetaTooltip();
+  }, { passive: true });
+}
+
+if (typeof document !== "undefined") {
+  initMatchMetaTooltips();
+}
+
