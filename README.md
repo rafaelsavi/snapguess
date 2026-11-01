@@ -127,7 +127,6 @@ Use the example files:
 | `LANGUAGE`                       | No       | `en-US`       | UI language (`en-US` for English, `pt-BR` for Brazilian Portuguese)                                                                                                                                              |
 | `AUTH_MODE`                      | No       | `disabled`    | Access control mode (`disabled` for single-tenant / full host access; `cloudflare` for Zero Trust header enforcement)                                                                                            |
 | `CF_CREATOR_EMAILS`              | No       | —             | Comma-separated emails granted Creator role (game creation, filter setup, library inspection, reported asset moderation)                                                                                         |
-| `CF_USER_EMAILS`                 | No       | —             | Comma-separated emails granted User role (join & play challenges, explore stats directory, view match replays)                                                                                                   |
 | `CF_LOCK_PLAYER_NAME`            | No       | `false`       | Strictly enforce verified reverse proxy / Cloudflare Access display names for challenge players (disabling custom nickname inputs)                                                                               |
 | `DATA_PATH`                      | No       | `data`        | Directory for SQLite persistence (`metadata.db` and `leaderboard.db`)                                                                                                                                            |
 | `AUTO_SYNC_ON_STARTUP`           | No       | `true`        | Auto-trigger metadata sync in the background on server startup                                                                                                                                                   |
@@ -167,7 +166,6 @@ SnapGuess features a zero-trust, role-based access control (RBAC) architecture t
 
 - **Local / Single-Player**: Default mode (`AUTH_MODE=disabled`) automatically grants full Creator access with display name `'Host'`.
 - **Zero Trust / Production**: Set `AUTH_MODE=cloudflare` to enforce verified identity headers from Cloudflare Access or a reverse proxy. Unrecognized callers receive the Guest role.
-- **Allowlists**: Specify authorized emails or usernames in `CF_CREATOR_EMAILS` and `CF_USER_EMAILS`.
 - **Identity Locking**: Set `CF_LOCK_PLAYER_NAME=true` to enforce verified reverse proxy or Cloudflare Access display names in challenge matches, preventing nickname collisions or impersonation on leaderboards and in replay archives.
 
 📖 **For complete Cloudflare Access setup, OIDC display name mapping, and reverse proxy configs (Caddy, Nginx, Traefik), see [`docs/AUTH.md`](docs/AUTH.md).**

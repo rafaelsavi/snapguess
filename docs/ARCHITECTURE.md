@@ -377,8 +377,8 @@ The application enforces a 3-tier hierarchical role architecture:
 - **Disabled Mode (`AUTH_MODE=disabled`)**: Default setting for local development and CI testing. Everyone resolves to `Creator`, preserving backward compatibility. Display name defaults to `'Host'`.
 - **Cloudflare Access & Reverse Proxy Mode (`AUTH_MODE=cloudflare`)**: Resolves identity from incoming headers (`Cf-Access-Authenticated-User-Email`, `Cf-Access-Authenticated-User-Name`, `X-User-Name`, `X-Auth-Name`, `X-Forwarded-User`, `Remote-User`) or extracts claims from the `Cf-Access-Jwt-Assertion` token payload.
   - Identifiers matching `CF_CREATOR_EMAILS` (by verified email or lowercase username) receive `Creator`.
-  - Identifiers matching `CF_USER_EMAILS` receive `User`.
-  - Unrecognized or missing headers resolve to `Guest`.
+  - All other authenticated visitors receive `User`.
+  - Unauthenticated requests (e.g. public `/play/*` links) resolve to `Guest`.
   - User display name resolves from custom name headers, JWT claims, or falls back to capitalized email prefix.
   - **Identity Locking (`CF_LOCK_PLAYER_NAME=true`)**: Strictly locks challenge participants to their verified reverse proxy / Cloudflare Access display names, preventing nickname spoofing and ensuring all match history reliably links to their profile in the replays catalog and player directory.
 - **Backend Enforcement**: FastAPI routes are protected via `dependencies=[Depends(require_role(min_role))]`, rejecting unauthorized callers with HTTP 403 Forbidden.

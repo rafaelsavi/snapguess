@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.2] - 2026-11-01
+
+### Changed
+
+- **Streamlined Player Access & Authentication**: All authenticated visitors approved through your reverse proxy or Cloudflare Access automatically receive the Player role to browse challenges, player directories, and match replays without requiring server-side allowlist management.
+
 ## [4.5.1] - 2026-11-01
 
 ### Added

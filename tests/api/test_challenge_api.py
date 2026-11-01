@@ -1084,7 +1084,6 @@ def test_challenge_start_locks_player_name_when_configured(tmp_path: Path) -> No
         data_path=tmp_path,
         auth_mode='cloudflare',
         cf_creator_emails=frozenset({creator_email}),
-        cf_user_emails=frozenset({user_email}),
         cf_lock_player_name=True,
         auto_sync_on_startup=False,
     )
@@ -1437,7 +1436,6 @@ def test_challenge_replay_guest_access_vs_direct_replay(tmp_path: Path) -> None:
         data_path=tmp_path,
         auth_mode='cloudflare',
         cf_creator_emails=frozenset({'admin@example.com'}),
-        cf_user_emails=frozenset({'player@example.com'}),
     )
     app = create_app(settings=settings)
     app.state.photo_provider = immich
