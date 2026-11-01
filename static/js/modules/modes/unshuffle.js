@@ -4,13 +4,13 @@ import { createStandardMap, createBadgePinIcon, updateSubmitState, fitMapToBound
 import { renderGuessingModeSettings } from "./common.js";
 import { readGameSettings } from "../game_settings.js";
 import { playerNameCell, buildCell, renderRoundMeta, escapeHtml } from "../formatters.js";
-import { animateScoreRollup, createPerfectBadge } from "../effects.js";
+import { animateScoreRollup, createPerfectBadge, launchStarBurst, launchGoldConfetti } from "../effects.js";
 import { openReportModal } from "../components/report_modal.js";
 import { openPhotoLightbox, closePhotoLightbox, isPhotoLightboxOpen } from "../components/lightbox.js";
 import { renderRevealTableHeaders, renderRevealTableRows } from "../components/reveal_table.js";
 import { RoundStage } from "../components/round_stage.js";
 import { challenge } from "../challenge/index.js";
-import { playCardSnapSound } from "../audio.js";
+import { playCardSnapSound, playChime } from "../audio.js";
 
 let shuffleMarkers = {}; // pinId -> Leaflet marker
 let spiderLines = {};    // pinId -> L.polyline connector line
@@ -832,7 +832,7 @@ export const unshuffleMode = {
     });
 
     const maxPoints = revealData.score_max_points || state.scoreMaxPoints || 100;
-    renderRevealTableRows(table, playerResults, {
+    const hasAnyPerfectInRound = renderRevealTableRows(table, playerResults, {
       locationMode: Boolean(revealData.location_mode),
       dateMode: Boolean(revealData.date_mode),
       gameMode: "unshuffle",
@@ -842,6 +842,12 @@ export const unshuffleMode = {
       totalPhotos,
       playerAccuracy,
     });
+
+    if (!skipEffects && hasAnyPerfectInRound) {
+      playChime();
+      launchStarBurst();
+      launchGoldConfetti();
+    }
 
     // --- SECTION 3: MAP LAYOUT (ONLY IF LOCATION MODE IS ACTIVE) ---
     if (revealData.location_mode && el.revealShuffleMapShell) {

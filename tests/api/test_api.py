@@ -684,14 +684,12 @@ def test_session_store_cleanup(client: TestClient) -> None:
     assert match_id not in store._matches
 
 
-def test_audio_playground_endpoint(client: TestClient) -> None:
+def test_audio_playground_endpoint_is_removed(client: TestClient) -> None:
     res = client.get('/audio-playground')
-    assert res.status_code == 200
-    assert 'text/html' in res.headers['content-type']
-    assert 'Audio Testing Playground' in res.text
-    assert 'playTick()' in res.text
-    assert 'playBuzzer()' in res.text
-    assert 'playChime()' in res.text
+    assert 'Audio Testing Playground' not in res.text
+    assert 'playTick()' not in res.text
+    static_file = Path(__file__).resolve().parents[2] / 'static' / 'audio-playground.html'
+    assert not static_file.exists()
 
 
 def test_unshuffle_multi_round_game(tmp_path: Path) -> None:

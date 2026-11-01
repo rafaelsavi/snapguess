@@ -69,14 +69,12 @@ snapguess/
 │                        career player performance analytics, and interactive match replay datasets.
 └── static/              Vanilla HTML/CSS/JS frontend.
     ├── index.html       Main quiz application HTML.
-    ├── audio-playground.html Interactive Web Audio testing playground page.
     ├── css/             Modular CSS stylesheets:
     │   ├── style.css    Master entrypoint (@importing base, components, modes).
     │   ├── base/        Design tokens (variables.css), resets (reset.css), app shell (layout.css).
     │   ├── components/  UI components (auth.css, avatar.css, buttons.css, cards.css, dialog.css, maps.css, leaderboard.css, challenge.css, modals.css, multi_select.css, player_input.css, range_slider.css, reported.css, filters.css, timer.css, toolbar.css, hub_header.css, stats.css, round_stage.css, reveal_table.css, replay.css, review_deck.css, summary.css).
     │   └── modes/       Game mode styles (pinpoint.css, unshuffle.css).
     ├── js/app.js        Main application coordinator and match lifecycle state machine.
-    ├── js/audio-playground.js Playground controller & visualizer logic.
     └── js/modules/      Modular ES modules:
         ├── components/  Reusable UI components:
         │   ├── activity_toast.js Glassmorphic activity toast notifications for real-time multiplayer.

@@ -103,7 +103,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 STATIC_DIR = REPO_ROOT / 'static'
 LOCALES_DIR = REPO_ROOT / 'locales'
 INDEX_HTML = STATIC_DIR / 'index.html'
-AUDIO_PLAYGROUND_HTML = STATIC_DIR / 'audio-playground.html'
 JS_DIR = STATIC_DIR / 'js'
 
 
@@ -127,7 +126,7 @@ def test_legacy_monolith_and_proxy_files_are_removed() -> None:
 
 
 def test_every_referenced_element_id_exists_in_markup() -> None:
-    html_files = [INDEX_HTML, AUDIO_PLAYGROUND_HTML]
+    html_files = [INDEX_HTML]
     defined_ids: set[str] = set()
     for html_file in html_files:
         if html_file.exists():
@@ -514,7 +513,7 @@ def test_html_favicon_and_pwa_assets_exist() -> None:
     """Verify all local favicon, icon, and manifest asset links in HTML markup resolve to disk."""
     import json
 
-    html_files = [INDEX_HTML, AUDIO_PLAYGROUND_HTML]
+    html_files = [INDEX_HTML]
     for html_file in html_files:
         assert html_file.exists(), f'{html_file} must exist'
         content = html_file.read_text(encoding='utf-8')
@@ -3220,13 +3219,13 @@ def test_sound_effects_and_tactile_cues_architecture() -> None:
     import json
 
     assert not (JS_DIR / 'modules' / 'bgm.js').exists(), 'bgm.js should be removed'
+    assert not (STATIC_DIR / 'audio-playground.html').exists(), 'audio-playground.html should be removed'
+    assert not (STATIC_DIR / 'js' / 'audio-playground.js').exists(), 'audio-playground.js should be removed'
 
     audio_js = (JS_DIR / 'modules' / 'audio.js').read_text(encoding='utf-8')
     state_js = (JS_DIR / 'modules' / 'state.js').read_text(encoding='utf-8')
     common_js = (JS_DIR / 'modules' / 'screens' / 'common.js').read_text(encoding='utf-8')
     index_html = INDEX_HTML.read_text(encoding='utf-8')
-    playground_html = AUDIO_PLAYGROUND_HTML.read_text(encoding='utf-8')
-    playground_js = (STATIC_DIR / 'js' / 'audio-playground.js').read_text(encoding='utf-8')
 
     # 1. audio.js exports sound effects & tactile cues only
     assert 'export function playTapSound()' in audio_js
@@ -3251,18 +3250,12 @@ def test_sound_effects_and_tactile_cues_architecture() -> None:
     # 3. Markup integration
     assert 'id="music-toggle-btn"' not in index_html
     assert 'id="music-icon"' not in index_html
-    assert 'id="music-toggle-btn"' not in playground_html
-    assert 'id="bgm-mood-badge"' not in playground_html
-    assert 'id="play-cardsnap-btn"' in playground_html
-    assert 'id="play-scrubber-btn"' in playground_html
-    assert 'playCardSnapSound' in playground_js
-    assert 'playScrubberClick' in playground_js
-    assert 'setupBgmSequencer' not in playground_js
 
     # 4. Tactile audio triggers in gameplay & replay components
     assert 'playTransitionWhoosh' in common_js
     unshuffle_js = (JS_DIR / 'modules' / 'modes' / 'unshuffle.js').read_text(encoding='utf-8')
     assert 'playCardSnapSound()' in unshuffle_js
+    assert 'playChime()' in unshuffle_js
     match_replay_js = (JS_DIR / 'modules' / 'components' / 'match_replay.js').read_text(encoding='utf-8')
     assert 'playScrubberClick()' in match_replay_js
 

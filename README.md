@@ -238,10 +238,6 @@ uv run mypy src
 uv run python scripts/generate_screenshots.py
 ```
 
-### Audio Testing Playground
-
-An interactive playground is available at [`/audio-playground`](http://localhost:8010/audio-playground) for testing, custom-synthesizing, and auditing sound effects built into `static/js/modules/audio.js`. See [docs/AUDIO_PLAYGROUND.md](docs/AUDIO_PLAYGROUND.md) for details.
-
 ---
 
 ## 📚 Documentation
@@ -255,7 +251,6 @@ An interactive playground is available at [`/audio-playground`](http://localhost
 - [docs/SYNC.md](docs/SYNC.md) — Metadata synchronization engine, SQLite schema, and background worker architecture
 - [docs/API.md](docs/API.md) — Full API contract and response schemas
 - [docs/SCORING.md](docs/SCORING.md) — Mathematical scoring formulas and decay reference tables
-- [docs/AUDIO_PLAYGROUND.md](docs/AUDIO_PLAYGROUND.md) — Web Audio sound engine documentation and testing playground guide
 - [docs/AWARDS.md](docs/AWARDS.md) — Guide to performance awards, criteria, and customization instructions
 - [docs/RELEASES.md](docs/RELEASES.md) — Release workflow, semantic versioning rules, and CI/CD pipelines
 - [docs/TODO.md](docs/TODO.md) — Project roadmap and backlog for planned features and technical tasks

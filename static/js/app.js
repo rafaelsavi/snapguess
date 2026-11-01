@@ -24,7 +24,7 @@ import {
   getLocale,
   normalizeLanguage,
 } from "./modules/i18n.js";
-import { toggleAudio, updateAudioUi } from "./modules/audio.js";
+import { toggleAudio, updateAudioUi, playTapSound } from "./modules/audio.js";
 import { api, getAuthMe, hasRole } from "./modules/api.js";
 import {
   toggleMapFullscreen,
@@ -332,11 +332,13 @@ if (el.setupForm) {
 
 bindClick(el.prepareGameBtn, (event) => {
   event.preventDefault();
+  playTapSound();
   openAdminModal("local");
 });
 
 bindClick(el.readyBtn, () => {
   if (!state.currentQuestion) return;
+  playTapSound();
   state.currentScreen = "guessing";
   state.passConfirmed = true;
   el.passOverlay?.classList.add("hidden");
@@ -376,6 +378,7 @@ bindClick(el.submitAnswer, () => {
 });
 
 bindClick(el.nextRound, () => {
+  playTapSound();
   if (challenge.isActive()) {
     challenge.handleNextRound();
     return;
@@ -384,18 +387,22 @@ bindClick(el.nextRound, () => {
 });
 
 bindClick(el.gameEndedLobbyBtn, () => {
+  playTapSound();
   returnToSetup();
 });
 
 bindClick(el.shareSummaryBtn, () => {
+  playTapSound();
   shareMatchSummary(state.lastSummary);
 });
 
 bindClick(el.summaryPlayAgainBtn, () => {
+  playTapSound();
   restartSameGame();
 });
 
 bindClick(el.langToggleBtn, () => {
+  playTapSound();
   toggleLanguage();
   refreshActiveScreenLanguage();
 });
@@ -406,24 +413,29 @@ bindClick(el.audioToggleBtn, () => {
 });
 
 bindClick(el.gameExitBtn, () => {
+  playTapSound();
   handleAbandonGame("exit");
 });
 
 bindClick(el.gameRestartBtn, () => {
   if (challenge.isActive()) return;
+  playTapSound();
   handleAbandonGame("restart");
 });
 
 bindClick(el.revealRestartBtn, () => {
   if (challenge.isActive()) return;
+  playTapSound();
   handleAbandonGame("restart");
 });
 
 bindClick(el.revealExitBtn, () => {
+  playTapSound();
   handleAbandonGame("exit");
 });
 
 bindClick(el.refreshLeaderboard, () => {
+  playTapSound();
   loadLeaderboard().catch((err) => showAlert(err.message || err));
 });
 
@@ -717,6 +729,7 @@ function initHomeCard() {
     if (el.homeJoinError) {
       el.homeJoinError.classList.add("hidden");
     }
+    playTapSound();
     navigate(`/play/${encodeURIComponent(token)}`);
   }
 
@@ -775,6 +788,7 @@ function initHomeCard() {
   if (el.homeNavBtn) {
     el.homeNavBtn.addEventListener("click", (e) => {
       e.preventDefault();
+      playTapSound();
       navigate("/");
     });
   }
@@ -782,6 +796,7 @@ function initHomeCard() {
   if (el.challengesNavBtn) {
     el.challengesNavBtn.addEventListener("click", (e) => {
       e.preventDefault();
+      playTapSound();
       navigate("/challenges");
     });
   }
@@ -789,6 +804,7 @@ function initHomeCard() {
   if (el.statsNavBtn) {
     el.statsNavBtn.addEventListener("click", (e) => {
       e.preventDefault();
+      playTapSound();
       navigate("/players");
     });
   }
@@ -796,6 +812,7 @@ function initHomeCard() {
   if (el.replaysNavBtn) {
     el.replaysNavBtn.addEventListener("click", (e) => {
       e.preventDefault();
+      playTapSound();
       navigate("/replays");
     });
   }
@@ -812,6 +829,7 @@ function initHomeCard() {
     const backBtn = e.target.closest("[data-action='back']");
     if (backBtn) {
       e.preventDefault();
+      playTapSound();
       const fallback = backBtn.dataset.fallback || "/";
       navigateBack(fallback);
     }

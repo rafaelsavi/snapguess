@@ -5,6 +5,7 @@
  */
 
 import { t } from "./i18n.js";
+import { playTapSound } from "./audio.js";
 import { el } from "./state.js";
 
 const THEME_STORAGE_KEY = "snapguess_theme";
@@ -105,6 +106,7 @@ export function initTheme() {
   if (btn) {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
+      playTapSound();
       toggleTheme();
     });
   }

@@ -197,6 +197,7 @@ export function initFilterComponents() {
   if (peopleModeToggleEl) {
     peopleModeToggleEl.querySelectorAll(".people-mode-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
+        playTapSound();
         peopleModeToggleEl.querySelectorAll(".people-mode-btn").forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         saveCurrentFilters();
@@ -231,6 +232,7 @@ export function initFilterComponents() {
       }
       const isExpanded = toggleBtn ? toggleBtn.getAttribute("aria-expanded") === "true" : false;
       const nextExpanded = !isExpanded;
+      playTapSound();
       if (toggleBtn) toggleBtn.setAttribute("aria-expanded", String(nextExpanded));
       contentEl.classList.toggle("hidden", !nextExpanded);
       if (accordionEl) accordionEl.classList.toggle("expanded", nextExpanded);
@@ -242,6 +244,7 @@ export function initFilterComponents() {
   const resetBtn = document.getElementById("reset-filters-btn");
   if (resetBtn) {
     resetBtn.addEventListener("click", () => {
+      playTapSound();
       if (libraryMultiSelect) libraryMultiSelect.clear();
       if (albumMultiSelect) albumMultiSelect.clear();
       if (countryMultiSelect) countryMultiSelect.clear();
@@ -299,6 +302,7 @@ export function initSegmentedControls() {
     const buttons = container.querySelectorAll(".segmented-btn");
     buttons.forEach((btn) => {
       btn.addEventListener("click", () => {
+        playTapSound();
         buttons.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         container.dispatchEvent(new Event("change", { bubbles: true }));
@@ -389,6 +393,7 @@ function initModeSelector() {
     pinpointHelpBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      playTapSound();
       GAME_MODES.pinpoint?.openHelp?.();
     });
   }
@@ -399,6 +404,7 @@ function initModeSelector() {
     shuffleHelpBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      playTapSound();
       GAME_MODES.unshuffle?.openHelp?.();
     });
   }

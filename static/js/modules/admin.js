@@ -33,6 +33,7 @@ import { getActiveMode } from "./modes/index.js";
 import { SinglePlayerInput, CREATOR_NAME_STORAGE_KEY } from "./components/single_player_input.js";
 import { setupShareBox, SHARE_ICONS } from "./components/share_box.js";
 import { activateFocusTrap, deactivateFocusTrap } from "./components/focus_trap.js";
+import { playTapSound } from "./audio.js";
 
 let _isInitialized = false;
 let _modalEl = null;
@@ -144,8 +145,8 @@ export function initAdminModal() {
   _openLinkBtn = document.getElementById("challenge-open-link-btn");
 
   // Tab switching
-  if (_tabLocalBtn) _tabLocalBtn.addEventListener("click", () => switchTab("local"));
-  if (_tabChallengeBtn) _tabChallengeBtn.addEventListener("click", () => switchTab("challenge"));
+  if (_tabLocalBtn) _tabLocalBtn.addEventListener("click", () => { playTapSound(); switchTab("local"); });
+  if (_tabChallengeBtn) _tabChallengeBtn.addEventListener("click", () => { playTapSound(); switchTab("challenge"); });
 
   // Open / Close modal
   if (_openPrepareBtn) {
@@ -154,9 +155,9 @@ export function initAdminModal() {
       openAdminModal("local");
     });
   }
-  if (_closeBtn) _closeBtn.addEventListener("click", closeAdminModal);
-  if (_localCancelBtn) _localCancelBtn.addEventListener("click", closeAdminModal);
-  if (_challengeCancelBtn) _challengeCancelBtn.addEventListener("click", closeAdminModal);
+  if (_closeBtn) _closeBtn.addEventListener("click", () => { playTapSound(); closeAdminModal(); });
+  if (_localCancelBtn) _localCancelBtn.addEventListener("click", () => { playTapSound(); closeAdminModal(); });
+  if (_challengeCancelBtn) _challengeCancelBtn.addEventListener("click", () => { playTapSound(); closeAdminModal(); });
 
   // Close on backdrop click (only if mouse/touch was pressed outside on the backdrop)
   let _isBackdropPress = false;
@@ -180,16 +181,21 @@ export function initAdminModal() {
   // Start match from local tab
   if (_startMatchBtn) {
     _startMatchBtn.addEventListener("click", (e) => {
+      playTapSound();
       startMatch(e).catch((err) => showShareToast(err.message || err));
     });
   }
 
   // Generate challenge button
-  if (_generateBtn) _generateBtn.addEventListener("click", handleGenerateChallenge);
+  if (_generateBtn) _generateBtn.addEventListener("click", () => {
+    playTapSound();
+    handleGenerateChallenge();
+  });
 
   // Play Now button
   if (_openLinkBtn) {
     _openLinkBtn.addEventListener("click", () => {
+      playTapSound();
       const url = _createdUrlInput?.value;
       if (url) {
         window.location.href = url;
