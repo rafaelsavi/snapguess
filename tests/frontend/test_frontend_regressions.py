@@ -3270,3 +3270,27 @@ def test_sound_effects_and_tactile_cues_architecture() -> None:
         assert k not in pt_json, f'{k} should not be in pt-BR.json'
         assert f'"{k}"' not in en_js, f'"{k}" should not be in en_US.js'
         assert f'"{k}"' not in pt_js, f'"{k}" should not be in pt_BR.js'
+
+
+def test_match_meta_chip_tap_tooltip_support() -> None:
+    """Verify that match_meta.js and leaderboard.css support mobile/touch tap tooltips for specification chips."""
+    match_meta_js = (JS_DIR / 'modules' / 'components' / 'match_meta.js').read_text(encoding='utf-8')
+    leaderboard_css = (STATIC_DIR / 'css' / 'components' / 'leaderboard.css').read_text(encoding='utf-8')
+    index_html = INDEX_HTML.read_text(encoding='utf-8')
+
+    # 1. Markup contains singleton tooltip container
+    assert 'id="match-meta-tooltip"' in index_html
+    assert 'class="match-meta-tooltip"' in index_html
+
+    # 2. match_meta.js provides data-tooltip, data-meta-list, and tooltip trigger handlers
+    assert 'data-tooltip=' in match_meta_js
+    assert 'data-meta-list=' in match_meta_js
+    assert 'showMatchMetaTooltip' in match_meta_js
+    assert 'hideMatchMetaTooltip' in match_meta_js
+    assert 'initMatchMetaTooltips' in match_meta_js
+
+    # 3. CSS styling defines touch cursor and floating tooltip popover
+    assert '.match-meta-tooltip {' in leaderboard_css
+    assert '.match-meta-tooltip.visible {' in leaderboard_css
+    assert '[data-theme="dark"] .match-meta-tooltip {' in leaderboard_css
+    assert 'cursor: pointer;' in leaderboard_css
