@@ -113,6 +113,7 @@ Use the example files:
 
 - [.env.example](.env.example)
 - [docker-compose.example.yml](docker-compose.example.yml)
+- [Unraid Community Applications XML Template](deploy/unraid/snapguess.xml) *(for Unraid Docker / Community Applications; TrueNAS SCALE 24.10+ users can paste `docker-compose.example.yml` directly into **Apps > Discover Apps > Custom App (YAML)**)*
 
 ### Environment Variables
 

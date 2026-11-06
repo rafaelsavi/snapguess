@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Container version="2">
+  <Name>SnapGuess</Name>
+  <Repository>ghcr.io/rafaelsavi/snapguess:latest</Repository>
+  <Registry>https://github.com/rafaelsavi/snapguess/pkgs/container/snapguess</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/rafaelsavi/snapguess/issues</Support>
+  <Project>https://github.com/rafaelsavi/snapguess</Project>
+  <Overview>Turn your personal photo library (Immich or local folders) into an interactive, multiplayer location and timeline trivia game.</Overview>
+  <Description>SnapGuess is a self-hosted, multiplayer photo trivia game engine for your personal memories. Drop pins on interactive satellite and street maps, arrange photo clusters along chronological timelines, and compete with friends in Pass &amp; Play couch mode or asynchronous multiplayer challenges via shareable links and QR codes.&#xD;
+&#xD;
+[b]Key Features:[/b]&#xD;
+• [b]Pinpoint &amp; Unshuffle Modes:[/b] Guess exact photo capture locations and dates, or match 3-photo clusters to map pins and timeline sequences.&#xD;
+• [b]Dual Photo Providers:[/b] Connect directly to your self-hosted Immich server (v3.2.0+) or scan local photo folders offline (`PHOTO_PROVIDER=local`).&#xD;
+• [b]Asynchronous Challenges:[/b] Generate shareable capability URLs (`/play/ch_...`) and QR codes so friends and family can play on their own phones and view the 3D podium and World Journey Map.&#xD;
+• [b]Privacy-First &amp; Fast:[/b] Sub-millisecond local SQLite metadata index; all EXIF and GPS metadata is stripped server-side before images reach player browsers.</Description>
+  <Category>Game:Other MediaApp:Photos Tools:Utilities</Category>
+  <WebUI>http://[IP]:[PORT:8010]</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/rafaelsavi/snapguess/main/deploy/unraid/snapguess.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/rafaelsavi/snapguess/main/static/favicons/android-chrome-512x512.png</Icon>
+  <ExtraParams>--user 99:100</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="Web UI Port" Target="8010" Default="8010" Mode="tcp" Description="Host port for the SnapGuess web interface." Type="Port" Display="always" Required="true" Mask="false">8010</Config>
+  <Config Name="AppData Storage" Target="/app/data" Default="/mnt/user/appdata/snapguess" Mode="rw" Description="Persistent directory for SQLite databases (metadata.db and leaderboard.db)." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/snapguess</Config>
+  <Config Name="Photo Provider" Target="PHOTO_PROVIDER" Default="immich" Mode="" Description="Photo source backend: 'immich' to connect to an Immich server, or 'local' to scan mounted local photo folders." Type="Variable" Display="always" Required="true" Mask="false">immich</Config>
+  <Config Name="Immich Server URL" Target="IMMICH_SERVER_URL" Default="http://192.168.1.100:2283" Mode="" Description="Base URL of your Immich server (required when PHOTO_PROVIDER=immich)." Type="Variable" Display="always" Required="false" Mask="false">http://192.168.1.100:2283</Config>
+  <Config Name="Immich Libraries (JSON)" Target="IMMICH_LIBRARIES" Default="{&quot;Family&quot;:&quot;replace-with-api-key&quot;}" Mode="" Description="JSON object mapping library display names to Immich API keys (required when PHOTO_PROVIDER=immich)." Type="Variable" Display="always" Required="false" Mask="true">{"Family":"replace-with-api-key"}</Config>
+  <Config Name="Local Photos Directory" Target="/photos" Default="/mnt/user/photos" Mode="ro" Description="Host photo directory mounted read-only into the container (used when PHOTO_PROVIDER=local)." Type="Path" Display="always" Required="false" Mask="false">/mnt/user/photos</Config>
+  <Config Name="Local Libraries (JSON)" Target="LOCAL_LIBRARIES" Default="{&quot;Family&quot;:&quot;/photos&quot;}" Mode="" Description="JSON object mapping library display names to container folder paths (required when PHOTO_PROVIDER=local)." Type="Variable" Display="always" Required="false" Mask="false">{"Family":"/photos"}</Config>
+  <Config Name="UI Language" Target="LANGUAGE" Default="en-US" Mode="" Description="Default interface language: en-US (English) or pt-BR (Brazilian Portuguese)." Type="Variable" Display="advanced" Required="false" Mask="false">en-US</Config>
+  <Config Name="Authentication Mode" Target="AUTH_MODE" Default="disabled" Mode="" Description="Access control mode: 'disabled' (everyone is Creator/Host) or 'cloudflare' (Zero Trust header authentication)." Type="Variable" Display="advanced" Required="false" Mask="false">disabled</Config>
+  <Config Name="Cloudflare Creator Emails" Target="CF_CREATOR_EMAILS" Default="" Mode="" Description="Comma-separated list of Cloudflare Access emails granted Creator (Host) privileges when AUTH_MODE=cloudflare." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Lock Verified Player Name" Target="CF_LOCK_PLAYER_NAME" Default="false" Mode="" Description="When true and AUTH_MODE=cloudflare, enforces verified Cloudflare Access display names in challenges." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="Auto Sync on Startup" Target="AUTO_SYNC_ON_STARTUP" Default="true" Mode="" Description="Automatically run background metadata indexing when the container starts (true/false)." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="Log Level" Target="LOG_LEVEL" Default="INFO" Mode="" Description="Logging verbosity: DEBUG, INFO, WARNING, or ERROR." Type="Variable" Display="advanced" Required="false" Mask="false">INFO</Config>
+</Container>
