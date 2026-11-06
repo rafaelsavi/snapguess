@@ -67,7 +67,10 @@ snapguess/
 │       └── leaderboard.py LeaderboardStore managing the 6-table relational match & challenge
 │                        schema (`challenges`, `challenge_sessions`, `matches`, `match_entries`, `match_rounds`, `match_round_guesses`),
 │                        career player performance analytics, and interactive match replay datasets.
-└── static/              Vanilla HTML/CSS/JS frontend.
+├── deploy/              Platform packaging and container catalog templates.
+│   └── unraid/
+│       └── snapguess.xml Unraid Community Applications (CA) v2 container template.
+├── static/              Vanilla HTML/CSS/JS frontend.
     ├── index.html       Main quiz application HTML.
     ├── css/             Modular CSS stylesheets:
     │   ├── style.css    Master entrypoint (@importing base, components, modes).
