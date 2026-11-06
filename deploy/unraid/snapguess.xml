@@ -41,3 +41,4 @@
   <Config Name="Auto Sync on Startup" Target="AUTO_SYNC_ON_STARTUP" Default="true" Mode="" Description="Automatically run background metadata indexing when the container starts (true/false)." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
   <Config Name="Log Level" Target="LOG_LEVEL" Default="INFO" Mode="" Description="Logging verbosity: DEBUG, INFO, WARNING, or ERROR." Type="Variable" Display="advanced" Required="false" Mask="false">INFO</Config>
 </Container>
+
