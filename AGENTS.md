@@ -134,7 +134,16 @@ This document provides context, architectural constraints, and standards for AI 
   - When modifying or adding API endpoints, update `docs/API.md` with request/response schemas, parameters, and descriptions.
   - When modifying architecture, components, ES modules, or stylesheets, update `docs/ARCHITECTURE.md`.
   - When adding top-level user-facing features or modes, update `README.md`.
-- **Commit Messages**: Follow standard conventional commits format (e.g. `feat:`, `fix:`, `refactor:`, `docs:`, `test:`).
+- **Commit Messages**: Follow standard conventional commits format (e.g. `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`).
+- **When to Commit & Agent Commit Discipline**:
+  - **Always commit each logical change immediately after verifying it**: Every distinct logical change (e.g. endpoint fix, UI tweak, locale key sync) must be committed individually with an atomic commit as soon as its verification passes.
+  - **Do not batch unrelated changes**: Never bundle multiple unrelated features, fixes, or refactors into a single commit.
+  - **Never leave uncommitted work**: Do not end an agent session or declare a task complete with uncommitted changes or untracked scratch files in the repository root.
+  - **Pre-Commit Verification**: Run `uv run python scripts/verify.py --check-version` (or `uv run python scripts/verify.py --fix` for safe formatting and lint fixes).
+- **Automated Zero-Effort Release Flow**:
+  - The application version is centrally maintained in `pyproject.toml` (`[project].version = "X.Y.Z"`).
+  - Bumping `version` in `pyproject.toml` and documenting changes in `CHANGELOG.md` automatically triggers the GitHub Actions CI/CD pipeline on push to `main`.
+  - The pipeline runs the full verification suite, auto-creates and pushes Git tag `vX.Y.Z`, publishes the GitHub Release with extracted release notes, and pushes the multi-architecture Docker image to GitHub Container Registry (`ghcr.io`). **Never manually run `git tag`**.
 
 ---
 
