@@ -140,10 +140,19 @@ This document provides context, architectural constraints, and standards for AI 
   - **Do not batch unrelated changes**: Never bundle multiple unrelated features, fixes, or refactors into a single commit.
   - **Never leave uncommitted work**: Do not end an agent session or declare a task complete with uncommitted changes or untracked scratch files in the repository root.
   - **Pre-Commit Verification**: Run `uv run python scripts/verify.py --check-version` (or `uv run python scripts/verify.py --fix` for safe formatting and lint fixes).
-- **Automated Zero-Effort Release Flow**:
-  - The application version is centrally maintained in `pyproject.toml` (`[project].version = "X.Y.Z"`).
-  - Bumping `version` in `pyproject.toml` and documenting changes in `CHANGELOG.md` automatically triggers the GitHub Actions CI/CD pipeline on push to `main`.
-  - The pipeline runs the full verification suite, auto-creates and pushes Git tag `vX.Y.Z`, publishes the GitHub Release with extracted release notes, and pushes the multi-architecture Docker image to GitHub Container Registry (`ghcr.io`). **Never manually run `git tag`**.
+- **Protected `main` Branch & Pull Request Protocol**:
+  - The `main` branch is protected. Direct pushes to `main` are restricted.
+  - **Always work on a dedicated branch**:
+    ```bash
+    git checkout -b feat/your-feature-name
+    ```
+  - **Include Version Bumps in the PR**: In SnapGuess, `scripts/verify.py` validates that any feature branch introducing code changes also includes the version bump in `pyproject.toml` and release notes in `CHANGELOG.md` before merging.
+  - **Pushing & PR Creation**:
+    ```bash
+    git push -u origin feat/your-feature-name
+    gh pr create --fill
+    ```
+  - **Automated Release on PR Merge**: When the Pull Request is merged into `main`, GitHub Actions receives the `push` event on `main`, runs verification, auto-creates Git tag `vX.Y.Z`, publishes the GitHub Release with extracted changelog notes, and pushes the multi-arch Docker image to GitHub Container Registry (`ghcr.io`). **Never manually run `git tag`**.
 
 ---
 
