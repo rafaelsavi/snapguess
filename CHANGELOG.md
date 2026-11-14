@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.6] - 2026-11-14
+
+### Fixed
+
+- **Unraid & Docker AppData Permissions**: Fixed first-time Unraid and Docker Compose startup permission errors when the host data folder (`/mnt/user/appdata/snapguess` or `./data`) is auto-created by Docker with root ownership; the container now prepares data folder ownership for configured `PUID`/`PGID` (`99:100` on Unraid, `1000:1000` by default) before dropping privileges, and reports clear diagnostic guidance if the data folder remains non-writable.
+- **Unraid Local Photos Default Share**: Cleared the pre-filled `/mnt/user/photos` default path in the Unraid Community Applications template so Immich users do not automatically create an empty `photos` User Share on installation.
+
 ## [4.5.5] - 2026-11-14
 
 ### Fixed

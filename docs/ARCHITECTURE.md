@@ -472,4 +472,4 @@ Player names in match and challenge result standings link to `/players/{playerNa
 
 - All runtime configuration is driven by `AppSettings` through environment variables (`.env`).
 - Persistent state is isolated under `DATA_PATH` (`data/metadata.db` and `data/leaderboard.db`).
-- Containerized deployment is supported out-of-the-box via the root `Dockerfile` and `docker-compose.example.yml`.
+- Containerized deployment is supported out-of-the-box via the root `Dockerfile`, `docker-entrypoint.sh` (initializing `DATA_PATH` ownership and dropping privileges to `PUID:PGID`), `deploy/unraid/snapguess.xml`, and `docker-compose.example.yml`.
