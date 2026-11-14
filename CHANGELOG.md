@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.5] - 2026-11-14
+
+### Fixed
+
+- **Multi-Library Local Folder Isolation**: Fixed photo identification in local folder mode so configuring multiple local libraries with identical filenames or folder names keeps each photo's media preview, coordinates, and capture date isolated.
+- **Local Folder Subfolder Albums & Pruning**: Fixed album filtering in local folder mode so selecting a parent folder includes photos from its nested subfolders, folders without photos are excluded from setup dropdowns, and removed folder albums are cleaned up automatically on re-sync.
+- **Reported Photos Moderation in Local Mode**: Hid the non-functional "Open in Immich Web" link in the report modal and moderation dashboard when running in local folder mode, and displayed human-readable library and file paths for flagged local photos.
+
+### Changed
+
+- **Multiplayer Thumbnail Caching for Local Folders**: Added server-side in-memory thumbnail caching (with automatic refresh when files change on disk) to speed up repeated photo loading when multiple players view the same challenge round.
+
 ## [4.5.4] - 2026-11-14
 
 ### Fixed

@@ -996,12 +996,11 @@ class SyncEngine:
                 is_delta=is_delta,
             )
 
-            # 1. Upsert & prune albums
+            # 1. Upsert & prune albums (scan_library_files returns complete album list in both modes)
             if albums_data:
                 self._metadata_store.upsert_albums(library_name, albums_data)
-            if not is_delta:
-                known_album_ids = {a['id'] for a in albums_data}
-                self._metadata_store.prune_missing_albums(library_name, known_album_ids)
+            known_album_ids = {a['id'] for a in albums_data}
+            self._metadata_store.prune_missing_albums(library_name, known_album_ids)
 
             # 2. Upsert assets in batches
             self._metadata_store.set_sync_state(

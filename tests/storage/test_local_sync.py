@@ -77,7 +77,7 @@ async def test_local_sync_lifecycle_full_delta_and_pruning(
     assert len(albums) == 1
     assert albums[0]['name'] == '2023'
 
-    p1_id = b'2023/beach.jpg'.hex()
+    p1_id = LocalFolderPhotoProvider.encode_asset_id('vacations', '2023/beach.jpg')
     answer = meta_store.get_asset_answer(p1_id)
     assert answer is not None
     assert answer.country == 'France'
@@ -111,8 +111,17 @@ async def test_local_sync_lifecycle_full_delta_and_pruning(
     assert meta_store.count_library_assets('vacations') == 1
     assert meta_store.get_asset_answer(p1_id) is None
 
-    p2_id = b'2024/alps.jpg'.hex()
+    p2_id = LocalFolderPhotoProvider.encode_asset_id('vacations', '2024/alps.jpg')
     assert meta_store.get_asset_answer(p2_id) is not None
+
+    # 4. Flattening subfolders into root prunes empty/removed albums even when 0 albums remain
+    flat_p2 = photos_dir / 'alps.jpg'
+    p2.rename(flat_p2)
+    (photos_dir / '2024').rmdir()
+    (photos_dir / '2023').rmdir()
+
+    await sync_engine.sync_library('vacations', force_full=False)
+    assert meta_store.get_albums(['vacations']) == []
 
 
 async def test_local_sync_missing_directory_records_error(
@@ -159,3 +168,43 @@ async def test_local_sync_game_query_compatibility(
     assert len(candidates) == 1
     answer = next(iter(candidates.values()))
     assert answer.country == 'France'
+
+
+async def test_local_sync_multi_library_filename_collision_isolation(
+    tmp_path: Path,
+    meta_store: MetadataStore,
+) -> None:
+    """Verify two local libraries with identical relative filenames store isolated metadata and resolve correctly."""
+    family_dir = tmp_path / 'family'
+    travel_dir = tmp_path / 'travel'
+
+    # Same relative filename in both libraries, placed in distinct cities/dates
+    _create_test_image(
+        family_dir / '2023' / 'IMG_0001.jpg',
+        date_str='2023:05:10 10:00:00',
+        lat_dms=((48.0, 51.0, 24.0), 'N'),
+        lon_dms=((2.0, 21.0, 7.0), 'E'),
+    )
+    _create_test_image(
+        travel_dir / '2023' / 'IMG_0001.jpg',
+        date_str='2024:09:15 15:00:00',
+        lat_dms=((35.0, 41.0, 22.0), 'N'),
+        lon_dms=((139.0, 41.0, 30.0), 'E'),
+    )
+
+    provider = LocalFolderPhotoProvider({'Family': family_dir, 'Travel': travel_dir})
+    sync_engine = SyncEngine(provider, meta_store)
+    await sync_engine.sync_library('Family', force_full=True)
+    await sync_engine.sync_library('Travel', force_full=True)
+
+    fam_id = LocalFolderPhotoProvider.encode_asset_id('Family', '2023/IMG_0001.jpg')
+    trav_id = LocalFolderPhotoProvider.encode_asset_id('Travel', '2023/IMG_0001.jpg')
+    assert fam_id != trav_id
+
+    assert meta_store.get_asset_library(fam_id) == 'Family'
+    assert meta_store.get_asset_library(trav_id) == 'Travel'
+
+    fam_ans = meta_store.get_asset_answer(fam_id)
+    trav_ans = meta_store.get_asset_answer(trav_id)
+    assert fam_ans is not None and fam_ans.country == 'France'
+    assert trav_ans is not None and trav_ans.country == 'Japan'

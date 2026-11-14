@@ -3294,3 +3294,16 @@ def test_match_meta_chip_tap_tooltip_support() -> None:
     assert '.match-meta-tooltip.visible {' in leaderboard_css
     assert '[data-theme="dark"] .match-meta-tooltip {' in leaderboard_css
     assert 'cursor: pointer;' in leaderboard_css
+
+
+def test_reported_ui_hides_immich_links_and_decodes_ids_in_local_mode() -> None:
+    """Verify report_modal.js and reported.js guard Immich links and format local asset IDs."""
+    report_modal_js = (JS_DIR / 'modules' / 'components' / 'report_modal.js').read_text(encoding='utf-8')
+    reported_js = (JS_DIR / 'modules' / 'screens' / 'reported.js').read_text(encoding='utf-8')
+
+    assert 'state.photoProvider && state.photoProvider !== "immich"' in report_modal_js
+    assert '_immichLinkEl.classList.add("hidden")' in report_modal_js
+
+    assert 'export function formatReportedAssetId(assetId)' in reported_js
+    assert 'state.photoProvider !== "local"' in reported_js
+    assert 'new TextDecoder("utf-8"' in reported_js

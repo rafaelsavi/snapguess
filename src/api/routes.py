@@ -124,10 +124,23 @@ async def health(metadata_store: MetadataStore = Depends(get_metadata_store)) ->
     return {'status': 'ok', 'version': APP_VERSION, 'database': 'connected'}
 
 
+def resolve_immich_web_url(settings: AppSettings) -> str:
+    """Return Immich Web base URL when the Immich provider is active, else empty string."""
+    if settings.photo_provider == 'immich' and settings.immich_server_url:
+        return settings.immich_server_url.removesuffix('/api')
+    return ''
+
+
+def build_immich_photo_url(settings: AppSettings, asset_id: str) -> str:
+    """Return direct Immich Web photo URL for Immich assets, or empty string for local folders."""
+    base_url = resolve_immich_web_url(settings)
+    return f'{base_url}/photos/{asset_id}' if base_url else ''
+
+
 @router.get('/ui-config', response_model=UiConfigResponse)
 async def ui_config(request: Request) -> dict[str, object]:
     settings = request.app.state.settings
-    immich_web_url = settings.immich_server_url.removesuffix('/api') if settings.immich_server_url else ''
+    immich_web_url = resolve_immich_web_url(settings)
     return {
         'photo_provider': settings.photo_provider,
         'language': settings.language,
@@ -447,8 +460,7 @@ async def flag_asset(
         other=payload.other,
         reported_by=payload.reported_by,
     )
-    immich_web_url = request.app.state.settings.immich_server_url.removesuffix('/api')
-    immich_url = f'{immich_web_url}/photos/{payload.asset_id}'
+    immich_url = build_immich_photo_url(request.app.state.settings, payload.asset_id)
     return FlagAssetResponse(
         success=True,
         asset_id=res['asset_id'],
@@ -469,7 +481,7 @@ async def list_flagged_assets(
     limit: int = Query(default=100, ge=1, le=1000),
     metadata_store: MetadataStore = Depends(get_metadata_store),
 ) -> list[FlaggedAssetItem]:
-    immich_web_url = request.app.state.settings.immich_server_url.removesuffix('/api')
+    settings = request.app.state.settings
     records = await asyncio.to_thread(metadata_store.list_flagged_assets, limit)
     return [
         FlaggedAssetItem(
@@ -480,7 +492,7 @@ async def list_flagged_assets(
             other=r['other'],
             reported_by=r['reported_by'],
             reported_at=r['reported_at'],
-            immich_url=f'{immich_web_url}/photos/{r["asset_id"]}',
+            immich_url=build_immich_photo_url(settings, r['asset_id']),
         )
         for r in records
     ]

@@ -28,7 +28,7 @@ Response:
 ```json
 {
   "status": "ok",
-  "version": "4.5.4",
+  "version": "4.5.5",
   "database": "connected"
 }
 ```
@@ -45,7 +45,7 @@ Response:
   "language": "EN",
   "score_max_points": 100,
   "immich_web_url": "https://immich.example.com",
-  "version": "4.5.4",
+  "version": "4.5.5",
   "tile_config": {
     "streets_url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     "streets_attribution": "&copy; OpenStreetMap",

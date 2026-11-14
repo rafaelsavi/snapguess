@@ -506,10 +506,11 @@ class MetadataStore:
             )
 
     def prune_missing_albums(self, library_name: str, active_album_ids: set[str]) -> int:
-        """Remove albums that no longer exist on the Immich server."""
-        if not active_album_ids:
-            return 0
+        """Remove albums that no longer exist on the Immich server or local folder."""
         with self._db.connection() as conn:
+            if not active_album_ids:
+                cursor = conn.execute('DELETE FROM albums WHERE library_name = ?', (library_name,))
+                return cursor.rowcount
             conn.execute('CREATE TEMP TABLE temp_active_album_ids (id TEXT PRIMARY KEY);')
             conn.executemany(
                 'INSERT INTO temp_active_album_ids (id) VALUES (?);',
