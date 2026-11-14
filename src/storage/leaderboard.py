@@ -1091,7 +1091,7 @@ class LeaderboardStore:
             params.append(q.game_mode.value)
 
         if q.player_name is not None and q.player_name != '':
-            clauses.append('e.player_name = ?')
+            clauses.append('e.player_name = ? COLLATE NOCASE')
             params.append(q.player_name)
         if q.play_mode is not None:
             clauses.append('m.play_mode = ?')
@@ -3321,6 +3321,25 @@ class LeaderboardStore:
                     is_timed_out = any(bool(x.get('timed_out')) for x in p_g_list)
 
                 cumulative_scores[p_name] = cumulative_scores.get(p_name, 0) + r_score
+                unshuffle_guesses_list = (
+                    [
+                        {
+                            'photo_id': x.get('asset_id'),
+                            'asset_id': x.get('asset_id'),
+                            'assigned_pin_id': x.get('assigned_pin_id'),
+                            'assigned_timeline_index': x.get('assigned_timeline_index'),
+                            'is_correct_location': bool(x['is_correct_location'])
+                            if x.get('is_correct_location') is not None
+                            else None,
+                            'is_correct_date_order': bool(x['is_correct_date_order'])
+                            if x.get('is_correct_date_order') is not None
+                            else None,
+                        }
+                        for x in p_g_list
+                    ]
+                    if game_mode == 'unshuffle'
+                    else None
+                )
 
                 player_guesses.append(
                     MatchReplayPlayerGuess(
@@ -3344,6 +3363,7 @@ class LeaderboardStore:
                         else None,
                         assigned_pin_id=first_pg.get('assigned_pin_id'),
                         assigned_timeline_index=first_pg.get('assigned_timeline_index'),
+                        unshuffle_guesses=unshuffle_guesses_list,
                     )
                 )
 
