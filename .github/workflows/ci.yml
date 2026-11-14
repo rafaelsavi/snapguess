@@ -70,11 +70,126 @@ jobs:
           "
 
   # ============================================================================
+  # STAGE 1B: DOCKER SMOKE TEST (Runs on EVERY PR and push to main/rc)
+  # ============================================================================
+  docker-test:
+    name: Docker Build & Permission Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build local test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: snapguess:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test Unraid PUID/PGID, non-root --user, and permission diagnostics
+        run: |
+          set -euo pipefail
+          WORK_DIR="$(mktemp -d)"
+          trap 'docker rm -f sg-unraid sg-nonroot sg-denied >/dev/null 2>&1 || true; sudo rm -rf "$WORK_DIR"' EXIT
+
+          # 1. Unraid simulation: root:root 0755 /app/data auto-fixed to 99:100 while read-only /photos stays untouched
+          UNRAID_DATA="$WORK_DIR/unraid-data"
+          UNRAID_PHOTOS="$WORK_DIR/unraid-photos"
+          sudo mkdir -p "$UNRAID_DATA" "$UNRAID_PHOTOS"
+          sudo chown 0:0 "$UNRAID_DATA" "$UNRAID_PHOTOS"
+          sudo chmod 0755 "$UNRAID_DATA" "$UNRAID_PHOTOS"
+
+          docker run -d --name sg-unraid \
+            -e PUID=99 -e PGID=100 \
+            -e PHOTO_PROVIDER=local \
+            -e LOCAL_LIBRARIES='{"Family":"/photos"}' \
+            -v "$UNRAID_DATA:/app/data" \
+            -v "$UNRAID_PHOTOS:/photos:ro" \
+            -p 18011:8010 \
+            snapguess:ci-test
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18011/api/health; then
+              echo ""
+              break
+            fi
+            sleep 1
+            if [ "$i" -eq 30 ]; then
+              docker logs sg-unraid || true
+              exit 1
+            fi
+          done
+
+          WORKER_UIDS="$(docker exec sg-unraid awk '/^Uid:/{u=$2; eu=$3} /^Gid:/{g=$2; eg=$3} END{print u":"eu":"g":"eg}' /proc/1/status)"
+          test "$WORKER_UIDS" = "99:99:100:100"
+          test "$(sudo stat -c '%u:%g' "$UNRAID_DATA")" = "99:100"
+          test "$(sudo stat -c '%u:%g' "$UNRAID_DATA/metadata.db")" = "99:100"
+          test "$(sudo stat -c '%u:%g' "$UNRAID_DATA/leaderboard.db")" = "99:100"
+          test "$(sudo stat -c '%u:%g' "$UNRAID_PHOTOS")" = "0:0"
+          docker rm -f sg-unraid
+
+          # 2. Explicit --user 1000:1000 with properly owned pre-existing directory
+          NONROOT_DATA="$WORK_DIR/nonroot-data"
+          sudo mkdir -p "$NONROOT_DATA"
+          sudo chown 1000:1000 "$NONROOT_DATA"
+          sudo chmod 0755 "$NONROOT_DATA"
+
+          docker run -d --name sg-nonroot \
+            --user 1000:1000 \
+            -e PHOTO_PROVIDER=local \
+            -e LOCAL_LIBRARIES='{"Family":"/photos"}' \
+            -v "$NONROOT_DATA:/app/data" \
+            -v "$UNRAID_PHOTOS:/photos:ro" \
+            -p 18012:8010 \
+            snapguess:ci-test
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18012/api/health; then
+              echo ""
+              break
+            fi
+            sleep 1
+            if [ "$i" -eq 30 ]; then
+              docker logs sg-nonroot || true
+              exit 1
+            fi
+          done
+          docker rm -f sg-nonroot
+
+          # 3. Forced --user 1000:1000 against root:root 0755 must fail cleanly with actionable guidance
+          DENIED_DATA="$WORK_DIR/denied-data"
+          sudo mkdir -p "$DENIED_DATA"
+          sudo chown 0:0 "$DENIED_DATA"
+          sudo chmod 0755 "$DENIED_DATA"
+
+          set +e
+          docker run --name sg-denied \
+            --user 1000:1000 \
+            -e PHOTO_PROVIDER=local \
+            -e LOCAL_LIBRARIES='{"Family":"/photos"}' \
+            -v "$DENIED_DATA:/app/data" \
+            -v "$UNRAID_PHOTOS:/photos:ro" \
+            snapguess:ci-test > "$WORK_DIR/denied.log" 2>&1
+          STATUS=$?
+          set -e
+          cat "$WORK_DIR/denied.log"
+          test "$STATUS" -ne 0
+          grep -q "PUID/PGID" "$WORK_DIR/denied.log"
+
+  # ============================================================================
   # STAGE 2: RELEASE (Runs ONLY if validate succeeded, on main, and version is new)
   # ============================================================================
   release:
     name: Create Tag & GitHub Release
-    needs: validate
+    needs: [validate, docker-test]
     if: needs.validate.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
