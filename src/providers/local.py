@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import reverse_geocoder as rg
+from cachetools import LRUCache
 from PIL import ExifTags, Image, ImageOps
 
 try:
@@ -348,11 +349,31 @@ def _parse_exif_datetime(raw: Any) -> str | None:
 class LocalFolderPhotoProvider(BasePhotoProvider):
     """Local filesystem photo provider satisfying the BasePhotoProvider interface."""
 
-    def __init__(self, libraries: Mapping[str, str | Path]) -> None:
+    def __init__(self, libraries: Mapping[str, str | Path], *, thumbnail_cache_size: int = 128) -> None:
         """Initialize provider with library names mapped to directory paths."""
         self._libraries: dict[str, Path] = {
             name.strip(): Path(path).expanduser().resolve() for name, path in libraries.items() if name.strip()
         }
+        self._thumb_cache: LRUCache[tuple[str, str, int], tuple[bytes, str]] = LRUCache(
+            maxsize=max(1, thumbnail_cache_size)
+        )
+
+    @staticmethod
+    def encode_asset_id(library_name: str, rel_posix: str) -> str:
+        """Encode a library-scoped relative POSIX path into a reversible hex asset ID."""
+        return f'{library_name}\x00{rel_posix}'.encode().hex()
+
+    @staticmethod
+    def decode_asset_id(asset_id: str) -> tuple[str | None, str]:
+        """Decode a hex asset ID into (library_name_or_none, rel_posix)."""
+        try:
+            raw_str = bytes.fromhex(asset_id).decode('utf-8')
+        except Exception as exc:
+            raise ProviderError(f'Invalid asset ID format: {asset_id}') from exc
+        if '\x00' in raw_str:
+            lib_name, rel_str = raw_str.split('\x00', 1)
+            return lib_name, rel_str
+        return None, raw_str
 
     @property
     def provider_id(self) -> str:
@@ -390,14 +411,15 @@ class LocalFolderPhotoProvider(BasePhotoProvider):
     def resolve_asset_path(self, library_name: str, asset_id: str) -> Path:
         """Resolve a reversible hex asset ID to its absolute filesystem path."""
         root = self.get_library_path(library_name)
-        try:
-            rel_str = bytes.fromhex(asset_id).decode('utf-8')
-        except Exception as exc:
-            raise ProviderError(f'Invalid asset ID format: {asset_id}') from exc
+        encoded_lib, rel_str = self.decode_asset_id(asset_id)
+        if encoded_lib is not None and encoded_lib != library_name:
+            raise ProviderError(f"Asset ID library mismatch: expected '{library_name}', got '{encoded_lib}'")
 
-        # Defense-in-depth: Reject absolute paths, Windows drive letters/streams, or traversal tokens
+        # Defense-in-depth: Reject empty/null paths, absolute paths, Windows drive letters/streams, or traversal tokens
         if (
-            Path(rel_str).is_absolute()
+            not rel_str
+            or '\x00' in rel_str
+            or Path(rel_str).is_absolute()
             or rel_str.startswith(('/', '\\'))
             or '..' in rel_str.replace('\\', '/').split('/')
             or ':' in rel_str
@@ -414,6 +436,15 @@ class LocalFolderPhotoProvider(BasePhotoProvider):
     async def get_asset_bytes(self, library_name: str, asset_id: str) -> tuple[bytes, str]:
         """Generate on-demand 1280px preview thumbnail with EXIF/GPS metadata scrubbed."""
         full_path = self.resolve_asset_path(library_name, asset_id)
+        try:
+            mtime_ns = full_path.stat().st_mtime_ns
+        except OSError as exc:
+            raise ProviderError(f'Asset file not found on disk: {asset_id}') from exc
+
+        cache_key = (library_name, str(full_path), mtime_ns)
+        cached = self._thumb_cache.get(cache_key)
+        if cached is not None:
+            return cached
 
         def _generate() -> tuple[bytes, str]:
             try:
@@ -437,11 +468,13 @@ class LocalFolderPhotoProvider(BasePhotoProvider):
             except Exception as exc:
                 raise ProviderError(f'Failed to render thumbnail for {full_path.name}: {exc}') from exc
 
-        return await asyncio.to_thread(_generate)
+        result = await asyncio.to_thread(_generate)
+        self._thumb_cache[cache_key] = result
+        return result
 
     async def aclose(self) -> None:
         """Release any underlying resources on shutdown."""
-        pass
+        self._thumb_cache.clear()
 
     @staticmethod
     def extract_file_metadata(file_path: Path) -> dict[str, Any]:
@@ -553,11 +586,15 @@ class LocalFolderPhotoProvider(BasePhotoProvider):
 
             p_dir = Path(dirpath)
             rel_dir = p_dir.relative_to(root).as_posix()
-            album_id: str | None = None
+            folder_ancestors: list[tuple[str, str]] = []
             if rel_dir != '.':
-                album_id = rel_dir.encode('utf-8').hex()
-                album_name = rel_dir.replace('/', ' / ')
-                albums_map[album_id] = album_name
+                parts = rel_dir.split('/')
+                for i in range(1, len(parts) + 1):
+                    anc_rel = '/'.join(parts[:i])
+                    anc_id = anc_rel.encode('utf-8').hex()
+                    anc_name = anc_rel.replace('/', ' / ')
+                    folder_ancestors.append((anc_id, anc_name))
+            leaf_album_id: str | None = folder_ancestors[-1][0] if folder_ancestors else None
 
             for fname in filenames:
                 # Ignore hidden files, system files, and macOS AppleDouble files
@@ -575,21 +612,21 @@ class LocalFolderPhotoProvider(BasePhotoProvider):
                     continue
 
                 rel_file = full_path.relative_to(root).as_posix()
-                aid = rel_file.encode('utf-8').hex()
+                aid = self.encode_asset_id(library_name, rel_file)
                 all_seen_ids.add(aid)
+
+                for anc_id, anc_name in folder_ancestors:
+                    albums_map[anc_id] = anc_name
+                    asset_albums.append((aid, anc_id))
 
                 mtime_str = f'mtime:{st.st_mtime_ns}'
 
                 # Check if file is already indexed and unchanged in delta sync
                 if is_delta and cached_mtimes.get(aid) == mtime_str:
                     # File unchanged; skip opening file for EXIF parsing
-                    if album_id:
-                        asset_albums.append((aid, album_id))
                     continue
 
-                if album_id:
-                    asset_albums.append((aid, album_id))
-                pending_exif_files.append((aid, full_path, mtime_str, album_id))
+                pending_exif_files.append((aid, full_path, mtime_str, leaf_album_id))
 
         if not pending_exif_files:
             albums_data = [{'id': aid, 'name': aname, 'isShared': 0} for aid, aname in albums_map.items()]

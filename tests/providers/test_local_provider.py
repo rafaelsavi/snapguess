@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import os
 from pathlib import Path
 
 import pytest
@@ -262,6 +263,11 @@ def test_scan_library_files_and_reverse_geocoding(tmp_path: Path) -> None:
     other_file.parent.mkdir(parents=True, exist_ok=True)
     other_file.write_text('ignore me')
 
+    # Subfolder with only non-image files should not appear as an album
+    non_photo_dir = lib_dir / 'Documents'
+    non_photo_dir.mkdir(parents=True, exist_ok=True)
+    (non_photo_dir / 'readme.txt').write_text('not a photo')
+
     # Hidden directory and AppleDouble files should be ignored
     hidden_dir = lib_dir / '.git' / 'nested'
     hidden_dir.mkdir(parents=True, exist_ok=True)
@@ -282,17 +288,19 @@ def test_scan_library_files_and_reverse_geocoding(tmp_path: Path) -> None:
     assert len(all_seen) == 2
     assert len(asset_dicts) == 2
 
-    # Check album mapping: subfolder mapped to "Vacations / France"
+    # Check ancestor and leaf album mapping, and ensure non-photo folders are excluded
     album_names = {a['name'] for a in albums_data}
+    assert 'Vacations' in album_names
     assert 'Vacations / France' in album_names
+    assert 'Documents' not in album_names
 
-    # Check asset albums: root photo has no album, sub_photo has album
-    root_id = b'root.jpg'.hex()
-    paris_id = b'Vacations/France/paris.jpg'.hex()
+    # Check asset albums: root photo has no album, sub_photo has both parent and leaf albums
+    root_id = LocalFolderPhotoProvider.encode_asset_id('vacation', 'root.jpg')
+    paris_id = LocalFolderPhotoProvider.encode_asset_id('vacation', 'Vacations/France/paris.jpg')
 
-    asset_album_pairs = dict(asset_albums)
-    assert root_id not in asset_album_pairs
-    assert paris_id in asset_album_pairs
+    paris_album_ids = {alb_id for aid, alb_id in asset_albums if aid == paris_id}
+    assert all(aid != root_id for aid, _ in asset_albums)
+    assert paris_album_ids == {b'Vacations'.hex(), b'Vacations/France'.hex()}
 
     # Check reverse geocoding on Paris coordinates
     paris_entry = next(a for a in asset_dicts if a['id'] == paris_id)
@@ -316,3 +324,74 @@ def test_scan_library_files_and_reverse_geocoding(tmp_path: Path) -> None:
     # Only root_photo needed parsing because paris_id was unchanged in delta
     assert len(delta_assets) == 1
     assert delta_assets[0]['id'] == root_id
+
+
+def test_multi_library_asset_id_isolation_and_mismatch_protection(tmp_path: Path) -> None:
+    """Verify identical paths in distinct local libraries produce unique asset IDs and reject cross-library IDs."""
+    fam_dir = tmp_path / 'family'
+    trav_dir = tmp_path / 'travel'
+    _create_sample_image(fam_dir / '2023' / 'IMG_0001.jpg', color=(255, 0, 0))
+    _create_sample_image(trav_dir / '2023' / 'IMG_0001.jpg', color=(0, 0, 255))
+
+    provider = LocalFolderPhotoProvider({'Family': str(fam_dir), 'Travel': str(trav_dir)})
+
+    fam_assets, _, _, fam_seen = provider.scan_library_files('Family', cached_mtimes={})
+    trav_assets, _, _, trav_seen = provider.scan_library_files('Travel', cached_mtimes={})
+
+    assert len(fam_assets) == 1
+    assert len(trav_assets) == 1
+    assert fam_assets[0]['id'] != trav_assets[0]['id']
+    assert fam_seen.isdisjoint(trav_seen)
+
+    fam_id = fam_assets[0]['id']
+    trav_id = trav_assets[0]['id']
+
+    assert provider.resolve_asset_path('Family', fam_id) == (fam_dir / '2023' / 'IMG_0001.jpg').resolve()
+    assert provider.resolve_asset_path('Travel', trav_id) == (trav_dir / '2023' / 'IMG_0001.jpg').resolve()
+
+    with pytest.raises(ProviderError, match='Asset ID library mismatch'):
+        provider.resolve_asset_path('Travel', fam_id)
+
+
+async def test_get_asset_bytes_lru_cache_and_mtime_invalidation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify get_asset_bytes caches rendered thumbnails in memory and invalidates when file mtime changes."""
+    lib_dir = tmp_path / 'photos'
+    img_path = lib_dir / 'cached.jpg'
+    _create_sample_image(img_path, width=400, height=300, color=(10, 20, 30))
+
+    provider = LocalFolderPhotoProvider({'lib': str(lib_dir)}, thumbnail_cache_size=4)
+    asset_id = LocalFolderPhotoProvider.encode_asset_id('lib', 'cached.jpg')
+
+    open_calls = 0
+    real_open = Image.open
+
+    def spy_open(*args: object, **kwargs: object) -> Image.Image:
+        nonlocal open_calls
+        open_calls += 1
+        return real_open(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(Image, 'open', spy_open)
+
+    first_bytes, first_mime = await provider.get_asset_bytes('lib', asset_id)
+    assert first_mime == 'image/jpeg'
+    assert open_calls == 1
+
+    # Second call with same mtime_ns should hit _thumb_cache without calling Image.open
+    second_bytes, second_mime = await provider.get_asset_bytes('lib', asset_id)
+    assert second_bytes == first_bytes
+    assert second_mime == 'image/jpeg'
+    assert open_calls == 1
+
+    # Update image with newer mtime_ns -> cache key changes, triggering regeneration
+    _create_sample_image(img_path, width=400, height=300, color=(200, 220, 240))
+    st = img_path.stat()
+    os.utime(img_path, ns=(st.st_atime_ns, st.st_mtime_ns + 1_000_000))
+
+    third_bytes, _ = await provider.get_asset_bytes('lib', asset_id)
+    assert open_calls == 2
+    assert third_bytes != first_bytes
+
+    await provider.aclose()
+    assert len(provider._thumb_cache) == 0
