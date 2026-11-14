@@ -646,7 +646,7 @@ function renderPlayerProfile(data) {
             </div>
             <div class="speed-metric-item">
               <span class="speed-metric-label">${t("stats.preferred_cadence")}</span>
-              <span class="speed-metric-value">${escapeHtml(analytics.preferred_cadence || "")}</span>
+              <span class="speed-metric-value">${escapeHtml(String(analytics.preferred_cadence || "").replace(/\brounds\b/gi, t("challenges_page.rounds_label")))}</span>
             </div>
           </div>
         </div>

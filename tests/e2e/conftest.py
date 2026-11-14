@@ -194,6 +194,8 @@ def e2e_server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
         language='EN',
         data_path=data_path,
         auto_sync_on_startup=False,
+        auto_delta_sync_interval_hours=0,
+        auto_full_sync_interval_hours=0,
     )
 
     app = create_app(settings=settings)

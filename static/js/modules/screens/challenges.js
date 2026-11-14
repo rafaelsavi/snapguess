@@ -268,7 +268,7 @@ export async function loadChallengesList(showToast = false) {
     _hubListEl.innerHTML = `
       <div class="challenges-error-box">
         <span class="error-icon">⚠️</span>
-        <p>${escapeHtml(err.message || "Failed to load challenges")}</p>
+        <p>${escapeHtml(err.message || t("challenges_page.load_error"))}</p>
         <button type="button" class="btn-secondary btn-mini" id="retry-load-challenges-btn">
           ${t("challenges_page.refresh_btn")}
         </button>
@@ -680,7 +680,7 @@ async function renderStandingsDrawerContent(challengeId, capabilityToken) {
       _cachedStandings.set(challengeId, data);
     } catch (err) {
       console.error(`Failed to fetch leaderboard for challenge ${challengeId}:`, err);
-      contentEl.innerHTML = `<div class="standings-error-msg">${escapeHtml(err.message || "Failed to load leaderboard")}</div>`;
+      contentEl.innerHTML = `<div class="standings-error-msg">${escapeHtml(err.message || t("challenges_page.leaderboard_error"))}</div>`;
       _loadingStandings.delete(challengeId);
       return;
     } finally {

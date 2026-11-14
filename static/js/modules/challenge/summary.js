@@ -261,7 +261,7 @@ export const challengeSummary = {
           showActivityToast({
             icon: "👥",
             playerName: newP.player_name,
-            title: `${newP.player_name} joined the challenge!`,
+            title: t("challenge.player_joined_challenge", newP.player_name),
           });
         } else {
           const wasFin = oldP.is_finished || oldP.completed_rounds >= totalRoundsCount;

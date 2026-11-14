@@ -75,7 +75,7 @@ snapguess/
     ├── css/             Modular CSS stylesheets:
     │   ├── style.css    Master entrypoint (@importing base, components, modes).
     │   ├── base/        Design tokens (variables.css), resets (reset.css), app shell (layout.css).
-    │   ├── components/  UI components (auth.css, avatar.css, buttons.css, cards.css, dialog.css, maps.css, leaderboard.css, challenge.css, modals.css, multi_select.css, player_input.css, range_slider.css, reported.css, filters.css, timer.css, toolbar.css, hub_header.css, stats.css, round_stage.css, reveal_table.css, replay.css, review_deck.css, summary.css).
+    │   ├── components/  UI components (auth.css, avatar.css, buttons.css, cards.css, dialog.css, maps.css, leaderboard.css, challenge.css, modals.css, multi_select.css, player_input.css, pwa.css, range_slider.css, reported.css, filters.css, timer.css, toolbar.css, hub_header.css, stats.css, round_stage.css, reveal_table.css, replay.css, review_deck.css, summary.css).
     │   └── modes/       Game mode styles (pinpoint.css, unshuffle.css).
     ├── js/app.js        Main application coordinator and match lifecycle state machine.
     └── js/modules/      Modular ES modules:
@@ -137,6 +137,7 @@ snapguess/
         ├── i18n.js      Multi-language translation engine (EN/PT), live switcher, and locale-aware date formatting with Today/Yesterday labels.
         ├── leaderboard.js Leaderboard UI rendering and filtering.
         ├── maps.js      Leaflet map wrapper, marker placement, auto-zoom, and updateSubmitState.
+        ├── pwa_install.js Progressive Web App install prompt & mobile banner lifecycle controller.
         ├── router.js    Client-side History API router (normalizePath, parseRoute, navigateBack, setNavigationGuard).
         ├── setup_filters.js Setup filter controls, dependent cities, persistence, and live preflight.
         ├── game_settings.js Normalizes and persists game mode, guess modes, round count, and round length in localStorage.

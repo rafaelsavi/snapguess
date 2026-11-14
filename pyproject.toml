@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "snapguess"
-version = "4.5.3"
+version = "4.5.4"
 description = "Game of guessing where and when your photos were taken"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -96,7 +96,3 @@ inline-quotes = "single"
 docstring-code-format = true
 quote-style = "single"
 
-[dependency-groups]
-dev = [
-    "httpx2>=2.12.0",
-]
