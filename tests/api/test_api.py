@@ -1869,3 +1869,43 @@ def test_unshuffle_local_game_persists_match_rounds(tmp_path: Path) -> None:
     assert replay is not None
     assert len(replay.rounds_data) == 3
     assert all(len(rd.player_guesses) == 1 for rd in replay.rounds_data)
+
+
+def test_flag_asset_endpoints_omit_immich_url_in_local_mode(tmp_path: Path) -> None:
+    """Verify flag_asset and list_flagged_assets return empty immich_url when PHOTO_PROVIDER=local."""
+    from src.config import AppSettings
+    from src.main import create_app
+
+    photos_dir = tmp_path / 'photos'
+    photos_dir.mkdir(parents=True)
+    settings = AppSettings(
+        photo_provider='local',
+        local_libraries={'Family': str(photos_dir)},
+        data_path=tmp_path / 'data',
+        auto_sync_on_startup=False,
+    )
+    app = create_app(settings)
+    local_client = TestClient(app)
+
+    post_res = local_client.post(
+        '/api/assets/flag',
+        json={
+            'asset_id': '46616d696c790070686f746f2e6a7067',
+            'flag_coordinates': True,
+            'flag_date': False,
+            'other': 'Wrong pin',
+            'reported_by': 'Alice',
+        },
+    )
+    assert post_res.status_code == 200
+    assert post_res.json()['immich_url'] == ''
+
+    list_res = local_client.get('/api/assets/flagged')
+    assert list_res.status_code == 200
+    items = list_res.json()
+    assert len(items) == 1
+    assert items[0]['immich_url'] == ''
+
+    ui_cfg = local_client.get('/api/ui-config').json()
+    assert ui_cfg['photo_provider'] == 'local'
+    assert ui_cfg['immich_web_url'] == ''

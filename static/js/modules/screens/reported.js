@@ -152,6 +152,32 @@ export async function loadReportedAssets(showToast = false) {
 }
 
 /**
+ * Decode a local provider hex asset ID into a readable "Library / path" display string.
+ * @param {string} assetId
+ * @returns {string}
+ */
+export function formatReportedAssetId(assetId) {
+  if (!assetId || state.photoProvider !== "local") return String(assetId || "");
+  if (assetId.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(assetId)) return assetId;
+  try {
+    const bytes = new Uint8Array(assetId.length / 2);
+    for (let i = 0; i < assetId.length; i += 2) {
+      bytes[i / 2] = parseInt(assetId.slice(i, i + 2), 16);
+    }
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const sepIdx = decoded.indexOf("\0");
+    if (sepIdx !== -1) {
+      const lib = decoded.slice(0, sepIdx);
+      const rel = decoded.slice(sepIdx + 1);
+      return `${lib} / ${rel}`;
+    }
+    return decoded;
+  } catch {
+    return assetId;
+  }
+}
+
+/**
  * Filter, sort, and render reported assets list and inspection panel.
  */
 export function renderReported() {
@@ -161,7 +187,8 @@ export function renderReported() {
   let filtered = _reportedAssets.filter((item) => {
     // Search query filter
     if (_searchQuery) {
-      const matchId = item.asset_id.toLowerCase().includes(_searchQuery);
+      const displayId = formatReportedAssetId(item.asset_id).toLowerCase();
+      const matchId = item.asset_id.toLowerCase().includes(_searchQuery) || displayId.includes(_searchQuery);
       const matchReporter = item.reported_by && item.reported_by.toLowerCase().includes(_searchQuery);
       const matchNotes = item.other && item.other.toLowerCase().includes(_searchQuery);
       if (!matchId && !matchReporter && !matchNotes) {
@@ -241,6 +268,7 @@ export function renderReported() {
       const mediaUrl = `/api/media/${encodeURIComponent(item.asset_id)}`;
       const timeStr = formatRelativeTime(item.reported_at);
       const reporter = item.reported_by || t("reported_page.reported_by_unknown");
+      const displayId = formatReportedAssetId(item.asset_id);
 
       const badges = [];
       if (item.flag_coordinates) {
@@ -260,7 +288,7 @@ export function renderReported() {
           </div>
           <div class="reported-item-info">
             <div class="reported-item-header">
-              <span class="reported-item-id" title="${escapeHtml(item.asset_id)}">${escapeHtml(item.asset_id)}</span>
+              <span class="reported-item-id" title="${escapeHtml(displayId)}">${escapeHtml(displayId)}</span>
               <span class="reported-item-time">${escapeHtml(timeStr)}</span>
             </div>
             <div class="reported-item-badges">
@@ -342,6 +370,15 @@ function renderInspectionPanel(item) {
     `);
   }
 
+  const displayId = formatReportedAssetId(item.asset_id);
+  const showImmichLink = Boolean(item.immich_url) && state.photoProvider !== "local";
+  const immichBtnHtml = showImmichLink
+    ? `<a href="${escapeHtml(item.immich_url)}" target="_blank" rel="noopener noreferrer" class="btn-open-immich" title="Open photo in Immich Web to edit metadata">
+            <span>${escapeHtml(t("reported_page.open_immich"))}</span>
+            <span aria-hidden="true">↗</span>
+          </a>`
+    : "";
+
   _inspectionPanelEl.innerHTML = `
     <div class="inspection-main-grid">
       <div class="inspection-preview-col">
@@ -353,7 +390,7 @@ function renderInspectionPanel(item) {
         <div class="inspection-header-box">
           <div class="inspection-asset-id-row">
             <span class="inspection-asset-id-label">${escapeHtml(t("reported_page.asset_id_label"))}</span>
-            <span class="inspection-asset-id-val">${escapeHtml(item.asset_id)}</span>
+            <span class="inspection-asset-id-val">${escapeHtml(displayId)}</span>
           </div>
           <div class="inspection-meta-row">
             <span>👤 ${escapeHtml(t("reported_page.reported_by", reporter))}</span>
@@ -368,10 +405,7 @@ function renderInspectionPanel(item) {
         </div>
 
         <div class="inspection-actions-footer">
-          <a href="${escapeHtml(item.immich_url)}" target="_blank" rel="noopener noreferrer" class="btn-open-immich" title="Open photo in Immich Web to edit metadata">
-            <span>${escapeHtml(t("reported_page.open_immich"))}</span>
-            <span aria-hidden="true">↗</span>
-          </a>
+          ${immichBtnHtml}
           <button type="button" class="btn-resolve-report" id="btn-resolve-current-report" data-asset-id="${escapeHtml(item.asset_id)}">
             <span aria-hidden="true">✓</span>
             <span>${escapeHtml(t("reported_page.mark_resolved"))}</span>

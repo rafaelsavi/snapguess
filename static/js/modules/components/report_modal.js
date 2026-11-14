@@ -105,12 +105,18 @@ export function openReportModal(assetId, previewUrl = null, playerName = null) {
     _thumbEl.src = src;
   }
 
-  // Update direct Immich Web link
+  // Update direct Immich Web link (hidden for local folder provider)
   if (_immichLinkEl) {
-    const baseUrl = state.immichWebUrl || window.location.origin;
-    _immichLinkEl.href = `${baseUrl.replace(/\/+$/, "")}/photos/${assetId}`;
-    _immichLinkEl.target = "_blank";
-    _immichLinkEl.rel = "noopener noreferrer";
+    if (state.photoProvider && state.photoProvider !== "immich") {
+      _immichLinkEl.classList.add("hidden");
+      _immichLinkEl.removeAttribute("href");
+    } else {
+      _immichLinkEl.classList.remove("hidden");
+      const baseUrl = state.immichWebUrl || window.location.origin;
+      _immichLinkEl.href = `${baseUrl.replace(/\/+$/, "")}/photos/${assetId}`;
+      _immichLinkEl.target = "_blank";
+      _immichLinkEl.rel = "noopener noreferrer";
+    }
   }
 
   validateFormState();

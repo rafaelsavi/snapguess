@@ -15,7 +15,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 
 from src.api.auth_routes import get_current_user
-from src.api.routes import ui_config
+from src.api.routes import build_immich_photo_url, ui_config
 from src.auth.models import AuthContext, Role
 from src.auth.service import get_current_auth, require_role
 from src.game.challenge_service import ChallengeService, get_challenge_total_rounds
@@ -604,8 +604,7 @@ async def flag_challenge_asset(
         other=payload.other,
         reported_by=payload.reported_by,
     )
-    immich_web_url = request.app.state.settings.immich_server_url.removesuffix('/api')
-    immich_url = f'{immich_web_url}/photos/{payload.asset_id}'
+    immich_url = build_immich_photo_url(request.app.state.settings, payload.asset_id)
     return FlagAssetResponse(
         success=True,
         asset_id=res['asset_id'],
