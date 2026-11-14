@@ -41,7 +41,6 @@ def test_unraid_xml_schema_and_metadata() -> None:
         'WebUI',
         'TemplateURL',
         'Icon',
-        'ExtraParams',
     )
     for tag in required_non_empty_tags:
         elem = root.find(tag)
@@ -52,8 +51,10 @@ def test_unraid_xml_schema_and_metadata() -> None:
     assert root.findtext('Repository') == 'ghcr.io/rafaelsavi/snapguess:latest'
     assert root.findtext('Privileged') == 'false'
     assert root.findtext('WebUI') == 'http://[IP]:[PORT:8010]'
-    # Ensure Unraid nobody:users (99:100) permission compatibility for /mnt/user/appdata mounts
-    assert '--user 99:100' in (root.findtext('ExtraParams') or '')
+    # ExtraParams must remain empty (no hardcoded --user) so entrypoint can initialize /app/data ownership cleanly
+    extra_params = root.find('ExtraParams')
+    assert extra_params is not None, 'Missing Unraid XML tag <ExtraParams>'
+    assert '--user' not in (extra_params.text or '')
 
 
 def test_unraid_template_urls_match_repo_files() -> None:
@@ -104,11 +105,54 @@ def test_unraid_configs_align_with_dockerfile() -> None:
     port_target = ports[0].attrib['Target']
     assert f'EXPOSE {port_target}' in dockerfile_text
 
-    paths = {c.attrib['Target']: c.attrib for c in configs if c.attrib['Type'] == 'Path'}
+    paths = {c.attrib['Target']: c for c in configs if c.attrib['Type'] == 'Path'}
     assert '/app/data' in paths
-    assert paths['/app/data']['Mode'] == 'rw'
+    assert paths['/app/data'].attrib['Mode'] == 'rw'
     assert '/photos' in paths
-    assert paths['/photos']['Mode'] == 'ro'
+    assert paths['/photos'].attrib['Mode'] == 'ro'
+    # Keep default /photos path empty so Immich installs do not auto-create /mnt/user/photos on Unraid
+    assert paths['/photos'].attrib['Default'] == ''
+    assert not (paths['/photos'].text or '').strip()
+
+    vars_map = {c.attrib['Target']: c for c in configs if c.attrib['Type'] == 'Variable'}
+    assert vars_map['PUID'].attrib['Default'] == '99'
+    assert (vars_map['PUID'].text or '').strip() == '99'
+    assert vars_map['PGID'].attrib['Default'] == '100'
+    assert (vars_map['PGID'].text or '').strip() == '100'
+
+
+def test_dockerfile_entrypoint_and_compose_safety() -> None:
+    """Verify Dockerfile entrypoint, LF line endings, runtime smoke checks, and Compose PUID/PGID config."""
+    entrypoint_path = REPO_ROOT / 'docker-entrypoint.sh'
+    compose_path = REPO_ROOT / 'docker-compose.example.yml'
+
+    assert entrypoint_path.is_file(), 'docker-entrypoint.sh missing at repository root'
+    raw_bytes = entrypoint_path.read_bytes()
+    assert b'\r' not in raw_bytes, 'docker-entrypoint.sh must use LF line endings (no CRLF)'
+    entrypoint_text = raw_bytes.decode('utf-8')
+    assert entrypoint_text.startswith('#!/bin/sh\n')
+    assert 'PUID' in entrypoint_text
+    assert 'PGID' in entrypoint_text
+    assert 'setpriv' in entrypoint_text
+    assert '/photos' not in entrypoint_text
+
+    dockerfile_text = DOCKERFILE_PATH.read_text(encoding='utf-8')
+    assert 'COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh' in dockerfile_text
+    assert 'chmod 0755 /usr/local/bin/docker-entrypoint.sh' in dockerfile_text
+    assert 'ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]' in dockerfile_text
+    assert 'CMD ["/app/.venv/bin/python", "-m", "src.main"]' in dockerfile_text
+    assert 'pillow_heif' in dockerfile_text
+    assert 'reverse_geocoder' in dockerfile_text
+    assert 'USER 1000:1000' not in dockerfile_text
+
+    compose_text = compose_path.read_text(encoding='utf-8')
+    assert './data:/app/data' in compose_text
+    assert 'PUID' in compose_text
+    assert 'PGID' in compose_text
+    active_user_lines = [line for line in compose_text.splitlines() if line.strip().startswith('user:')]
+    assert not active_user_lines, (
+        'docker-compose.example.yml should drop privileges via PUID/PGID instead of hardcoded user:'
+    )
 
 
 def test_unraid_template_variables_boot_with_load_settings(monkeypatch: pytest.MonkeyPatch) -> None:
