@@ -17,6 +17,7 @@ import {
   playerBadge,
   playerNameCell,
   renderRoundMeta,
+  escapeHtml,
 } from "../formatters.js";
 import {
   createPerfectBadge,
@@ -409,7 +410,7 @@ function renderRevealMap(reveal) {
           const icon = createPopPinIcon(playerInitial(result.player_name), color);
           const marker = L.marker(guessed, { icon })
             .addTo(state.revealMap)
-            .bindPopup(t("reveal.popup_guess", result.player_name, formatDistance(distance_km)), { autoPan: false, closeOnClick: false });
+            .bindPopup(t("reveal.popup_guess", escapeHtml(result.player_name), formatDistance(distance_km)), { autoPan: false, closeOnClick: false });
           state.revealLayers.push(marker);
         });
       }

@@ -386,7 +386,7 @@ export async function showPlayerProfile(playerName) {
     if (profileView) {
       profileView.innerHTML = `
         <div class="empty-state" style="padding: 3rem 1rem; text-align: center;">
-          <p style="color: var(--text-muted); font-size: 1.1rem;">${t("stats.player_not_found", playerName)}</p>
+          <p style="color: var(--text-muted); font-size: 1.1rem;">${t("stats.player_not_found", escapeHtml(playerName))}</p>
           <button type="button" class="btn-secondary btn-sm page-back-btn" style="margin-top: 1rem;" id="profile-back-btn" data-action="back" data-fallback="/players">
             <span aria-hidden="true">←</span>
             <span>${t("common.back")}</span>

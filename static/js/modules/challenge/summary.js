@@ -623,7 +623,7 @@ export const challengeSummary = {
 
               const distStr = gp.distance_km !== null && gp.distance_km !== undefined ? ` (${formatDistance(gp.distance_km)})` : "";
               const marker = L.marker(latlng, { icon })
-                .bindPopup(`<b>${g.player_name}</b><br>${g.round_score} pts${distStr}`, { autoPan: false, closeOnClick: false })
+                .bindPopup(`<b>${escapeHtml(g.player_name)}</b><br>${g.round_score} pts${escapeHtml(distStr)}`, { autoPan: false, closeOnClick: false })
                 .addTo(challengeSession.carouselMap);
               challengeSession.carouselLayers.push(marker);
             }

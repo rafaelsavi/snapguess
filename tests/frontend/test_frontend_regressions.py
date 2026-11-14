@@ -1063,7 +1063,7 @@ def test_challenges_page_share_drawer_and_results_button() -> None:
     assert 'btn-results-challenge' in challenges_page_js
     assert '.btn-results-challenge' in challenge_css
     assert 'btn-play-challenge' in challenges_page_js
-    assert '/play/${ch.capability_token}/summary' in challenges_page_js
+    assert '/play/${escapeHtml(ch.capability_token)}/summary' in challenges_page_js
     assert 'navigate(`/play/${token}/summary`)' in challenges_page_js
     assert 'navigate(`/play/${token}`)' in challenges_page_js
     assert 'btn-replay-challenge' not in challenges_page_js

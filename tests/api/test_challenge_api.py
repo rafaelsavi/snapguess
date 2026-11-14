@@ -1484,3 +1484,75 @@ def test_challenge_replay_guest_access_vs_direct_replay(tmp_path: Path) -> None:
         )
         assert cap_res.status_code == 200
         assert cap_res.json()['challenge_id'] == ch_id
+
+
+def test_leaderboard_cross_challenge_token_does_not_bypass_fog_of_war(tmp_path: Path) -> None:
+    """A completed X-Player-Token from Challenge A must not reveal Fog of War data on Challenge B."""
+    immich = FakeImmichClient(_create_mock_assets(25))
+    client = build_client(tmp_path, immich)
+
+    c_a = client.post(
+        '/api/challenge/create',
+        json={'creator_name': 'Host', 'title': 'Challenge A', 'game_mode': 'pinpoint', 'round_count': 3},
+    )
+    assert c_a.status_code == 200
+    cap_a = c_a.json()['capability_token']
+
+    c_b = client.post(
+        '/api/challenge/create',
+        json={'creator_name': 'Host', 'title': 'Challenge B', 'game_mode': 'pinpoint', 'round_count': 3},
+    )
+    assert c_b.status_code == 200
+    cap_b = c_b.json()['capability_token']
+
+    # Player 1 joins and completes all rounds of Challenge A
+    start_a = client.post(f'/play/api/{cap_a}/start', json={'player_name': 'Alice'})
+    assert start_a.status_code == 200
+    token_a = start_a.json()['session_token']
+
+    for r_idx in range(3):
+        ans_a = client.post(
+            f'/play/api/{cap_a}/answer',
+            headers={'X-Player-Token': token_a},
+            json={
+                'round_index': r_idx,
+                'guessed_latitude': 10.0,
+                'guessed_longitude': 20.0,
+                'guessed_year': 2020,
+                'guessed_month': 1,
+                'time_taken_seconds': 5.0,
+            },
+        )
+        assert ans_a.status_code == 200
+
+    # Player 2 joins Challenge B and submits round 0 so round guesses exist on Challenge B
+    start_b = client.post(f'/play/api/{cap_b}/start', json={'player_name': 'Bob'})
+    assert start_b.status_code == 200
+    token_b = start_b.json()['session_token']
+
+    ans_b = client.post(
+        f'/play/api/{cap_b}/answer',
+        headers={'X-Player-Token': token_b},
+        json={
+            'round_index': 0,
+            'guessed_latitude': 12.0,
+            'guessed_longitude': 22.0,
+            'guessed_year': 2021,
+            'guessed_month': 2,
+            'time_taken_seconds': 4.0,
+        },
+    )
+    assert ans_b.status_code == 200
+
+    # Using token_a on Challenge B's leaderboard must NOT unlock Fog of War
+    lb_res = client.get(
+        f'/play/api/{cap_b}/leaderboard',
+        headers={'X-Player-Token': token_a},
+    )
+    assert lb_res.status_code == 200
+    lb = lb_res.json()
+    assert lb['is_game_over'] is False
+    assert lb['up_to_round'] == -1
+    assert lb['round_guesses'] == []
+    assert lb['round_history'] == []
+    assert lb['rounds'] == []

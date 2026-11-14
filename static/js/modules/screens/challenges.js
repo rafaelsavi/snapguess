@@ -268,7 +268,7 @@ export async function loadChallengesList(showToast = false) {
     _hubListEl.innerHTML = `
       <div class="challenges-error-box">
         <span class="error-icon">⚠️</span>
-        <p>${err.message || "Failed to load challenges"}</p>
+        <p>${escapeHtml(err.message || "Failed to load challenges")}</p>
         <button type="button" class="btn-secondary btn-mini" id="retry-load-challenges-btn">
           ${t("challenges_page.refresh_btn")}
         </button>
@@ -515,13 +515,13 @@ export function renderChallenges() {
           <div class="footer-left-actions">
             ${
               isActive
-                ? `<a href="/play/${ch.capability_token}" class="btn-primary btn-play-challenge" data-token="${ch.capability_token}">
+                ? `<a href="/play/${escapeHtml(ch.capability_token)}" class="btn-primary btn-play-challenge" data-token="${escapeHtml(ch.capability_token)}">
                     <span class="btn-icon">🎮</span>
                     ${t("challenges_page.play_btn")}
                   </a>`
                 : ""
             }
-            <a href="/play/${ch.capability_token}/summary" class="btn-secondary btn-results-challenge" data-token="${ch.capability_token}">
+            <a href="/play/${escapeHtml(ch.capability_token)}/summary" class="btn-secondary btn-results-challenge" data-token="${escapeHtml(ch.capability_token)}">
               <span class="btn-icon">🏆</span>
               ${t("challenges_page.results_btn")}
             </a>
@@ -539,15 +539,15 @@ export function renderChallenges() {
           </div>
 
           <button type="button" class="btn-standings-toggle ${isStandingsExpanded ? "active" : ""}"
-            data-id="${ch.challenge_id}" data-token="${ch.capability_token}">
+            data-id="${escapeHtml(ch.challenge_id)}" data-token="${escapeHtml(ch.capability_token)}">
             <span class="standings-toggle-icon">${isStandingsExpanded ? "▲" : "▼"}</span>
             <span>${standingsBtnText}</span>
           </button>
         </div>
 
         <!-- Inline Standings & Leaderboard Drawer -->
-        <div class="challenge-standings-drawer ${isStandingsExpanded ? "open" : "hidden"}" id="standings-drawer-${ch.challenge_id}">
-          <div class="drawer-inner" id="drawer-content-${ch.challenge_id}">
+        <div class="challenge-standings-drawer ${isStandingsExpanded ? "open" : "hidden"}" id="standings-drawer-${escapeHtml(ch.challenge_id)}">
+          <div class="drawer-inner" id="drawer-content-${escapeHtml(ch.challenge_id)}">
             <!-- Rendered dynamically by toggleChallengeStandings -->
           </div>
         </div>
@@ -680,7 +680,7 @@ async function renderStandingsDrawerContent(challengeId, capabilityToken) {
       _cachedStandings.set(challengeId, data);
     } catch (err) {
       console.error(`Failed to fetch leaderboard for challenge ${challengeId}:`, err);
-      contentEl.innerHTML = `<div class="standings-error-msg">${err.message || "Failed to load leaderboard"}</div>`;
+      contentEl.innerHTML = `<div class="standings-error-msg">${escapeHtml(err.message || "Failed to load leaderboard")}</div>`;
       _loadingStandings.delete(challengeId);
       return;
     } finally {
@@ -749,7 +749,7 @@ async function renderStandingsDrawerContent(challengeId, capabilityToken) {
 
     const timeFormatted = e.total_time_seconds ? `${Math.round(e.total_time_seconds)}s` : "—";
     const awardsHtml = (e.awards || [])
-      .map((aw) => `<span class="standing-award-badge" title="${aw}">${aw}</span>`)
+      .map((aw) => `<span class="standing-award-badge" title="${escapeHtml(aw)}">${escapeHtml(aw)}</span>`)
       .join(" ");
 
     rowsHtml += `
