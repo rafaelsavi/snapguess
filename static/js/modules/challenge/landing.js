@@ -295,7 +295,7 @@ export function renderErrorScreen(message, i18nKey = null) {
   el.challengeCard.innerHTML = `
     <div class="challenge-error">
       <h2>⚠️ <span data-i18n="challenge.error_title">${t("challenge.error_title")}</span></h2>
-      <p${key ? ` data-i18n="${key}"` : ""}>${displayMsg}</p>
+      <p${key ? ` data-i18n="${escapeHtml(key)}"` : ""}>${escapeHtml(displayMsg)}</p>
       <button type="button" class="btn btn-primary" id="challenge-error-home-btn" data-i18n="challenge.back_home">
         ${t("challenge.back_home")}
       </button>

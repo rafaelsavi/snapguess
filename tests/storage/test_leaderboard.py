@@ -2011,3 +2011,140 @@ def test_unshuffle_dual_mode_50_50_apportionment_and_replay(tmp_path: Path) -> N
     assert r0_guess.round_score == 100
     assert r0_guess.location_score == 50
     assert r0_guess.date_score == 50
+
+
+def test_get_match_replay_unshuffle_populates_unshuffle_guesses(tmp_path: Path) -> None:
+    """Verify get_match_replay populates per-photo unshuffle_guesses for unshuffle matches."""
+    db_path = tmp_path / 'leaderboard.db'
+    store = LeaderboardStore(db_path)
+    cfg = BaseGameConfig(
+        libraries=['main'],
+        round_count=3,
+        round_length=RoundLength.minute_1,
+        location_mode=True,
+        date_mode=True,
+        game_mode=GameMode.unshuffle,
+        players=['Alice'],
+    )
+
+    round_guesses = [
+        {
+            'match_id': 'm-unshuf-detail',
+            'player_name': 'Alice',
+            'round_index': 0,
+            'photo_index': 0,
+            'game_mode': 'unshuffle',
+            'asset_id': 'photo-a',
+            'actual_latitude': 10.0,
+            'actual_longitude': 20.0,
+            'actual_date': '2021-01-01T00:00:00Z',
+            'assigned_pin_id': 'A',
+            'assigned_timeline_index': 0,
+            'is_correct_location': 1,
+            'is_correct_date_order': 1,
+            'true_pin_id': 'A',
+            'location_points': 17,
+            'date_points': 17,
+            'round_score': 34,
+            'time_taken_seconds': 5.0,
+            'timed_out': 0,
+        },
+        {
+            'match_id': 'm-unshuf-detail',
+            'player_name': 'Alice',
+            'round_index': 0,
+            'photo_index': 1,
+            'game_mode': 'unshuffle',
+            'asset_id': 'photo-b',
+            'actual_latitude': 30.0,
+            'actual_longitude': 40.0,
+            'actual_date': '2022-01-01T00:00:00Z',
+            'assigned_pin_id': 'C',
+            'assigned_timeline_index': 2,
+            'is_correct_location': 0,
+            'is_correct_date_order': 0,
+            'true_pin_id': 'B',
+            'location_points': 0,
+            'date_points': 0,
+            'round_score': 0,
+            'time_taken_seconds': 5.0,
+            'timed_out': 0,
+        },
+        {
+            'match_id': 'm-unshuf-detail',
+            'player_name': 'Alice',
+            'round_index': 0,
+            'photo_index': 2,
+            'game_mode': 'unshuffle',
+            'asset_id': 'photo-c',
+            'actual_latitude': 50.0,
+            'actual_longitude': 60.0,
+            'actual_date': '2023-01-01T00:00:00Z',
+            'assigned_pin_id': 'B',
+            'assigned_timeline_index': 1,
+            'is_correct_location': 0,
+            'is_correct_date_order': 0,
+            'true_pin_id': 'C',
+            'location_points': 0,
+            'date_points': 0,
+            'round_score': 0,
+            'time_taken_seconds': 5.0,
+            'timed_out': 0,
+        },
+    ]
+
+    store.append_match(
+        match_id='m-unshuf-detail',
+        config=cfg,
+        player_scores={'Alice': {'location': 17, 'date': 17, 'total': 34}},
+        play_mode=PlayMode.local,
+        duration_seconds=5.0,
+        player_times={'Alice': 5.0},
+        round_guesses=round_guesses,
+    )
+
+    replay = store.get_match_replay('m-unshuf-detail')
+    assert replay is not None
+    r0_guess = replay.rounds_data[0].player_guesses[0]
+    assert r0_guess.unshuffle_guesses is not None
+    assert len(r0_guess.unshuffle_guesses) == 3
+    assert r0_guess.unshuffle_guesses[0] == {
+        'photo_id': 'photo-a',
+        'asset_id': 'photo-a',
+        'assigned_pin_id': 'A',
+        'assigned_timeline_index': 0,
+        'is_correct_location': True,
+        'is_correct_date_order': True,
+    }
+    assert r0_guess.unshuffle_guesses[1] == {
+        'photo_id': 'photo-b',
+        'asset_id': 'photo-b',
+        'assigned_pin_id': 'C',
+        'assigned_timeline_index': 2,
+        'is_correct_location': False,
+        'is_correct_date_order': False,
+    }
+    assert r0_guess.unshuffle_guesses[2] == {
+        'photo_id': 'photo-c',
+        'asset_id': 'photo-c',
+        'assigned_pin_id': 'B',
+        'assigned_timeline_index': 1,
+        'is_correct_location': False,
+        'is_correct_date_order': False,
+    }
+
+
+def test_list_entries_player_name_case_insensitive(tmp_path: Path) -> None:
+    """Verify LeaderboardStore.list_entries matches player_name case-insensitively."""
+    db_path = tmp_path / 'leaderboard.db'
+    store = LeaderboardStore(db_path)
+    cfg = BaseGameConfig(libraries=['main'], round_count=3, players=['Alice'])
+    store.append_match(
+        match_id='m-case',
+        config=cfg,
+        player_scores={'Alice': {'location': 100, 'date': 100, 'total': 200}},
+    )
+
+    entries = store.list_entries(LeaderboardQuery(libraries=['main'], player_name='alice'))
+    assert len(entries) == 1
+    assert entries[0].player_name == 'Alice'

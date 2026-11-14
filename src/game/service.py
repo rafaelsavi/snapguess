@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-import math
 import time
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException
@@ -37,12 +36,10 @@ from src.models import (
     SyncStatus,
 )
 from src.scoring import (
-    SCORE_MAX_POINTS,
     accuracy_pct,
-    apportion_batch_scores,
+    apportion_unshuffle_photo_scores,
     calculate_date_decay,
     calculate_location_decay,
-    haversine_km,
     max_possible_score,
 )
 from src.storage.leaderboard import LeaderboardStore
@@ -64,150 +61,55 @@ def extract_round_guesses(state: MatchState) -> list[dict[str, Any]]:
             continue
         if state.setup.game_mode == GameMode.unshuffle and q.round_data.assets:
             guess_map = {g['photo_id']: g for g in (q.unshuffle_guesses or [])}
-            pin_by_id = {bp['pin_id']: bp for bp in q.round_data.pins}
-            true_pin_map = {str(bp['true_asset_id']): str(bp['pin_id']) for bp in q.round_data.pins}
-            sorted_by_date = sorted(q.round_data.assets, key=lambda a: a.answer.capture_date or date.min, reverse=False)
-            true_rank_map = {a.asset_id: idx for idx, a in enumerate(sorted_by_date)}
-            slot_target_dates = [a.answer.capture_date or date.min for a in sorted_by_date]
-            total_photos = len(q.round_data.assets)
-            per_photo_pts = (SCORE_MAX_POINTS / total_photos) if total_photos > 0 else 0.0
-
+            assigned_pins = {aid: guess_map.get(aid, {}).get('assigned_pin_id') for aid in guess_map}
+            assigned_timeline = {aid: guess_map.get(aid, {}).get('assigned_timeline_index') for aid in guess_map}
             decay_km = calculate_location_decay(q.round_data.assets) if state.setup.location_mode else None
             decay_days = calculate_date_decay(q.round_data.assets) if state.setup.date_mode else None
+            submitted_at = q.submitted_at or datetime.now(timezone.utc).isoformat()
 
-            # Calculate raw photo scores for largest-remainder apportionment
-            raw_loc_scores: list[float] = []
-            raw_dt_scores: list[float] = []
-            photo_distances: list[float | None] = []
-            photo_diff_days: list[int | None] = []
-            photo_coords_guess: list[tuple[float | None, float | None]] = []
-            loc_correct_flags: list[int | None] = []
-            dt_correct_flags: list[int | None] = []
-
-            for ba in q.round_data.assets:
-                guessed_item = guess_map.get(ba.asset_id, {})
-                assigned_pin_id = guessed_item.get('assigned_pin_id')
-                assigned_timeline_index = guessed_item.get('assigned_timeline_index')
-                assigned_pin = pin_by_id.get(assigned_pin_id) if assigned_pin_id else None
-
-                guess_lat = (
-                    float(assigned_pin['latitude'])
-                    if assigned_pin and assigned_pin.get('latitude') is not None
-                    else None
-                )
-                guess_lng = (
-                    float(assigned_pin['longitude'])
-                    if assigned_pin and assigned_pin.get('longitude') is not None
-                    else None
-                )
-                photo_coords_guess.append((guess_lat, guess_lng))
-
-                dist_km: float | None = None
-                if (
-                    guess_lat is not None
-                    and guess_lng is not None
-                    and ba.answer.latitude is not None
-                    and ba.answer.longitude is not None
-                ):
-                    if assigned_pin_id and assigned_pin_id == true_pin_map.get(ba.asset_id):
-                        dist_km = 0.0
-                    else:
-                        dist_km = haversine_km(ba.answer.latitude, ba.answer.longitude, guess_lat, guess_lng)
-                photo_distances.append(dist_km)
-
-                if state.setup.location_mode:
-                    is_correct_loc = (
-                        1 if (ba.asset_id in true_pin_map and assigned_pin_id == true_pin_map[ba.asset_id]) else 0
-                    )
-                    raw_loc = (
-                        per_photo_pts * math.exp(-dist_km / decay_km)
-                        if dist_km is not None and decay_km and decay_km > 0
-                        else 0.0
-                    )
-                else:
-                    is_correct_loc = None
-                    raw_loc = 0.0
-                loc_correct_flags.append(is_correct_loc)
-                raw_loc_scores.append(raw_loc)
-
-                if state.setup.date_mode:
-                    p_date = ba.answer.capture_date or date.min
-                    if assigned_timeline_index is not None and 0 <= assigned_timeline_index < total_photos:
-                        target_date = slot_target_dates[assigned_timeline_index]
-                        d_days = abs((p_date - target_date).days)
-                        is_correct_date = (
-                            1
-                            if (assigned_timeline_index == true_rank_map.get(ba.asset_id) or p_date == target_date)
-                            else 0
-                        )
-                        raw_dt = (
-                            per_photo_pts * math.exp(-d_days / decay_days) if (decay_days and decay_days > 0) else 0.0
-                        )
-                    else:
-                        d_days = None
-                        is_correct_date = 0
-                        raw_dt = 0.0
-                else:
-                    d_days = None
-                    is_correct_date = None
-                    raw_dt = 0.0
-                photo_diff_days.append(d_days)
-                dt_correct_flags.append(is_correct_date)
-                raw_dt_scores.append(raw_dt)
-
-            apportioned_loc: list[int | None] = (
-                [int(x) for x in apportion_batch_scores(raw_loc_scores, q.location_points)]
-                if state.setup.location_mode
-                else [None] * total_photos
-            )
-            apportioned_dt: list[int | None] = (
-                [int(x) for x in apportion_batch_scores(raw_dt_scores, q.date_points)]
-                if state.setup.date_mode
-                else [None] * total_photos
+            breakdowns = apportion_unshuffle_photo_scores(
+                batch_assets=q.round_data.assets,
+                pins=q.round_data.pins,
+                assigned_pins=assigned_pins,
+                assigned_timeline=assigned_timeline,
+                location_mode=state.setup.location_mode,
+                date_mode=state.setup.date_mode,
+                round_location_score=q.location_points,
+                round_date_score=q.date_points,
+                decay_km=decay_km,
+                decay_days=decay_days,
             )
 
-            for idx, ba in enumerate(q.round_data.assets):
-                guessed_item = guess_map.get(ba.asset_id, {})
-                assigned_pin_id = guessed_item.get('assigned_pin_id')
-                assigned_timeline_index = guessed_item.get('assigned_timeline_index')
-                guess_lat, guess_lng = photo_coords_guess[idx]
-                dist_km = photo_distances[idx]
-                diff_days = photo_diff_days[idx]
-                is_correct_loc = loc_correct_flags[idx]
-                is_correct_date = dt_correct_flags[idx]
-                loc_points = apportioned_loc[idx]
-                dt_points = apportioned_dt[idx]
-                photo_score = (loc_points or 0) + (dt_points or 0)
-
+            for item in breakdowns:
                 guesses.append(
                     {
                         'match_id': state.match_id,
                         'player_name': q.player_name,
                         'round_index': q.round_index,
-                        'photo_index': idx,
+                        'photo_index': item.photo_index,
                         'game_mode': state.setup.game_mode.value,
-                        'asset_id': ba.asset_id,
-                        'guess_latitude': guess_lat,
-                        'guess_longitude': guess_lng,
-                        'actual_latitude': ba.answer.latitude,
-                        'actual_longitude': ba.answer.longitude,
-                        'actual_city': ba.answer.city,
-                        'actual_country': ba.answer.country,
-                        'distance_km': dist_km,
-                        'location_points': loc_points,
+                        'asset_id': item.asset_id,
+                        'guess_latitude': item.guess_latitude,
+                        'guess_longitude': item.guess_longitude,
+                        'actual_latitude': item.actual_latitude,
+                        'actual_longitude': item.actual_longitude,
+                        'actual_city': item.actual_city,
+                        'actual_country': item.actual_country,
+                        'distance_km': item.distance_km,
+                        'location_points': item.location_points,
                         'guess_date': None,
-                        'actual_date': ba.answer.capture_date.isoformat() if ba.answer.capture_date else None,
-                        'date_diff_days': diff_days,
-                        'date_points': dt_points,
-                        'round_score': photo_score,
-                        'is_correct_location': is_correct_loc,
-                        'is_correct_date_order': is_correct_date,
+                        'actual_date': item.actual_date,
+                        'date_diff_days': item.diff_days,
+                        'date_points': item.date_points,
+                        'round_score': item.photo_score,
+                        'is_correct_location': item.is_correct_location,
+                        'is_correct_date_order': item.is_correct_date_order,
                         'time_taken_seconds': q.time_taken_seconds,
                         'timed_out': bool(q.timed_out),
-                        'submitted_at': q.submitted_at or datetime.now(timezone.utc).isoformat(),
-                        'assigned_pin_id': str(assigned_pin_id) if assigned_pin_id else None,
-                        'assigned_timeline_index': assigned_timeline_index,
-                        'true_pin_id': true_pin_map.get(ba.asset_id),
+                        'submitted_at': submitted_at,
+                        'assigned_pin_id': item.assigned_pin_id,
+                        'assigned_timeline_index': item.assigned_timeline_index,
+                        'true_pin_id': item.true_pin_id,
                     }
                 )
         else:

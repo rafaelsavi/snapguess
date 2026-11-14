@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.4] - 2026-11-14
+
+### Fixed
+
+- **Unshuffle Match Replay Breakdown**: Fixed Unshuffle match replays so every player's per-photo pin and timeline assignments are preserved and displayed across all three photos in the round breakdown table.
+- **Accurate Summary Maximum Scores**: Fixed post-game and challenge summary screens to calculate maximum possible scores dynamically from active game goals and scoring settings.
+- **Challenge Fog-of-War Isolation**: Fixed challenge live standings so round-by-round guesses remain hidden until the viewing player completes that specific challenge.
+- **Bilingual Localization Polish**: Completed English and Brazilian Portuguese translations for live challenge join notifications, challenge hub error states, and player cadence labels.
+
 ## [4.5.3] - 2026-11-06
 
 ### Added

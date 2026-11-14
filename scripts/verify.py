@@ -87,7 +87,7 @@ def check_linter(fix: bool) -> None:
 
 
 def check_types() -> None:
-    run_cmd(['uv', 'run', 'mypy', 'src'], 'Running type checker (Mypy)')
+    run_cmd(['uv', 'run', 'python', '-m', 'mypy', 'src'], 'Running type checker (Mypy)')
 
 
 def check_privacy_and_paths() -> None:
@@ -158,7 +158,7 @@ def check_privacy_and_paths() -> None:
 
 
 def run_tests(quick: bool = False, pytest_args: list[str] | None = None) -> None:
-    cmd = ['uv', 'run', 'pytest']
+    cmd = ['uv', 'run', 'python', '-m', 'pytest']
     if not quick:
         cmd.extend(['--cov=src', '--cov-report=term-missing'])
     if pytest_args:
@@ -211,7 +211,7 @@ def validate_version_and_changelog() -> None:
     working_files = diff_working.stdout.splitlines() if diff_working.returncode == 0 else []
     all_changed = list(dict.fromkeys([f.strip() for f in (committed_files + working_files) if f.strip()]))
 
-    code_pattern = re.compile(r'^(docs/|\.vscode/|\.githooks/|\.github/|\.gitignore|.*\.md$)', re.IGNORECASE)
+    code_pattern = re.compile(r'^(docs/|\.vscode/|\.githooks/|\.github/|scripts/|\.gitignore|.*\.md$)', re.IGNORECASE)
     code_changed = [f for f in all_changed if not code_pattern.match(f)]
 
     if not code_changed:

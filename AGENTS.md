@@ -134,7 +134,25 @@ This document provides context, architectural constraints, and standards for AI 
   - When modifying or adding API endpoints, update `docs/API.md` with request/response schemas, parameters, and descriptions.
   - When modifying architecture, components, ES modules, or stylesheets, update `docs/ARCHITECTURE.md`.
   - When adding top-level user-facing features or modes, update `README.md`.
-- **Commit Messages**: Follow standard conventional commits format (e.g. `feat:`, `fix:`, `refactor:`, `docs:`, `test:`).
+- **Commit Messages**: Follow standard conventional commits format (e.g. `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`).
+- **When to Commit & Agent Commit Discipline**:
+  - **Always commit each logical change immediately after verifying it**: Every distinct logical change (e.g. endpoint fix, UI tweak, locale key sync) must be committed individually with an atomic commit as soon as its verification passes.
+  - **Do not batch unrelated changes**: Never bundle multiple unrelated features, fixes, or refactors into a single commit.
+  - **Never leave uncommitted work**: Do not end an agent session or declare a task complete with uncommitted changes or untracked scratch files in the repository root.
+  - **Pre-Commit Verification**: Run `uv run python scripts/verify.py --check-version` (or `uv run python scripts/verify.py --fix` for safe formatting and lint fixes).
+- **Protected `main` Branch & Pull Request Protocol**:
+  - The `main` branch is protected. Direct pushes to `main` are restricted.
+  - **Always work on a dedicated branch**:
+    ```bash
+    git checkout -b feat/your-feature-name
+    ```
+  - **Include Version Bumps in the PR**: In SnapGuess, `scripts/verify.py` validates that any feature branch introducing code changes also includes the version bump in `pyproject.toml` and release notes in `CHANGELOG.md` before merging.
+  - **Pushing & PR Creation**:
+    ```bash
+    git push -u origin feat/your-feature-name
+    gh pr create --fill
+    ```
+  - **Automated Release on PR Merge**: When the Pull Request is merged into `main`, GitHub Actions receives the `push` event on `main`, runs verification, auto-creates Git tag `vX.Y.Z`, publishes the GitHub Release with extracted changelog notes, and pushes the multi-arch Docker image to GitHub Container Registry (`ghcr.io`). **Never manually run `git tag`**.
 
 ---
 
@@ -153,7 +171,7 @@ This document provides context, architectural constraints, and standards for AI 
 - **Playwright & Browser Automation**:
   - Playwright is fully installed and managed inside the Python environment (`playwright>=1.50.0`, `pytest-playwright`).
   - Chromium browser binary is cached under `%LOCALAPPDATA%\ms-playwright` and can be provisioned at any time via:
-    `uv run playwright install chromium`
+    `uv run python -m playwright install chromium`
   - **Running E2E tests**: Execute `uv run pytest tests/e2e/`.
   - **Ad-hoc Browser Automation / Screenshots**: When taking page screenshots, inspecting DOM, or verifying responsive layouts, always execute Python Playwright scripts via `uv run python` using `playwright.async_api` or `playwright.sync_api` with `headless=True` (pointing to the local dev server on port `8020` or dynamically launched test server). Never rely on external browser driver downloads.
 

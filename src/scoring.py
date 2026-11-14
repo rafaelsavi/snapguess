@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 from calendar import monthrange
 from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, TypeVar
@@ -683,3 +684,173 @@ def apportion_batch_scores(raw_scores: Sequence[float], total_target: int) -> li
             surplus -= 1
 
     return allocated
+
+
+@dataclass(frozen=True)
+class UnshufflePhotoBreakdown:
+    """Per-photo unshuffle guess evaluation and apportioned points for persistence."""
+
+    asset_id: str
+    photo_index: int
+    assigned_pin_id: str | None
+    assigned_timeline_index: int | None
+    true_pin_id: str | None
+    guess_latitude: float | None
+    guess_longitude: float | None
+    actual_latitude: float | None
+    actual_longitude: float | None
+    actual_city: str | None
+    actual_country: str | None
+    actual_date: str | None
+    distance_km: float | None
+    diff_days: int | None
+    is_correct_location: int | None
+    is_correct_date_order: int | None
+    location_points: int | None
+    date_points: int | None
+    photo_score: int
+
+
+def apportion_unshuffle_photo_scores(
+    *,
+    batch_assets: Sequence[Any],
+    pins: Sequence[Mapping[str, Any]],
+    assigned_pins: Mapping[str, str | None],
+    assigned_timeline: Mapping[str, int | None],
+    location_mode: bool,
+    date_mode: bool,
+    round_location_score: int,
+    round_date_score: int,
+    decay_km: float | None,
+    decay_days: float | None,
+    max_points: int = SCORE_MAX_POINTS,
+) -> list[UnshufflePhotoBreakdown]:
+    """Compute per-photo deviations and apportion round scores across an Unshuffle batch.
+
+    Uses exponential distance/date decay per photo and apportions integer points via
+    largest-remainder so ``sum(location_points) == round_location_score`` and
+    ``sum(date_points) == round_date_score``.
+    """
+    total_photos = len(batch_assets)
+    if total_photos == 0:
+        return []
+
+    pin_by_id = {str(bp['pin_id']): bp for bp in pins}
+    true_pin_map = {str(bp['true_asset_id']): str(bp['pin_id']) for bp in pins}
+    sorted_by_date = sorted(batch_assets, key=lambda a: a.answer.capture_date or date.min, reverse=False)
+    true_rank_map = {a.asset_id: idx for idx, a in enumerate(sorted_by_date)}
+    slot_target_dates = [a.answer.capture_date or date.min for a in sorted_by_date]
+    per_photo_pts = max_points / total_photos
+
+    raw_loc_scores: list[float] = []
+    raw_dt_scores: list[float] = []
+    photo_distances: list[float | None] = []
+    photo_diff_days: list[int | None] = []
+    photo_coords_guess: list[tuple[float | None, float | None]] = []
+    loc_correct_flags: list[int | None] = []
+    dt_correct_flags: list[int | None] = []
+
+    for ba in batch_assets:
+        assigned_pin_id = assigned_pins.get(ba.asset_id)
+        assigned_timeline_index = assigned_timeline.get(ba.asset_id)
+        assigned_pin = pin_by_id.get(str(assigned_pin_id)) if assigned_pin_id else None
+
+        guess_lat = (
+            float(assigned_pin['latitude']) if assigned_pin and assigned_pin.get('latitude') is not None else None
+        )
+        guess_lng = (
+            float(assigned_pin['longitude']) if assigned_pin and assigned_pin.get('longitude') is not None else None
+        )
+        photo_coords_guess.append((guess_lat, guess_lng))
+
+        dist_km: float | None = None
+        if (
+            guess_lat is not None
+            and guess_lng is not None
+            and ba.answer.latitude is not None
+            and ba.answer.longitude is not None
+        ):
+            if assigned_pin_id and assigned_pin_id == true_pin_map.get(ba.asset_id):
+                dist_km = 0.0
+            else:
+                dist_km = haversine_km(ba.answer.latitude, ba.answer.longitude, guess_lat, guess_lng)
+        photo_distances.append(dist_km)
+
+        if location_mode:
+            is_correct_loc: int | None = (
+                1 if (ba.asset_id in true_pin_map and assigned_pin_id == true_pin_map[ba.asset_id]) else 0
+            )
+            raw_loc = (
+                per_photo_pts * math.exp(-dist_km / decay_km)
+                if dist_km is not None and decay_km and decay_km > 0
+                else 0.0
+            )
+        else:
+            is_correct_loc = None
+            raw_loc = 0.0
+        loc_correct_flags.append(is_correct_loc)
+        raw_loc_scores.append(raw_loc)
+
+        d_days: int | None = None
+        is_correct_date: int | None = None
+        if date_mode:
+            p_date = ba.answer.capture_date or date.min
+            if assigned_timeline_index is not None and 0 <= assigned_timeline_index < total_photos:
+                target_date = slot_target_dates[assigned_timeline_index]
+                delta_days = abs((p_date - target_date).days)
+                d_days = delta_days
+                is_correct_date = (
+                    1 if (assigned_timeline_index == true_rank_map.get(ba.asset_id) or p_date == target_date) else 0
+                )
+                raw_dt = per_photo_pts * math.exp(-delta_days / decay_days) if (decay_days and decay_days > 0) else 0.0
+            else:
+                is_correct_date = 0
+                raw_dt = 0.0
+        else:
+            raw_dt = 0.0
+        photo_diff_days.append(d_days)
+        dt_correct_flags.append(is_correct_date)
+        raw_dt_scores.append(raw_dt)
+
+    apportioned_loc: list[int | None] = (
+        [int(x) for x in apportion_batch_scores(raw_loc_scores, round_location_score)]
+        if location_mode
+        else [None] * total_photos
+    )
+    apportioned_dt: list[int | None] = (
+        [int(x) for x in apportion_batch_scores(raw_dt_scores, round_date_score)]
+        if date_mode
+        else [None] * total_photos
+    )
+
+    breakdowns: list[UnshufflePhotoBreakdown] = []
+    for idx, ba in enumerate(batch_assets):
+        assigned_pin_id = assigned_pins.get(ba.asset_id)
+        assigned_timeline_index = assigned_timeline.get(ba.asset_id)
+        guess_lat, guess_lng = photo_coords_guess[idx]
+        loc_pts = apportioned_loc[idx]
+        dt_pts = apportioned_dt[idx]
+        breakdowns.append(
+            UnshufflePhotoBreakdown(
+                asset_id=ba.asset_id,
+                photo_index=idx,
+                assigned_pin_id=str(assigned_pin_id) if assigned_pin_id else None,
+                assigned_timeline_index=assigned_timeline_index,
+                true_pin_id=true_pin_map.get(ba.asset_id),
+                guess_latitude=guess_lat,
+                guess_longitude=guess_lng,
+                actual_latitude=ba.answer.latitude,
+                actual_longitude=ba.answer.longitude,
+                actual_city=ba.answer.city,
+                actual_country=ba.answer.country,
+                actual_date=ba.answer.capture_date.isoformat() if ba.answer.capture_date else None,
+                distance_km=photo_distances[idx],
+                diff_days=photo_diff_days[idx],
+                is_correct_location=loc_correct_flags[idx],
+                is_correct_date_order=dt_correct_flags[idx],
+                location_points=loc_pts,
+                date_points=dt_pts,
+                photo_score=(loc_pts or 0) + (dt_pts or 0),
+            )
+        )
+    return breakdowns

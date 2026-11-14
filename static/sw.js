@@ -86,7 +86,7 @@ self.addEventListener('fetch', (event) => {
           if (
             networkResponse &&
             networkResponse.status === 200 &&
-            networkResponse.type === 'basic'
+            (networkResponse.type === 'basic' || networkResponse.type === 'cors')
           ) {
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -108,7 +108,7 @@ self.addEventListener('fetch', (event) => {
           if (
             networkResponse &&
             networkResponse.status === 200 &&
-            networkResponse.type === 'basic'
+            (networkResponse.type === 'basic' || networkResponse.type === 'cors')
           ) {
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {

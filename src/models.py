@@ -1042,6 +1042,7 @@ class MatchReplayPlayerGuess(BaseModel):
     is_correct_date_order: bool | None = None
     assigned_pin_id: str | None = None
     assigned_timeline_index: int | None = None
+    unshuffle_guesses: list[dict[str, Any]] | None = None
 
 
 class MatchReplayBatchPhoto(BaseModel):

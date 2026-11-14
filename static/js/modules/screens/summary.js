@@ -460,9 +460,9 @@ export function buildUnifiedSummary({
       return a.player_name.localeCompare(b.player_name);
     });
 
-    const isUnshuffle = (replayData?.game_mode || "").toLowerCase().includes("unshuffle");
     const activeGoals = (replayData?.location_mode !== false ? 1 : 0) + (replayData?.date_mode !== false ? 1 : 0);
-    const roundMaxScore = isUnshuffle ? (activeGoals * 100) : (activeGoals * 5000);
+    const maxPtsPerGoal = state.scoreMaxPoints || 100;
+    const roundMaxScore = activeGoals * maxPtsPerGoal;
     const computedMaxScore = Math.max(1, totalRounds * roundMaxScore);
 
     rawPlayers = sorted.map((g, idx) => {
@@ -486,6 +486,11 @@ export function buildUnifiedSummary({
   }
 
   // 2. Normalize player entries
+  const hasLoc = challengeData ? (challengeData.location_mode !== false) : (replayData?.location_mode ?? summaryData?.location_mode ?? true);
+  const hasDate = challengeData ? (challengeData.date_mode !== false) : (replayData?.date_mode ?? summaryData?.date_mode ?? true);
+  const activeGoalsCount = Math.max(1, (hasLoc ? 1 : 0) + (hasDate ? 1 : 0));
+  const defaultMaxScore = totalRounds * activeGoalsCount * (state.scoreMaxPoints || 100);
+
   const players = rawPlayers.map((p, idx) => {
     const name = typeof p === "string" ? p : p.player_name;
     const score = (typeof p === "object" && p.total_score != null) ? p.total_score : 0;
@@ -504,7 +509,7 @@ export function buildUnifiedSummary({
       location_score: typeof p === "object" ? p.location_score : null,
       date_score: typeof p === "object" ? p.date_score : null,
       rank: (typeof p === "object" && p.rank) ? p.rank : (idx + 1),
-      max_possible_score: (typeof p === "object" && p.max_possible_score) ? p.max_possible_score : (totalRounds * 10000),
+      max_possible_score: (typeof p === "object" && p.max_possible_score) ? p.max_possible_score : defaultMaxScore,
       accuracy_pct: typeof p === "object" ? (p.accuracy_pct ?? p.accuracy_percentage ?? null) : null,
       accuracy_percentage: typeof p === "object" ? (p.accuracy_pct ?? p.accuracy_percentage ?? null) : null,
       avatar_color: typeof p === "object" ? (p.avatar_color || playerColor(name)) : playerColor(name),
@@ -615,7 +620,7 @@ export function buildUnifiedSummary({
     date_mode: challengeData ? (challengeData.date_mode !== false) : (replayData?.date_mode ?? summaryData?.date_mode ?? true),
     rounds_played: totalRounds,
     total_rounds: totalRounds,
-    max_possible_score: totalRounds * 10000,
+    max_possible_score: players[0]?.max_possible_score || defaultMaxScore,
     players,
     winners,
     is_settled: isSettled,

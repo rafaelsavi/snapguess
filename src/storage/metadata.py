@@ -60,8 +60,10 @@ CREATE TABLE IF NOT EXISTS assets (
 );
 
 CREATE INDEX IF NOT EXISTS idx_assets_lib_country ON assets(library_name, country);
+CREATE INDEX IF NOT EXISTS idx_assets_country_nocase ON assets(library_name, country COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_assets_lib_state ON assets(library_name, state);
 CREATE INDEX IF NOT EXISTS idx_assets_lib_city ON assets(library_name, city);
+CREATE INDEX IF NOT EXISTS idx_assets_city_nocase ON assets(library_name, city COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_assets_lib_datetime ON assets(library_name, capture_datetime);
 CREATE INDEX IF NOT EXISTS idx_assets_lib_coords ON assets(library_name, latitude, longitude);
 CREATE INDEX IF NOT EXISTS idx_assets_lib_updated ON assets(library_name, immich_updated_at);
@@ -74,6 +76,8 @@ CREATE TABLE IF NOT EXISTS people (
     name TEXT NOT NULL,
     PRIMARY KEY(id, library_name)
 );
+CREATE INDEX IF NOT EXISTS idx_people_lib_name_nocase ON people(library_name, name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_people_name_nocase ON people(name COLLATE NOCASE);
 
 CREATE TABLE IF NOT EXISTS asset_people (
     asset_id TEXT NOT NULL,
@@ -93,6 +97,8 @@ CREATE TABLE IF NOT EXISTS albums (
     is_shared INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY(id, library_name)
 );
+CREATE INDEX IF NOT EXISTS idx_albums_lib_name_nocase ON albums(library_name, name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_albums_name_nocase ON albums(name COLLATE NOCASE);
 
 CREATE TABLE IF NOT EXISTS asset_albums (
     asset_id TEXT NOT NULL,
@@ -216,25 +222,44 @@ class MetadataStore:
 
     def __init__(self, db: DatabaseManager) -> None:
         self._db = db
-        self.init_schema()
+        self.init_schema(force=False)
 
     @property
     def db(self) -> DatabaseManager:
         """Return the underlying DatabaseManager instance."""
         return self._db
 
-    def init_schema(self) -> None:
+    def init_schema(self, *, force: bool = True) -> None:
         """Initialize metadata database schema tables and indices."""
         self._db.execute_script(SCHEMA_SQL)
-        table_info = self._db.fetch_all('PRAGMA table_info(flagged_assets)')
-        columns = {r['name'] for r in table_info}
-        if 'reported_by' not in columns:
-            with self._db.connection() as conn:
+        with self._db.connection() as conn:
+            table_info = conn.execute('PRAGMA table_info(flagged_assets)').fetchall()
+            columns = {r[1] for r in table_info}
+            if 'reported_by' not in columns:
                 conn.execute('ALTER TABLE flagged_assets ADD COLUMN reported_by TEXT')
 
-        # Safeguard: Reset erroneously latched is_shared flags for assets
-        # that are associated with albums but not in any shared album for their library
-        with self._db.connection() as conn:
+            conn.execute(
+                'CREATE INDEX IF NOT EXISTS idx_assets_country_nocase ON assets(library_name, country COLLATE NOCASE)'
+            )
+            conn.execute(
+                'CREATE INDEX IF NOT EXISTS idx_assets_city_nocase ON assets(library_name, city COLLATE NOCASE)'
+            )
+            conn.execute(
+                'CREATE INDEX IF NOT EXISTS idx_people_lib_name_nocase ON people(library_name, name COLLATE NOCASE)'
+            )
+            conn.execute('CREATE INDEX IF NOT EXISTS idx_people_name_nocase ON people(name COLLATE NOCASE)')
+            conn.execute(
+                'CREATE INDEX IF NOT EXISTS idx_albums_lib_name_nocase ON albums(library_name, name COLLATE NOCASE)'
+            )
+            conn.execute('CREATE INDEX IF NOT EXISTS idx_albums_name_nocase ON albums(name COLLATE NOCASE)')
+
+            user_ver_row = conn.execute('PRAGMA user_version').fetchone()
+            user_ver = int(user_ver_row[0]) if user_ver_row else 0
+            if not force and user_ver >= 1:
+                return
+
+            # Safeguard: Reset erroneously latched is_shared flags for assets
+            # that are associated with albums but not in any shared album for their library
             conn.execute(
                 """
                 UPDATE assets SET is_shared = 0
@@ -251,10 +276,9 @@ class MetadataStore:
                 """
             )
 
-        # Safeguard: Purge legacy VIDEO assets and their junction rows if any exist
-        has_videos = self._db.fetch_val("SELECT 1 FROM assets WHERE file_type = 'VIDEO' LIMIT 1")
-        if has_videos:
-            with self._db.connection() as conn:
+            # Safeguard: Purge legacy VIDEO assets and their junction rows if any exist
+            has_videos = conn.execute("SELECT 1 FROM assets WHERE file_type = 'VIDEO' LIMIT 1").fetchone()
+            if has_videos:
                 conn.execute(
                     "DELETE FROM asset_people WHERE asset_id IN (SELECT id FROM assets WHERE file_type = 'VIDEO')"
                 )
@@ -265,6 +289,8 @@ class MetadataStore:
                     "DELETE FROM asset_tags WHERE asset_id IN (SELECT id FROM assets WHERE file_type = 'VIDEO')"
                 )
                 conn.execute("DELETE FROM assets WHERE file_type = 'VIDEO'")
+
+            conn.execute('PRAGMA user_version = 1')
 
     def has_synced_assets(self, libraries: list[str] | tuple[str, ...] | None = None) -> bool:
         """Check if any photo assets are indexed for the given libraries (or across all if None)."""
@@ -1187,7 +1213,7 @@ class MetadataStore:
                     f"""
                     SELECT DISTINCT p2.id
                     FROM people p
-                    JOIN people p2 ON LOWER(p.name) = LOWER(p2.name)
+                    JOIN people p2 ON p.name = p2.name COLLATE NOCASE
                     WHERE (p.id = ? OR p.name COLLATE NOCASE = ?) {lib_clause_p2}
                     UNION
                     SELECT DISTINCT id FROM people WHERE (id = ? OR name COLLATE NOCASE = ?) {lib_clause}
@@ -1230,7 +1256,7 @@ class MetadataStore:
                 f"""
                 SELECT DISTINCT a2.id
                 FROM albums a
-                JOIN albums a2 ON LOWER(a.name) = LOWER(a2.name)
+                JOIN albums a2 ON a.name = a2.name COLLATE NOCASE
                 WHERE (a.id = ? OR a.name COLLATE NOCASE = ?) {lib_clause_a2}
                 UNION
                 SELECT DISTINCT id FROM albums WHERE (id = ? OR name COLLATE NOCASE = ?) {lib_clause}
