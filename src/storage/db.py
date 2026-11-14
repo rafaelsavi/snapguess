@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -21,15 +22,55 @@ class DatabaseManager:
         self._ensure_dir()
         self._init_db()
 
+    @staticmethod
+    def _build_permission_message(target: Path, action: str) -> str:
+        """Build an actionable diagnostic message for directory or SQLite permission failures."""
+        uid_gid = ''
+        getuid = getattr(os, 'getuid', None)
+        getgid = getattr(os, 'getgid', None)
+        if callable(getuid) and callable(getgid):
+            uid_gid = f' (process UID:GID={getuid()}:{getgid()})'
+        return (
+            f"Cannot {action} '{target}'{uid_gid}: permission denied. "
+            'Ensure the host data directory exists and is writable by the container user '
+            '(configure PUID/PGID without forcing --user, or run chown -R <uid>:<gid> on the host directory).'
+        )
+
     def _ensure_dir(self) -> None:
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        if str(self.db_path) == ':memory:':
+            return
+        parent = self.db_path.parent
+        try:
+            parent.mkdir(parents=True, exist_ok=True)
+        except PermissionError as exc:
+            msg = self._build_permission_message(parent, 'create data directory')
+            logger.critical('%s', msg)
+            raise PermissionError(msg) from exc
+
+        if not os.access(parent, os.W_OK | os.X_OK):
+            msg = self._build_permission_message(parent, 'write to data directory')
+            logger.critical('%s', msg)
+            raise PermissionError(msg)
+
+        if self.db_path.exists() and not os.access(self.db_path, os.W_OK):
+            msg = self._build_permission_message(self.db_path, 'write to SQLite database')
+            logger.critical('%s', msg)
+            raise PermissionError(msg)
 
     def _init_db(self) -> None:
-        with self.connection() as conn:
-            conn.execute('PRAGMA journal_mode=WAL;')
-            conn.execute('PRAGMA synchronous=NORMAL;')
-            conn.execute('PRAGMA foreign_keys=ON;')
-            conn.execute('PRAGMA busy_timeout=5000;')
+        try:
+            with self.connection() as conn:
+                conn.execute('PRAGMA journal_mode=WAL;')
+                conn.execute('PRAGMA synchronous=NORMAL;')
+                conn.execute('PRAGMA foreign_keys=ON;')
+                conn.execute('PRAGMA busy_timeout=5000;')
+        except sqlite3.OperationalError as exc:
+            err_lower = str(exc).lower()
+            if 'unable to open' in err_lower or 'readonly' in err_lower or 'permission' in err_lower:
+                msg = self._build_permission_message(self.db_path, 'open SQLite database')
+                logger.critical('%s (SQLite detail: %s)', msg, exc)
+                raise PermissionError(msg) from exc
+            raise
 
     @contextmanager
     def connection(self) -> Generator[sqlite3.Connection]:
