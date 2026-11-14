@@ -442,9 +442,9 @@ class LeaderboardStore:
 
     def _init_db(self) -> None:
         self._db.execute_script(LEADERBOARD_SCHEMA_SQL)
-        self._migrate_db()
+        self._migrate_db(force=False)
 
-    def _migrate_db(self) -> None:
+    def _migrate_db(self, *, force: bool = True) -> None:
         """Ensure backward compatibility for databases created in earlier versions."""
         with self._db.connection() as conn:
             cursor = conn.execute('PRAGMA table_info(match_round_guesses)')
@@ -468,17 +468,14 @@ class LeaderboardStore:
                 conn.execute('ALTER TABLE matches ADD COLUMN person_names_json TEXT')
             cursor_s = conn.execute('PRAGMA table_info(challenge_sessions)')
             existing_session_cols = {row[1] for row in cursor_s.fetchall()}
-            if existing_session_cols:
-                if 'player_color' in existing_session_cols:
-                    conn.execute('ALTER TABLE challenge_sessions DROP COLUMN player_color')
-                # Ensure unique index on challenge_sessions uses COLLATE NOCASE for existing databases
-                conn.execute('DROP INDEX IF EXISTS idx_challenge_sessions_unique_player')
-                conn.execute(
-                    """
-                    CREATE UNIQUE INDEX IF NOT EXISTS idx_challenge_sessions_unique_player
-                        ON challenge_sessions(challenge_id, player_name COLLATE NOCASE)
-                    """
-                )
+            if existing_session_cols and 'player_color' in existing_session_cols:
+                conn.execute('ALTER TABLE challenge_sessions DROP COLUMN player_color')
+            conn.execute(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_challenge_sessions_unique_player
+                    ON challenge_sessions(challenge_id, player_name COLLATE NOCASE)
+                """
+            )
             conn.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_match_round_guesses_player
@@ -495,6 +492,50 @@ class LeaderboardStore:
                     ON match_entries(player_name COLLATE NOCASE)
                 """
             )
+
+            # Ensure match_rounds table and its indices exist
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS match_rounds (
+                    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+                    match_id           TEXT NOT NULL,
+                    player_name        TEXT NOT NULL COLLATE NOCASE,
+                    round_index        INTEGER NOT NULL,
+                    game_mode          TEXT NOT NULL,
+                    location_score     INTEGER,
+                    date_score         INTEGER,
+                    round_score        INTEGER NOT NULL,
+                    time_taken_seconds REAL NOT NULL DEFAULT 0.0,
+                    timed_out          INTEGER NOT NULL DEFAULT 0,
+                    submitted_at       TEXT NOT NULL,
+                    FOREIGN KEY(match_id) REFERENCES matches(match_id) ON DELETE CASCADE,
+                    UNIQUE(match_id, player_name, round_index)
+                )
+                """
+            )
+            conn.execute('CREATE INDEX IF NOT EXISTS idx_match_rounds_match ON match_rounds(match_id)')
+            conn.execute(
+                'CREATE INDEX IF NOT EXISTS idx_match_rounds_match_round ON match_rounds(match_id, round_index)'
+            )
+            conn.execute(
+                'CREATE INDEX IF NOT EXISTS idx_match_rounds_player ON match_rounds(player_name COLLATE NOCASE)'
+            )
+
+            user_ver_row = conn.execute('PRAGMA user_version').fetchone()
+            user_ver = int(user_ver_row[0]) if user_ver_row else 0
+            if not force and user_ver >= 1:
+                return
+
+            if existing_session_cols:
+                # Ensure unique index on challenge_sessions uses COLLATE NOCASE for legacy databases
+                conn.execute('DROP INDEX IF EXISTS idx_challenge_sessions_unique_player')
+                conn.execute(
+                    """
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_challenge_sessions_unique_player
+                        ON challenge_sessions(challenge_id, player_name COLLATE NOCASE)
+                    """
+                )
+
             # Standardize whitespace in historical player names
             conn.execute(
                 """
@@ -648,34 +689,6 @@ class LeaderboardStore:
             except Exception as exc:
                 logger.warning('Failed to backfill unshuffle true_pin_id: %s', exc)
 
-            # Ensure match_rounds table and its indices exist
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS match_rounds (
-                    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
-                    match_id           TEXT NOT NULL,
-                    player_name        TEXT NOT NULL COLLATE NOCASE,
-                    round_index        INTEGER NOT NULL,
-                    game_mode          TEXT NOT NULL,
-                    location_score     INTEGER,
-                    date_score         INTEGER,
-                    round_score        INTEGER NOT NULL,
-                    time_taken_seconds REAL NOT NULL DEFAULT 0.0,
-                    timed_out          INTEGER NOT NULL DEFAULT 0,
-                    submitted_at       TEXT NOT NULL,
-                    FOREIGN KEY(match_id) REFERENCES matches(match_id) ON DELETE CASCADE,
-                    UNIQUE(match_id, player_name, round_index)
-                )
-                """
-            )
-            conn.execute('CREATE INDEX IF NOT EXISTS idx_match_rounds_match ON match_rounds(match_id)')
-            conn.execute(
-                'CREATE INDEX IF NOT EXISTS idx_match_rounds_match_round ON match_rounds(match_id, round_index)'
-            )
-            conn.execute(
-                'CREATE INDEX IF NOT EXISTS idx_match_rounds_player ON match_rounds(player_name COLLATE NOCASE)'
-            )
-
             # Fix historical unshuffle 99 scores in match_round_guesses
             try:
                 unshuffle_99s = conn.execute(
@@ -800,6 +813,8 @@ class LeaderboardStore:
                         )
             except Exception as exc:
                 logger.warning('Failed to backfill challenge ranks: %s', exc)
+
+            conn.execute('PRAGMA user_version = 1')
 
     def append_match(
         self,
