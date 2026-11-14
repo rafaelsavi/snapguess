@@ -261,7 +261,7 @@ export const challengeSummary = {
           showActivityToast({
             icon: "👥",
             playerName: newP.player_name,
-            title: `${newP.player_name} joined the challenge!`,
+            title: t("challenge.player_joined_challenge", newP.player_name),
           });
         } else {
           const wasFin = oldP.is_finished || oldP.completed_rounds >= totalRoundsCount;
@@ -417,14 +417,18 @@ export const challengeSummary = {
 
     // 4. Update Unified Standings Table Rows & Flash
     if (updatedPlayers.length > 0) {
+      const locEnabled = challengeSession.challengeData?.location_mode !== false && data.location_mode !== false;
+      const dateEnabled = challengeSession.challengeData?.date_mode !== false && data.date_mode !== false;
+      const activeGoalsCount = Math.max(1, (locEnabled ? 1 : 0) + (dateEnabled ? 1 : 0));
+      const maxPossible = totalRoundsCount * activeGoalsCount * (state.scoreMaxPoints || 100);
       const summaryObj = {
         is_challenge: true,
         play_mode: "challenge",
-        location_mode: challengeSession.challengeData?.location_mode !== false && data.location_mode !== false,
-        date_mode: challengeSession.challengeData?.date_mode !== false && data.date_mode !== false,
+        location_mode: locEnabled,
+        date_mode: dateEnabled,
         rounds_played: totalRoundsCount,
         total_rounds: totalRoundsCount,
-        max_possible_score: totalRoundsCount * 10000,
+        max_possible_score: maxPossible,
         players: data.leaderboard,
         is_settled: isSettled,
       };
@@ -623,7 +627,7 @@ export const challengeSummary = {
 
               const distStr = gp.distance_km !== null && gp.distance_km !== undefined ? ` (${formatDistance(gp.distance_km)})` : "";
               const marker = L.marker(latlng, { icon })
-                .bindPopup(`<b>${g.player_name}</b><br>${g.round_score} pts${distStr}`, { autoPan: false, closeOnClick: false })
+                .bindPopup(`<b>${escapeHtml(g.player_name)}</b><br>${g.round_score} pts${escapeHtml(distStr)}`, { autoPan: false, closeOnClick: false })
                 .addTo(challengeSession.carouselMap);
               challengeSession.carouselLayers.push(marker);
             }

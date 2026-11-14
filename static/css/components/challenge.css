@@ -886,7 +886,7 @@ input.challenge-name-input[readonly]:focus {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--ink-secondary);
+  color: var(--text-muted, var(--muted));
 }
 
 .challenge-rounds-pill {

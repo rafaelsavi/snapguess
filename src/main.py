@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import html
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -42,9 +43,10 @@ def _render_index_html(
     lang_code = active_lang.value if hasattr(active_lang, 'value') else str(active_lang)
     template = (static_path / 'index.html').read_text(encoding='utf-8')
     version_badge = f'<span class="app-version-badge">v{APP_VERSION}</span>' if APP_VERSION else ''
+    escaped_title = html.escape(settings.app_title)
     return (
-        template.replace('{{APP_TITLE}}', settings.app_title)
-        .replace('{{APP_HEADING}}', settings.app_title)
+        template.replace('{{APP_TITLE}}', escaped_title)
+        .replace('{{APP_HEADING}}', escaped_title)
         .replace('{{LANG_CODE}}', lang_code)
         .replace('{{APP_VERSION_BADGE}}', version_badge)
         .replace('{{APP_VERSION}}', APP_VERSION)

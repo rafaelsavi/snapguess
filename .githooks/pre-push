@@ -8,7 +8,7 @@ echo "=========================================="
 
 # Ensure dev dependencies and Playwright browser binary are installed
 uv sync --extra dev || exit 1
-uv run playwright install chromium || exit 1
+uv run python -m playwright install chromium || exit 1
 
 # Execute the exact same verification suite as CI
 uv run python scripts/verify.py --check-version

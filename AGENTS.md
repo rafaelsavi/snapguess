@@ -171,7 +171,7 @@ This document provides context, architectural constraints, and standards for AI 
 - **Playwright & Browser Automation**:
   - Playwright is fully installed and managed inside the Python environment (`playwright>=1.50.0`, `pytest-playwright`).
   - Chromium browser binary is cached under `%LOCALAPPDATA%\ms-playwright` and can be provisioned at any time via:
-    `uv run playwright install chromium`
+    `uv run python -m playwright install chromium`
   - **Running E2E tests**: Execute `uv run pytest tests/e2e/`.
   - **Ad-hoc Browser Automation / Screenshots**: When taking page screenshots, inspecting DOM, or verifying responsive layouts, always execute Python Playwright scripts via `uv run python` using `playwright.async_api` or `playwright.sync_api` with `headless=True` (pointing to the local dev server on port `8020` or dynamically launched test server). Never rely on external browser driver downloads.
 

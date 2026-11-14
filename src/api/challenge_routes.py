@@ -429,8 +429,9 @@ async def get_challenge_leaderboard(
     is_game_over = False
     session = None
     if x_player_token:
-        session = await asyncio.to_thread(challenge_store.get_player_session, x_player_token)
-        if session:
+        fetched_session = await asyncio.to_thread(challenge_store.get_player_session, x_player_token)
+        if fetched_session and fetched_session.get('challenge_id') == challenge['challenge_id']:
+            session = fetched_session
             caller_completed_round = session['current_round'] - 1
             is_game_over = session['current_round'] >= total_rounds
 
