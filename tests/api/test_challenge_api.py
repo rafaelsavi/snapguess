@@ -233,6 +233,46 @@ def test_challenge_start_prevents_completed_replay_token_theft(tmp_path: Path) -
     assert alice_replay.status_code == 200
 
 
+def test_challenge_map_bounds_uses_candidate_pool_without_answer_spoilers(tmp_path: Path) -> None:
+    """Verify challenge map_bounds uses the broader candidate pool with padded 2-decimal bounds."""
+    assets = [
+        make_asset(
+            f'paris-{i}',
+            latitude=48.810123 + i * 0.015,
+            longitude=2.250456 + i * 0.02,
+            captured=f'2024-06-{(i % 28) + 1:02d}T12:00:00Z',
+        )
+        for i in range(15)
+    ]
+    immich = FakeImmichClient(assets)
+    client = build_client(tmp_path, immich)
+
+    create_res = client.post(
+        '/api/challenge/create',
+        json={'creator_name': 'Host', 'game_mode': 'pinpoint', 'round_count': 3, 'location_mode': True},
+    )
+    assert create_res.status_code == 200
+    token = create_res.json()['capability_token']
+
+    detail = client.get(f'/play/api/{token}').json()
+    bounds = detail['map_bounds']
+    assert bounds is not None
+
+    # Bounds are quantized to 2 decimals and strictly wider than every selected answer coordinate
+    assert round(bounds['min_lat'], 2) == bounds['min_lat']
+    assert round(bounds['max_lat'], 2) == bounds['max_lat']
+    assert round(bounds['min_lng'], 2) == bounds['min_lng']
+    assert round(bounds['max_lng'], 2) == bounds['max_lng']
+
+    ch_record = client.app.state.challenge_store.get_challenge_by_token(token)
+    assert ch_record is not None
+    for aid in ch_record['asset_ids']:
+        ans = client.app.state.metadata_store.get_asset_answer(aid)
+        assert ans is not None and ans.latitude is not None and ans.longitude is not None
+        assert bounds['min_lat'] < ans.latitude < bounds['max_lat']
+        assert bounds['min_lng'] < ans.longitude < bounds['max_lng']
+
+
 def test_challenge_question_sequencing_and_security(tmp_path: Path) -> None:
     immich = FakeImmichClient(_create_mock_assets(25))
     client = build_client(tmp_path, immich)

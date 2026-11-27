@@ -157,10 +157,12 @@ class ChallengeService:
         )
         asset_ids = [ra.asset_id for ra in selected]
 
-        # Pre-compute scoring decay constants from the selected pool
+        # Pre-compute scoring decay constants from the selected pool and anti-spoiler map bounds from candidate pool
         location_decay_km = calculate_location_decay(selected) if setup.location_mode else None
         date_decay_days = calculate_date_decay(selected) if setup.date_mode else None
-        map_bounds = calculate_match_bounds([ra.answer for ra in selected]) if setup.location_mode else None
+        map_bounds = (
+            calculate_match_bounds(candidates) if (setup.location_mode and game_mode == GameMode.pinpoint) else None
+        )
 
         # Build config_json with frozen scoring parameters
         config = setup.model_dump(mode='json')

@@ -14,13 +14,21 @@ This module provides the core asset selection engine for the trivia game, includ
 
 from __future__ import annotations
 
+import math
 import random
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import date
 from typing import Any
 
 from src.app_logging import LOGGER_MATCH, get_logger
 from src.models import AssetAnswer, MapBounds
-from src.scoring import calculate_date_decay, calculate_location_decay, haversine_km
+from src.scoring import (
+    _circular_percentile_lng_bounds,
+    _percentile_bounds,
+    calculate_date_decay,
+    calculate_location_decay,
+    haversine_km,
+)
 from src.storage.metadata import AssetFilterCriteria, MetadataStore
 from src.storage.session import MatchState, RoundAsset
 
@@ -40,33 +48,26 @@ DEFAULT_PHOTO_DIVERSITY_MIN_TIME_SECONDS: float = 60.0
 
 
 def calculate_match_bounds(
-    pool: list[AssetAnswer] | dict[str, AssetAnswer],
+    pool: Sequence[Any] | Mapping[str, Any] | Iterable[Any],
     max_span_km: float = SMART_MAP_ZOOM_MAX_SPAN_KM,
 ) -> MapBounds | None:
-    """Calculate the geographic bounding box for the match asset pool.
+    """Calculate the geographic bounding box for the match candidate pool.
 
     Anti-spoiler & Privacy safeguards:
-    - Computed match-wide across the whole pool (never per-photo).
-    - If photos span globally (> max_span_km or > 60 deg lat / 90 deg lng), returns None
-      so the client defaults cleanly to standard world view.
-    - The client enforces `maxZoom` in Leaflet `fitBounds`, guaranteeing
-      single-location and city albums never over-zoom to street level regardless of screen size.
-
-    Args:
-        pool: List or dictionary of `AssetAnswer` objects representing candidate photos in the match.
-        max_span_km: Maximum diagonal distance threshold in kilometers. Defaults to 5000 km.
-
-    Returns:
-        A `MapBounds` object containing min/max latitude and longitude, or `None` if no valid
-        coordinates exist or if the pool span exceeds global threshold limits.
-
+    - Computed match-wide across the candidate pool using 5th-95th percentile trimming
+      and circular antimeridian-aware longitude math (never tight per-round subsets).
+    - Adds outward geographic padding (>= 0.05 deg or 15% of span) and quantizes outward
+      to 2 decimal places (~1.1 km grid) so exact photo coordinates never sit on box edges.
+    - If photos cross the +/-180 antimeridian or span globally (> max_span_km or
+      > 60 deg lat / 90 deg lng), returns None so the client defaults to world view.
     """
-    answers = list(pool.values()) if isinstance(pool, dict) else list(pool)
+    raw_items = list(pool.values()) if isinstance(pool, Mapping) else list(pool)
+    answers = [getattr(item, 'answer', item) for item in raw_items]
     coords = [
-        (ans.latitude, ans.longitude)
+        (float(ans.latitude), float(ans.longitude))
         for ans in answers
-        if ans.latitude is not None
-        and ans.longitude is not None
+        if getattr(ans, 'latitude', None) is not None
+        and getattr(ans, 'longitude', None) is not None
         and not (abs(ans.latitude) < 1e-6 and abs(ans.longitude) < 1e-6)
     ]
     if not coords:
@@ -80,19 +81,19 @@ def calculate_match_bounds(
     lats = [c[0] for c in coords]
     lngs = [c[1] for c in coords]
 
-    min_lat = min(lats)
-    max_lat = max(lats)
-    min_lng = min(lngs)
-    max_lng = max(lngs)
+    min_lat, max_lat = _percentile_bounds(lats)
+    min_lng, max_lng, lng_span = _circular_percentile_lng_bounds(lngs)
+    crosses_antimeridian = min_lng > max_lng
 
     lat_span = max_lat - min_lat
-    lng_span = max_lng - min_lng
     diagonal_km = haversine_km(min_lat, min_lng, max_lat, max_lng)
 
-    # Global check: if span is excessively wide (> 60 deg lat or > 90 deg lng),
-    # or distance between corners exceeds max_span_km, fallback to world view.
-    if lat_span > 60.0 or lng_span > 90.0 or diagonal_km > max_span_km:
+    # Global / antimeridian check: fallback cleanly to world view when bounds wrap +/-180
+    # or exceed regional span thresholds.
+    if crosses_antimeridian or lat_span > 60.0 or lng_span > 90.0 or diagonal_km > max_span_km:
         reasons = []
+        if crosses_antimeridian:
+            reasons.append('crosses +/-180 antimeridian')
         if lat_span > 60.0:
             reasons.append(f'lat_span {lat_span:.2f}° > 60.0°')
         if lng_span > 90.0:
@@ -118,16 +119,23 @@ def calculate_match_bounds(
         )
         return None
 
+    pad_lat = max(0.05, lat_span * 0.15)
+    pad_lng = max(0.05, lng_span * 0.15)
+    padded_min_lat = round(math.floor(max(-90.0, min_lat - pad_lat) * 100.0) / 100.0, 2)
+    padded_max_lat = round(math.ceil(min(90.0, max_lat + pad_lat) * 100.0) / 100.0, 2)
+    padded_min_lng = round(math.floor(max(-180.0, min_lng - pad_lng) * 100.0) / 100.0, 2)
+    padded_max_lng = round(math.ceil(min(180.0, max_lng + pad_lng) * 100.0) / 100.0, 2)
+
     bounds = MapBounds(
-        min_lat=round(min_lat, 6),
-        max_lat=round(max_lat, 6),
-        min_lng=round(min_lng, 6),
-        max_lng=round(max_lng, 6),
+        min_lat=padded_min_lat,
+        max_lat=padded_max_lat,
+        min_lng=padded_min_lng,
+        max_lng=padded_max_lng,
     )
     logger.info(
         'Smart map auto-zoom calibration: inputs=[pool_size=%d, coords=%d, diagonal_span=%.2f km (max=%.1f km), '
         'lat_span=%.2f°, lng_span=%.2f°, lat_range=(%.4f, %.4f), lng_range=(%.4f, %.4f)] '
-        '-> output=[map_bounds=MapBounds(min_lat=%.6f, max_lat=%.6f, min_lng=%.6f, max_lng=%.6f)]',
+        '-> output=[map_bounds=MapBounds(min_lat=%.2f, max_lat=%.2f, min_lng=%.2f, max_lng=%.2f)]',
         len(answers),
         len(coords),
         diagonal_km,
