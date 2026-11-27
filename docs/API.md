@@ -609,10 +609,10 @@ Response:
 
 ---
 
-## Flagged Asset Management (👑 Creator)
+## Flagged Asset Management (👑 Creator / 👥 User)
 
 > [!NOTE]
-> `POST /api/assets/flag` is accessible to all roles (Guests, Players, and Creators) during active gameplay. Querying and resolving flagged photos require the **👑 Creator** role.
+> `POST /api/assets/flag` requires at least the **👥 User** role (non-Creators may only flag assets registered to an active match, active challenge, or recorded match history, and `immich_url` is omitted for non-Creators). Challenge guests report inconsistencies via `POST /play/api/{capability_token}/flag` with their `X-Player-Token`. Querying and resolving flagged photos require the **👑 Creator** role.
 
 ### POST /api/assets/flag
 
@@ -1110,14 +1110,21 @@ Response (`200 OK`):
 
 ### POST /play/api/{capability_token}/flag
 
-Allows challenge participants to report photo inconsistencies (e.g. wrong date or misplaced GPS) directly from in-game controls without exposing the administrative `/api/assets/flag` endpoint.
+Allows active challenge participants to report photo inconsistencies (e.g. wrong date or misplaced GPS) directly from in-game controls without exposing the administrative `/api/assets/flag` endpoint. Requires a valid `X-Player-Token` header belonging to the challenge, and `asset_id` must belong to the challenge's photo seed. Direct `immich_url` links are populated only for authenticated **👑 Creators**.
+
+Headers:
+
+- `X-Player-Token`: Participant player session token.
 
 Request:
 
 ```json
 {
   "asset_id": "asset-uuid-101",
-  "reason": "GPS pin is in the wrong city"
+  "flag_coordinates": true,
+  "flag_date": false,
+  "other": "GPS pin is in the wrong city",
+  "reported_by": "Bob"
 }
 ```
 
@@ -1126,7 +1133,13 @@ Response (`200 OK`):
 ```json
 {
   "success": true,
-  "asset_id": "asset-uuid-101"
+  "asset_id": "asset-uuid-101",
+  "flag_coordinates": true,
+  "flag_date": false,
+  "other": "GPS pin is in the wrong city",
+  "reported_by": "Bob",
+  "reported_at": "2026-09-03T12:15:00Z",
+  "immich_url": ""
 }
 ```
 

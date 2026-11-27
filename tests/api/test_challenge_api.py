@@ -1123,9 +1123,24 @@ def test_play_media_scoped_and_flagging(tmp_path: Path) -> None:
     token_fail = client.get(f'/play/media/invalid-token/{valid_asset_id}')
     assert token_fail.status_code == 404
 
-    # 5. Flag asset via challenge endpoint (/play/api/{token}/flag)
+    # 5. Flag asset without X-Player-Token or with invalid token -> 401 Unauthorized
+    unauth_flag = client.post(
+        f'/play/api/{token}/flag',
+        json={'asset_id': valid_asset_id, 'flag_coordinates': True},
+    )
+    assert unauth_flag.status_code == 401
+
+    bad_tok_flag = client.post(
+        f'/play/api/{token}/flag',
+        headers={'X-Player-Token': 'forged-token'},
+        json={'asset_id': valid_asset_id, 'flag_coordinates': True},
+    )
+    assert bad_tok_flag.status_code == 401
+
+    # 6. Flag asset via challenge endpoint (/play/api/{token}/flag) with valid session token
     flag_res = client.post(
         f'/play/api/{token}/flag',
+        headers={'X-Player-Token': p_token},
         json={
             'asset_id': valid_asset_id,
             'flag_coordinates': True,
@@ -1137,15 +1152,94 @@ def test_play_media_scoped_and_flagging(tmp_path: Path) -> None:
     assert flag_res.status_code == 200
     assert flag_res.json()['success'] is True
 
-    # 6. Flag unknown asset via challenge endpoint -> 404
+    # 7. Flag unknown asset via challenge endpoint -> 404
     flag_fail = client.post(
         f'/play/api/{token}/flag',
+        headers={'X-Player-Token': p_token},
         json={
             'asset_id': 'unknown-asset-id',
             'flag_coordinates': True,
         },
     )
     assert flag_fail.status_code == 404
+
+
+def test_flagging_and_ui_config_redact_immich_url_for_non_creators(tmp_path: Path) -> None:
+    """Verify Guests and non-Creator Users never receive private Immich URLs and cannot flag unplayed assets."""
+    from starlette.testclient import TestClient
+
+    from src.config import AppSettings
+    from src.main import create_app
+
+    creator_email = 'creator@example.com'
+    user_email = 'player@example.com'
+    settings = AppSettings(
+        immich_server_url='https://private-immich.internal:2283/api',
+        immich_libraries={'family': 'token'},
+        data_path=tmp_path,
+        auth_mode='cloudflare',
+        cf_creator_emails=frozenset({creator_email}),
+        auto_sync_on_startup=False,
+    )
+    immich = FakeImmichClient(_create_mock_assets(10))
+    app = create_app(settings=settings)
+    app.state.photo_provider = immich
+    seed_test_metadata(app.state.metadata_store, 'family', immich)
+
+    creator_headers = {'cf-access-authenticated-user-email': creator_email}
+    user_headers = {'cf-access-authenticated-user-email': user_email}
+
+    with TestClient(app) as cf_client:
+        # 1. Guest & User receive empty immich_web_url; Creator receives private URL
+        assert cf_client.get('/play/api/ui-config').json()['immich_web_url'] == ''
+        assert cf_client.get('/api/ui-config', headers=user_headers).json()['immich_web_url'] == ''
+        assert (
+            cf_client.get('/api/ui-config', headers=creator_headers).json()['immich_web_url']
+            == 'https://private-immich.internal:2283'
+        )
+
+        # 2. Guest cannot call /api/assets/flag (403 Forbidden)
+        guest_flag = cf_client.post('/api/assets/flag', json={'asset_id': 'mock-asset-0', 'flag_date': True})
+        assert guest_flag.status_code == 403
+
+        # 3. Non-creator User cannot flag arbitrary unplayed library assets (404 Not Found)
+        user_unplayed_flag = cf_client.post(
+            '/api/assets/flag',
+            headers=user_headers,
+            json={'asset_id': 'mock-asset-0', 'flag_date': True},
+        )
+        assert user_unplayed_flag.status_code == 404
+
+        # 4. Create challenge as Creator; Guest joins and flags an active challenge photo: immich_url is redacted
+        ch_res = cf_client.post(
+            '/api/challenge/create',
+            headers=creator_headers,
+            json={'creator_name': 'Host', 'game_mode': 'pinpoint', 'round_count': 3},
+        )
+        cap_token = ch_res.json()['capability_token']
+        guest_session = cf_client.post(f'/play/api/{cap_token}/start', json={'player_name': 'GuestAlice'}).json()
+        q0 = cf_client.get(
+            f'/play/api/{cap_token}/question/0',
+            headers={'X-Player-Token': guest_session['session_token']},
+        ).json()
+
+        play_flag = cf_client.post(
+            f'/play/api/{cap_token}/flag',
+            headers={'X-Player-Token': guest_session['session_token']},
+            json={'asset_id': q0['asset_id'], 'flag_coordinates': True},
+        )
+        assert play_flag.status_code == 200
+        assert play_flag.json()['immich_url'] == ''
+        assert play_flag.json()['reported_by'] == 'GuestAlice'
+
+        # 5. Authenticated User CAN flag an active challenge asset via /api/assets/flag, with redacted immich_url
+        user_played_flag = cf_client.post(
+            '/api/assets/flag',
+            headers=user_headers,
+            json={'asset_id': q0['asset_id'], 'flag_date': True},
+        )
+        assert user_played_flag.status_code == 200
+        assert user_played_flag.json()['immich_url'] == ''
 
 
 def test_challenge_start_normalizes_player_name(tmp_path: Path) -> None:

@@ -619,23 +619,39 @@ async def flag_challenge_asset(
     capability_token: str,
     payload: FlagAssetRequest,
     request: Request,
+    x_player_token: str | None = Header(default=None),
     challenge_store: ChallengeStore = Depends(get_challenge_store),
     metadata_store: MetadataStore = Depends(get_metadata_store),
 ) -> FlagAssetResponse:
-    """Allow challenge participants to flag photo inconsistencies directly from challenge gameplay."""
+    """Allow active challenge participants to flag photo inconsistencies directly from challenge gameplay."""
+    challenge = await asyncio.to_thread(challenge_store.get_challenge_by_token, capability_token)
+    if not challenge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Challenge not found or expired.')
+
+    if not x_player_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid session token.')
+
+    session = await asyncio.to_thread(challenge_store.get_player_session, x_player_token)
+    if not session or session['challenge_id'] != challenge['challenge_id']:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid session token.')
+
     is_valid = await asyncio.to_thread(challenge_store.is_asset_in_challenge, capability_token, payload.asset_id)
     if not is_valid:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Unknown asset for this challenge')
 
+    reported_by = payload.reported_by or session['player_name']
     res = await asyncio.to_thread(
         metadata_store.flag_asset,
         payload.asset_id,
         flag_coordinates=payload.flag_coordinates,
         flag_date=payload.flag_date,
         other=payload.other,
-        reported_by=payload.reported_by,
+        reported_by=reported_by,
     )
-    immich_url = build_immich_photo_url(request.app.state.settings, payload.asset_id)
+    auth = await get_current_auth(request)
+    immich_url = (
+        build_immich_photo_url(request.app.state.settings, payload.asset_id) if auth.has_role(Role.CREATOR) else ''
+    )
     return FlagAssetResponse(
         success=True,
         asset_id=res['asset_id'],

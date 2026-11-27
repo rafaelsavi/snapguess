@@ -105,14 +105,15 @@ export function openReportModal(assetId, previewUrl = null, playerName = null) {
     _thumbEl.src = src;
   }
 
-  // Update direct Immich Web link (hidden for local folder provider)
+  // Update direct Immich Web link (only shown to Creators on Immich provider when URL is available)
   if (_immichLinkEl) {
-    if (state.photoProvider && state.photoProvider !== "immich") {
+    const isCreator = !state.auth || state.auth.role === "creator";
+    if ((state.photoProvider && state.photoProvider !== "immich") || !isCreator || !state.immichWebUrl) {
       _immichLinkEl.classList.add("hidden");
       _immichLinkEl.removeAttribute("href");
     } else {
       _immichLinkEl.classList.remove("hidden");
-      const baseUrl = state.immichWebUrl || window.location.origin;
+      const baseUrl = state.immichWebUrl;
       _immichLinkEl.href = `${baseUrl.replace(/\/+$/, "")}/photos/${assetId}`;
       _immichLinkEl.target = "_blank";
       _immichLinkEl.rel = "noopener noreferrer";
@@ -164,9 +165,14 @@ async function handleReportSubmit(e) {
       ? `/play/api/${encodeURIComponent(capToken)}/flag`
       : "/api/assets/flag";
 
+    const headers = { "Content-Type": "application/json" };
+    if (capToken && challengeSession?.sessionToken) {
+      headers["X-Player-Token"] = challengeSession.sessionToken;
+    }
+
     await api(flagEndpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(payload),
     });
 
