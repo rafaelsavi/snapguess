@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.7] - 2026-11-27
+
+### Added
+
+- **Cloudflare Access Token Verification (`CF_TEAM_DOMAIN` & `CF_AUD_TAG`)**: Hosts running behind Cloudflare Zero Trust can now configure their team domain (and optional audience tags) so signed-in players automatically preserve their verified account identity on public `/play/*` challenge links while rejecting unverified cookies.
+- **Explicit Local Auth Simulation Toggle (`ALLOW_DEV_AUTH`)**: Local loopback identity simulation parameters are now disabled by default and require explicit opt-in via `ALLOW_DEV_AUTH=true`.
+
+### Fixed
+
+- **Challenge Player Session Protection**: Joining an active challenge with a player name already in use on another device now displays a localized notice instead of taking over that player's turn or unlocking completed match replays early, while returning players on their own device (or with locked verified accounts) resume seamlessly.
+- **Spoiler-Free Regional Map Framing**: Smart map auto-zoom in Pinpoint matches and challenges now frames the broader regional photo pool with outward margin padding and falls back cleanly to world view across the Pacific date line, preventing exact photo locations from sitting on map boundaries.
+- **Private Immich Link & Photo Reporting Safeguards**: Hid direct Immich server links from guest and non-host players in the photo report dialog, and restricted in-game photo reporting to active match and challenge participants.
+
 ## [4.5.6] - 2026-11-14
 
 ### Fixed
