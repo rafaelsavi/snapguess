@@ -171,32 +171,26 @@ class ChallengeStore:
 
         return _row_to_challenge_dict(row)
 
-    def get_or_resume_player_session(
+    def get_player_session_by_name(
         self,
         challenge_id: str,
         player_name: str,
-    ) -> dict[str, Any]:
-        """Resume an existing session or create a new one for the player.
-
-        Uses UNIQUE(challenge_id, player_name) constraint — if a player has an
-        existing session (complete or in-progress), it is returned for resume.
-        """
+    ) -> dict[str, Any] | None:
+        """Look up an existing player session in a challenge by case-insensitive player name."""
         clean_name = re.sub(r'\s+', ' ', player_name.strip())
         existing = self._db.fetch_one(
             'SELECT * FROM challenge_sessions WHERE challenge_id = ? AND player_name = ? COLLATE NOCASE',
             (challenge_id, clean_name),
         )
-        if existing:
-            session_dict = dict(existing)
+        return dict(existing) if existing else None
 
-            logger.info(
-                'Resuming session for %r in challenge %s (round %d)',
-                player_name,
-                challenge_id,
-                existing['current_round'],
-            )
-            return session_dict
-
+    def create_new_player_session(
+        self,
+        challenge_id: str,
+        player_name: str,
+    ) -> dict[str, Any] | None:
+        """Create a brand-new player session, returning None if the name was concurrently taken."""
+        clean_name = re.sub(r'\s+', ' ', player_name.strip())
         existing_sessions = self._db.fetch_all(
             'SELECT session_token FROM challenge_sessions WHERE challenge_id = ? ORDER BY started_at ASC',
             (challenge_id,),
@@ -220,13 +214,7 @@ class ChallengeStore:
                     (session_token, match_id, challenge_id, clean_name, started_at),
                 )
         except sqlite3.IntegrityError:
-            existing = self._db.fetch_one(
-                'SELECT * FROM challenge_sessions WHERE challenge_id = ? AND player_name = ? COLLATE NOCASE',
-                (challenge_id, clean_name),
-            )
-            if existing:
-                return dict(existing)
-            raise
+            return None
 
         logger.info(
             'Created new session for %r in challenge %s (index %d)',
@@ -249,6 +237,31 @@ class ChallengeStore:
             'completed_at': None,
             'participant_index': participant_index,
         }
+
+    def get_or_resume_player_session(
+        self,
+        challenge_id: str,
+        player_name: str,
+    ) -> dict[str, Any]:
+        """Resume an existing session or create a new one for internal storage callers."""
+        existing = self.get_player_session_by_name(challenge_id, player_name)
+        if existing:
+            logger.info(
+                'Resuming session for %r in challenge %s (round %d)',
+                player_name,
+                challenge_id,
+                existing['current_round'],
+            )
+            return existing
+
+        created = self.create_new_player_session(challenge_id, player_name)
+        if created is not None:
+            return created
+
+        existing = self.get_player_session_by_name(challenge_id, player_name)
+        if existing:
+            return existing
+        raise RuntimeError(f'Failed to create or fetch session for {player_name!r} in {challenge_id}')
 
     def get_player_session(self, session_token: str) -> dict[str, Any] | None:
         """Retrieve a player session by its token from persistent storage."""

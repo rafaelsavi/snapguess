@@ -410,6 +410,7 @@
   "challenge.new_player_placeholder": "Digite seu nome...",
   "challenge.join_heading": "Entrar no Desafio",
   "challenge.join_desc": "Digite seu nome para começar a jogar este jogo.",
+  "challenge.name_taken_error": "O nome \"{0}\" já está em uso neste desafio. Escolha outro nome ou retome a partir do seu dispositivo original.",
   "challenge.current_leader": "🏆 Líder Atual: {0}",
   "challenge.current_leader_tie": "🏆 Líderes Atuais: {0}",
   "challenge.true_date": "Data Real",

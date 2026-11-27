@@ -91,6 +91,68 @@ export const challengeSession = {
   },
 
   /**
+   * Look up a stored session token on this device for a specific player name (case-insensitive).
+   * @param {string} capabilityToken
+   * @param {string} playerName
+   * @returns {string|null}
+   */
+  getTokenForPlayer(capabilityToken, playerName) {
+    if (!capabilityToken || !playerName) return null;
+    const normTarget = String(playerName).trim().replace(/\s+/g, " ").toLowerCase();
+    if (!normTarget) return null;
+
+    if (
+      this.sessionToken &&
+      this.sessionPlayerName &&
+      String(this.sessionPlayerName).trim().replace(/\s+/g, " ").toLowerCase() === normTarget
+    ) {
+      return this.sessionToken;
+    }
+
+    const key = this.sessionKey(capabilityToken);
+    try {
+      const tabRaw = sessionStorage.getItem(key);
+      if (tabRaw) {
+        const tabSession = JSON.parse(tabRaw);
+        if (
+          tabSession?.token &&
+          tabSession?.playerName &&
+          String(tabSession.playerName).trim().replace(/\s+/g, " ").toLowerCase() === normTarget
+        ) {
+          return tabSession.token;
+        }
+      }
+    } catch (_) {}
+
+    try {
+      const localRaw = localStorage.getItem(key);
+      if (!localRaw) return null;
+      const parsed = JSON.parse(localRaw);
+      if (!parsed || typeof parsed !== "object") return null;
+
+      if (parsed.players && typeof parsed.players === "object") {
+        for (const [storedKey, entry] of Object.entries(parsed.players)) {
+          const entryName = entry?.playerName || storedKey;
+          if (
+            entry?.token &&
+            String(entryName).trim().replace(/\s+/g, " ").toLowerCase() === normTarget
+          ) {
+            return entry.token;
+          }
+        }
+      } else if (
+        parsed.token &&
+        parsed.playerName &&
+        String(parsed.playerName).trim().replace(/\s+/g, " ").toLowerCase() === normTarget
+      ) {
+        return parsed.token;
+      }
+    } catch (_) {}
+
+    return null;
+  },
+
+  /**
    * Load session for challenge, prioritizing the current tab's sessionStorage first.
    * If sessionStorage is empty, falls back to localStorage (e.g. fresh tab resume).
    * @param {string} capabilityToken
@@ -102,6 +164,9 @@ export const challengeSession = {
   loadSession(capabilityToken, { tabOnly = false, preferredPlayerName = null } = {}) {
     if (!capabilityToken) return null;
     const key = this.sessionKey(capabilityToken);
+    const normPreferred = preferredPlayerName
+      ? String(preferredPlayerName).trim().replace(/\s+/g, " ").toLowerCase()
+      : null;
 
     // 1. Always prioritize current tab's sessionStorage (prevents cross-tab leaks)
     try {
@@ -109,7 +174,12 @@ export const challengeSession = {
       if (tabRaw) {
         const tabSession = JSON.parse(tabRaw);
         if (tabSession && tabSession.token) {
-          return tabSession;
+          if (
+            !normPreferred ||
+            String(tabSession.playerName || "").trim().replace(/\s+/g, " ").toLowerCase() === normPreferred
+          ) {
+            return tabSession;
+          }
         }
       }
     } catch (_) {}
@@ -125,8 +195,16 @@ export const challengeSession = {
 
       // Handle dictionary format { lastPlayer, players: { ... } }
       if (parsed.players && typeof parsed.players === "object") {
-        if (preferredPlayerName && parsed.players[preferredPlayerName]) {
-          return parsed.players[preferredPlayerName];
+        if (normPreferred) {
+          for (const [storedKey, entry] of Object.entries(parsed.players)) {
+            const entryName = entry?.playerName || storedKey;
+            if (
+              entry?.token &&
+              String(entryName).trim().replace(/\s+/g, " ").toLowerCase() === normPreferred
+            ) {
+              return entry;
+            }
+          }
         }
         if (parsed.lastPlayer && parsed.players[parsed.lastPlayer]) {
           return parsed.players[parsed.lastPlayer];

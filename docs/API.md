@@ -804,7 +804,11 @@ Response (`200 OK`):
 
 ### POST /play/api/{capability_token}/start
 
-Initializes or resumes a player's challenge session. If the player name already has an active session, returns the existing session token and current round progress. Surrounding and duplicate inner whitespace in `player_name` are automatically normalized. When `CF_LOCK_PLAYER_NAME` is enabled, authenticated reverse proxy/Cloudflare user identity strictly overrides any forged or custom player name submitted in the request body.
+Initializes or resumes a player's challenge session. Resuming an existing `player_name` requires proof of session ownership via the `X-Player-Token` header (or a locked verified identity when `CF_LOCK_PLAYER_NAME=true`); unauthenticated name collisions return `409 Conflict` to prevent session hijacking and Fog-of-War replay leaks. Surrounding and duplicate inner whitespace in `player_name` are automatically normalized. When `CF_LOCK_PLAYER_NAME` is enabled, authenticated reverse proxy/Cloudflare user identity strictly overrides any forged or custom player name submitted in the request body.
+
+Headers:
+
+- `X-Player-Token`: (Optional) Existing player session token when resuming on the same device.
 
 Request:
 

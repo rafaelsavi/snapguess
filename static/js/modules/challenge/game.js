@@ -80,10 +80,14 @@ export const challengeGame = {
    */
   async start(playerName, onLoadRound = null, onShowSummary = null) {
     try {
+      const capToken = challengeSession.challengeData.capability_token;
       const payload = { player_name: playerName };
+      const resumeToken = challengeSession.getTokenForPlayer(capToken, playerName);
+      const headers = resumeToken ? { "X-Player-Token": resumeToken } : {};
 
-      const res = await api(`/play/api/${encodeURIComponent(challengeSession.challengeData.capability_token)}/start`, {
+      const res = await api(`/play/api/${encodeURIComponent(capToken)}/start`, {
         method: "POST",
+        headers,
         body: JSON.stringify(payload),
       });
 
@@ -98,7 +102,7 @@ export const challengeGame = {
       }
 
       // Persist session into tab-scoped sessionStorage and player-indexed localStorage
-      challengeSession.saveSession(challengeSession.challengeData.capability_token, {
+      challengeSession.saveSession(capToken, {
         token: challengeSession.sessionToken,
         matchId: res.match_id,
         playerName: challengeSession.sessionPlayerName,
@@ -113,7 +117,7 @@ export const challengeGame = {
       }
     } catch (err) {
       if (err.status === 409) {
-        if (onShowSummary) onShowSummary();
+        showAlert(t("challenge.name_taken_error", playerName));
         return;
       }
       if (err.status === 404 || String(err.message || "").toLowerCase().includes("not found") || String(err.message || "").toLowerCase().includes("expired")) {

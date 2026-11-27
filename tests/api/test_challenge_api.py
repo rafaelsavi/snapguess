@@ -171,11 +171,66 @@ def test_challenge_start_and_deduplicated_resumption(tmp_path: Path) -> None:
     assert s_data['is_resumed'] is False
     session_token = s_data['session_token']
 
-    # 2. Starting again with same player name returns same session
-    resume_res = client.post(f'/play/api/{token}/start', json={'player_name': 'Bob'})
+    # 2. Starting again with same player name WITH valid X-Player-Token resumes same session
+    resume_res = client.post(
+        f'/play/api/{token}/start',
+        json={'player_name': '  bob  '},
+        headers={'X-Player-Token': session_token},
+    )
     assert resume_res.status_code == 200
     r_data = resume_res.json()
     assert r_data['session_token'] == session_token
+
+    # 3. Attempting to start as 'Bob' WITHOUT X-Player-Token or with wrong token returns 409 Conflict
+    hijack_no_token = client.post(f'/play/api/{token}/start', json={'player_name': 'Bob'})
+    assert hijack_no_token.status_code == 409
+    assert 'already taken' in hijack_no_token.json()['detail'].lower()
+    assert 'session_token' not in hijack_no_token.json()
+
+    hijack_wrong_token = client.post(
+        f'/play/api/{token}/start',
+        json={'player_name': 'BOB'},
+        headers={'X-Player-Token': 'forged_token_value'},
+    )
+    assert hijack_wrong_token.status_code == 409
+
+
+def test_challenge_start_prevents_completed_replay_token_theft(tmp_path: Path) -> None:
+    """Verify an attacker cannot steal a finisher's session_token via POST /start to bypass Fog of War."""
+    immich = FakeImmichClient(_create_mock_assets(25))
+    client = build_client(tmp_path, immich)
+
+    create_res = client.post(
+        '/api/challenge/create',
+        json={'creator_name': 'Host', 'game_mode': 'pinpoint', 'round_count': 3, 'date_mode': False},
+    )
+    token = create_res.json()['capability_token']
+
+    # Alice joins and finishes all 3 rounds
+    alice_start = client.post(f'/play/api/{token}/start', json={'player_name': 'Alice'}).json()
+    alice_token = alice_start['session_token']
+    for r in range(3):
+        client.post(
+            f'/play/api/{token}/answer',
+            headers={'X-Player-Token': alice_token},
+            json={
+                'round_index': r,
+                'pinpoint': {'guessed_latitude': 10.0, 'guessed_longitude': 20.0},
+                'time_taken_seconds': 5.0,
+            },
+        )
+
+    # Challenge is still active: unauthenticated replay access is blocked by Fog of War (403)
+    assert client.get(f'/play/api/{token}/replay').status_code == 403
+
+    # Attacker tries to claim 'Alice' via POST /start without Alice's token -> 409 Conflict
+    steal_attempt = client.post(f'/play/api/{token}/start', json={'player_name': 'alice'})
+    assert steal_attempt.status_code == 409
+    assert 'session_token' not in steal_attempt.json()
+
+    # Alice herself can still view the replay using her legitimate session token
+    alice_replay = client.get(f'/play/api/{token}/replay', headers={'X-Player-Token': alice_token})
+    assert alice_replay.status_code == 200
 
 
 def test_challenge_question_sequencing_and_security(tmp_path: Path) -> None:
@@ -1119,6 +1174,16 @@ def test_challenge_start_locks_player_name_when_configured(tmp_path: Path) -> No
         assert start_res.status_code == 200
         # Overridden to verified name
         assert start_res.json()['player_name'] == 'Verified Hero'
+        hero_token = start_res.json()['session_token']
+
+        # Verified locked user can resume their own session across devices without X-Player-Token
+        resume_res = test_client.post(
+            f'/play/api/{token}/start',
+            json={'player_name': 'Verified Hero'},
+            headers=user_headers,
+        )
+        assert resume_res.status_code == 200
+        assert resume_res.json()['session_token'] == hero_token
 
 
 def test_challenge_pinpoint_date_scoring_precision(tmp_path: Path) -> None:

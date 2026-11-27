@@ -410,6 +410,7 @@ export default {
   "challenge.new_player_placeholder": "Enter your name...",
   "challenge.join_heading": "Join Challenge",
   "challenge.join_desc": "Enter your name to start playing this game.",
+  "challenge.name_taken_error": "The name \"{0}\" is already in use in this challenge. Choose a different name or resume from your original device.",
   "challenge.current_leader": "🏆 Current Leader: {0}",
   "challenge.current_leader_tie": "🏆 Current Leaders: {0}",
   "challenge.true_date": "Actual Date",
