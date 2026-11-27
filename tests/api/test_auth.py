@@ -337,43 +337,160 @@ def test_resolve_role_name_headers_and_jwt() -> None:
 
 
 def test_resolve_role_loopback_dev_parameters() -> None:
-    """Verify loopback requests can simulate email and name for local development."""
-    settings = AppSettings(
-        immich_server_url='https://placeholder.example.com/api',
-        immich_libraries={'family': 'token'},
-        data_path=Path('/tmp'),
-        auth_mode='cloudflare',
-        cf_creator_emails=frozenset({'dev@example.com'}),
-    )
-    app = FastAPI()
-    app.state.settings = settings
+    """Verify loopback dev overrides require BOTH allow_dev_auth=True and a loopback socket."""
+    base_kwargs = {
+        'immich_server_url': 'https://placeholder.example.com/api',
+        'immich_libraries': {'family': 'token'},
+        'data_path': Path('/tmp'),
+        'auth_mode': 'cloudflare',
+        'cf_creator_emails': frozenset({'dev@example.com'}),
+    }
 
-    def make_loopback_req(headers_dict: dict[str, str], query: str = '') -> Request:
+    def make_req(
+        app: FastAPI,
+        headers_dict: dict[str, str],
+        query: str = '',
+        client_ip: str = '127.0.0.1',
+    ) -> Request:
         headers = [(k.lower().encode('utf-8'), v.encode('utf-8')) for k, v in headers_dict.items()]
         scope = {
             'type': 'http',
             'app': app,
-            'client': ('127.0.0.1', 50000),
+            'client': (client_ip, 50000),
+            'path': '/api/auth/me',
             'headers': headers,
             'query_string': query.encode('utf-8'),
         }
         return Request(scope)
 
-    # 1. Loopback headers x-dev-email and x-dev-name
-    req = make_loopback_req({'x-dev-email': 'dev@example.com', 'x-dev-name': 'Dev Master'})
-    ctx = _resolve_role_cloudflare(req)
+    # 1. Default (allow_dev_auth=False): loopback dev headers and query params MUST be ignored
+    locked_app = FastAPI()
+    locked_app.state.settings = AppSettings(**base_kwargs)
+
+    ctx = _resolve_role_cloudflare(make_req(locked_app, {'x-dev-email': 'dev@example.com', 'x-dev-name': 'Spoofer'}))
+    assert ctx.role == Role.GUEST
+    assert not ctx.authenticated
+
+    ctx = _resolve_role_cloudflare(make_req(locked_app, {}, query='dev_email=dev@example.com&dev_name=Spoofer'))
+    assert ctx.role == Role.GUEST
+    assert not ctx.authenticated
+
+    # 2. Explicit opt-in (allow_dev_auth=True) on loopback -> honored
+    dev_app = FastAPI()
+    dev_app.state.settings = AppSettings(**base_kwargs, allow_dev_auth=True)
+
+    ctx = _resolve_role_cloudflare(make_req(dev_app, {'x-dev-email': 'dev@example.com', 'x-dev-name': 'Dev Master'}))
     assert ctx.role == Role.CREATOR
     assert ctx.email == 'dev@example.com'
     assert ctx.name == 'Dev Master'
     assert ctx.authenticated is True
 
-    # 2. Loopback query parameters dev_email and dev_name
-    req = make_loopback_req({}, query='dev_email=dev@example.com&dev_name=Dev+Param')
-    ctx = _resolve_role_cloudflare(req)
+    ctx = _resolve_role_cloudflare(make_req(dev_app, {}, query='dev_email=dev@example.com&dev_name=Dev+Param'))
     assert ctx.role == Role.CREATOR
     assert ctx.email == 'dev@example.com'
     assert ctx.name == 'Dev Param'
     assert ctx.authenticated is True
+
+    # 3. Even with allow_dev_auth=True, non-loopback client IPs MUST be rejected
+    ctx = _resolve_role_cloudflare(
+        make_req(
+            dev_app,
+            {'x-dev-email': 'dev@example.com', 'x-dev-name': 'Remote Spoofer'},
+            client_ip='203.0.113.42',
+        )
+    )
+    assert ctx.role == Role.GUEST
+    assert not ctx.authenticated
+
+
+def _generate_test_rsa_keypair(seed: int = 42) -> tuple[int, int, int]:
+    """Generate a deterministic 2048-bit RSA (n, e, d) keypair using stdlib Miller-Rabin."""
+    import random
+
+    rng = random.Random(seed)
+
+    def _is_probable_prime(candidate: int) -> bool:
+        if candidate % 2 == 0:
+            return False
+        small_primes = (3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53)
+        for sp in small_primes:
+            if candidate % sp == 0:
+                return candidate == sp
+        r, d_odd = 0, candidate - 1
+        while d_odd % 2 == 0:
+            r += 1
+            d_odd //= 2
+        for witness in (2, 3, 5, 7, 11, 13, 17, 19):
+            x = pow(witness, d_odd, candidate)
+            if x in (1, candidate - 1):
+                continue
+            for _ in range(r - 1):
+                x = pow(x, 2, candidate)
+                if x == candidate - 1:
+                    break
+            else:
+                return False
+        return True
+
+    def _next_1024_bit_prime() -> int:
+        val = rng.getrandbits(1024) | (1 << 1023) | (1 << 1022) | 1
+        while not _is_probable_prime(val):
+            val += 2
+        return val
+
+    e = 65537
+    while True:
+        p = _next_1024_bit_prime()
+        q = _next_1024_bit_prime()
+        if p == q:
+            continue
+        phi = (p - 1) * (q - 1)
+        if phi % e != 0:
+            n = p * q
+            d = pow(e, -1, phi)
+            return n, e, d
+
+
+_RSA_KEY_PRIMARY = _generate_test_rsa_keypair(seed=101)
+_RSA_KEY_OTHER = _generate_test_rsa_keypair(seed=202)
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode('ascii').rstrip('=')
+
+
+def _build_jwk(keypair: tuple[int, int, int], kid: str) -> dict[str, str]:
+    n, e, _ = keypair
+    n_bytes = n.to_bytes((n.bit_length() + 7) // 8, 'big')
+    e_bytes = e.to_bytes((e.bit_length() + 7) // 8, 'big')
+    return {
+        'kty': 'RSA',
+        'kid': kid,
+        'alg': 'RS256',
+        'use': 'sig',
+        'n': _b64url(n_bytes),
+        'e': _b64url(e_bytes),
+    }
+
+
+def _sign_rs256_jwt(
+    claims: dict[str, object],
+    keypair: tuple[int, int, int],
+    *,
+    kid: str = 'cf-key-1',
+    alg: str = 'RS256',
+) -> str:
+    import hashlib
+
+    n, _, d = keypair
+    k = (n.bit_length() + 7) // 8
+    header_b64 = _b64url(json.dumps({'alg': alg, 'typ': 'JWT', 'kid': kid}).encode('utf-8'))
+    payload_b64 = _b64url(json.dumps(claims).encode('utf-8'))
+    signing_input = f'{header_b64}.{payload_b64}'.encode('ascii')
+    digest_info = bytes.fromhex('3031300d060960864801650304020105000420') + hashlib.sha256(signing_input).digest()
+    em = b'\x00\x01' + (b'\xff' * (k - len(digest_info) - 3)) + b'\x00' + digest_info
+    sig = pow(int.from_bytes(em, 'big'), d, n).to_bytes(k, 'big')
+    return f'{header_b64}.{payload_b64}.{_b64url(sig)}'
 
 
 def test_auth_me_lock_player_name(tmp_path: Path) -> None:
@@ -408,24 +525,23 @@ def test_auth_me_lock_player_name(tmp_path: Path) -> None:
         assert data['lock_player_name'] is True
 
 
-def test_cloudflare_bypass_cookie_fallback_and_play_boot_routes(tmp_path: Path) -> None:
-    """Verify CF_Authorization cookie fallback on Cloudflare Bypass routes (/play/api/*)."""
+def test_cloudflare_bypass_rejects_unverified_cookies_and_headers_without_team_domain(tmp_path: Path) -> None:
+    """Without CF_TEAM_DOMAIN, unverified CF_Authorization cookies and X-User-* headers on /play/* resolve to Guest."""
     import time
 
-    user_email = 'player@example.com'
     settings = AppSettings(
         immich_server_url='https://placeholder.example.com/api',
         immich_libraries={'family': 'token'},
         data_path=tmp_path,
         auth_mode='cloudflare',
+        cf_creator_emails=frozenset({'owner@example.com'}),
         cf_lock_player_name=True,
     )
     app = create_app(settings=settings)
     app.state.photo_provider = FakeImmichClient()
 
-    def _make_jwt(claims: dict[str, object]) -> str:
-        payload_b64 = base64.urlsafe_b64encode(json.dumps(claims).encode('utf-8')).decode('ascii').rstrip('=')
-        return f'header.{payload_b64}.signature'
+    forged_claims = {'email': 'owner@example.com', 'name': 'Spoofed Owner', 'exp': int(time.time()) + 3600}
+    forged_jwt = f'eyJhbGciOiJSUzI1NiJ9.{_b64url(json.dumps(forged_claims).encode("utf-8"))}.forgedsig'
 
     with TestClient(app) as client:
         # 1. Unauthenticated guest on /play/api/auth/me and /play/api/ui-config
@@ -438,23 +554,180 @@ def test_cloudflare_bypass_cookie_fallback_and_play_boot_routes(tmp_path: Path) 
         assert cfg_resp.status_code == 200
         assert 'tile_config' in cfg_resp.json()
 
-        # 2. Logged-in User visiting a Cloudflare Bypass path (/play/api/auth/me) with CF_Authorization cookie only
-        valid_jwt = _make_jwt({'email': user_email, 'name': 'Maria Savi', 'exp': int(time.time()) + 3600})
-        client.cookies.set('CF_Authorization', valid_jwt)
-        resp = client.get('/play/api/auth/me')
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data['role'] == 'user'
-        assert data['email'] == user_email
-        assert data['name'] == 'Maria Savi'
-        assert data['authenticated'] is True
-        assert data['lock_player_name'] is True
-
-        # 3. Expired CF_Authorization cookie falls back to unauthenticated guest
-        expired_jwt = _make_jwt({'email': user_email, 'name': 'Maria Savi', 'exp': int(time.time()) - 60})
-        client.cookies.set('CF_Authorization', expired_jwt)
+        # 2. Forged CF_Authorization cookie without CF_TEAM_DOMAIN MUST NOT authenticate as Creator/User
+        client.cookies.set('CF_Authorization', forged_jwt)
         resp = client.get('/play/api/auth/me')
         assert resp.status_code == 200
         data = resp.json()
         assert data['role'] == 'guest'
         assert data['authenticated'] is False
+        assert data['lock_player_name'] is False
+
+        # 3. Spoofed X-User-Name / X-Forwarded-Email / Cf-Access-Jwt-Assertion on /play/* MUST be rejected
+        client.cookies.clear()
+        resp = client.get(
+            '/play/api/auth/me',
+            headers={
+                'X-User-Name': 'Spoofed Alice',
+                'X-Forwarded-Email': 'owner@example.com',
+                'Cf-Access-Jwt-Assertion': forged_jwt,
+            },
+        )
+        assert resp.status_code == 200
+        assert resp.json()['role'] == 'guest'
+        assert resp.json()['authenticated'] is False
+
+
+def test_cloudflare_jwks_verified_cookie_and_key_rotation(tmp_path: Path) -> None:
+    """With CF_TEAM_DOMAIN and CF_AUD_TAG configured, verify RS256 JWKS signatures, claims, and key rotation."""
+    import time
+
+    import httpx
+
+    from src.auth.service import clear_jwks_cache
+
+    clear_jwks_cache()
+    team_issuer = 'https://snapteam.cloudflareaccess.com'
+    aud_tag = 'aud-snapguess-prod'
+    active_keys = [_build_jwk(_RSA_KEY_PRIMARY, 'cf-key-1')]
+
+    def _mock_certs_handler(request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == f'{team_issuer}/cdn-cgi/access/certs'
+        return httpx.Response(200, json={'keys': active_keys})
+
+    settings = AppSettings(
+        immich_server_url='https://placeholder.example.com/api',
+        immich_libraries={'family': 'token'},
+        data_path=tmp_path,
+        auth_mode='cloudflare',
+        cf_creator_emails=frozenset({'owner@example.com'}),
+        cf_lock_player_name=True,
+        cf_team_domain='snapteam',
+        cf_aud_tags=frozenset({aud_tag}),
+    )
+    app = create_app(settings=settings)
+    app.state.photo_provider = FakeImmichClient()
+    app.state.cf_jwks_http_client = httpx.AsyncClient(transport=httpx.MockTransport(_mock_certs_handler))
+
+    now = int(time.time())
+    try:
+        with TestClient(app) as client:
+            # 1. Valid RS256-signed CF_Authorization cookie on /play/api/auth/me -> verified User
+            valid_cookie = _sign_rs256_jwt(
+                {
+                    'iss': team_issuer,
+                    'aud': [aud_tag],
+                    'email': 'maria@example.com',
+                    'oidc_fields': {'name': 'Maria Savi'},
+                    'exp': now + 3600,
+                },
+                _RSA_KEY_PRIMARY,
+                kid='cf-key-1',
+            )
+            client.cookies.set('CF_Authorization', valid_cookie)
+            resp = client.get('/play/api/auth/me')
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data['role'] == 'user'
+            assert data['email'] == 'maria@example.com'
+            assert data['name'] == 'Maria Savi'
+            assert data['authenticated'] is True
+            assert data['lock_player_name'] is True
+
+            # 2. Valid RS256-signed Creator token -> Role.CREATOR
+            creator_cookie = _sign_rs256_jwt(
+                {
+                    'iss': team_issuer,
+                    'aud': aud_tag,
+                    'email': 'owner@example.com',
+                    'name': 'Host Owner',
+                    'exp': now + 3600,
+                },
+                _RSA_KEY_PRIMARY,
+                kid='cf-key-1',
+            )
+            client.cookies.set('CF_Authorization', creator_cookie)
+            resp = client.get('/play/api/auth/me')
+            assert resp.json()['role'] == 'creator'
+            assert resp.json()['authenticated'] is True
+
+            # 3. Wrong RSA signing key (forged signature) -> Guest
+            wrong_key_cookie = _sign_rs256_jwt(
+                {
+                    'iss': team_issuer,
+                    'aud': [aud_tag],
+                    'email': 'owner@example.com',
+                    'exp': now + 3600,
+                },
+                _RSA_KEY_OTHER,
+                kid='cf-key-1',
+            )
+            client.cookies.set('CF_Authorization', wrong_key_cookie)
+            resp = client.get('/play/api/auth/me')
+            assert resp.json()['role'] == 'guest'
+            assert resp.json()['authenticated'] is False
+
+            # 4. Wrong audience tag -> Guest
+            wrong_aud_cookie = _sign_rs256_jwt(
+                {
+                    'iss': team_issuer,
+                    'aud': ['some-other-app-aud'],
+                    'email': 'owner@example.com',
+                    'exp': now + 3600,
+                },
+                _RSA_KEY_PRIMARY,
+                kid='cf-key-1',
+            )
+            client.cookies.set('CF_Authorization', wrong_aud_cookie)
+            assert client.get('/play/api/auth/me').json()['role'] == 'guest'
+
+            # 5. Wrong issuer -> Guest
+            wrong_iss_cookie = _sign_rs256_jwt(
+                {
+                    'iss': 'https://evilteam.cloudflareaccess.com',
+                    'aud': [aud_tag],
+                    'email': 'owner@example.com',
+                    'exp': now + 3600,
+                },
+                _RSA_KEY_PRIMARY,
+                kid='cf-key-1',
+            )
+            client.cookies.set('CF_Authorization', wrong_iss_cookie)
+            assert client.get('/play/api/auth/me').json()['role'] == 'guest'
+
+            # 6. Expired token -> Guest
+            expired_cookie = _sign_rs256_jwt(
+                {
+                    'iss': team_issuer,
+                    'aud': [aud_tag],
+                    'email': 'owner@example.com',
+                    'exp': now - 120,
+                },
+                _RSA_KEY_PRIMARY,
+                kid='cf-key-1',
+            )
+            client.cookies.set('CF_Authorization', expired_cookie)
+            assert client.get('/play/api/auth/me').json()['role'] == 'guest'
+
+            # 7. Key rotation: reset refresh cooldown, add cf-key-2 to JWKS, verify auto-refresh works
+            from src.auth import service as auth_service
+
+            auth_service._jwks_last_refresh_mono.clear()
+            active_keys.append(_build_jwk(_RSA_KEY_OTHER, 'cf-key-2'))
+            rotated_cookie = _sign_rs256_jwt(
+                {
+                    'iss': team_issuer,
+                    'aud': [aud_tag],
+                    'email': 'rotated@example.com',
+                    'name': 'Rotated User',
+                    'exp': now + 3600,
+                },
+                _RSA_KEY_OTHER,
+                kid='cf-key-2',
+            )
+            client.cookies.set('CF_Authorization', rotated_cookie)
+            resp = client.get('/play/api/auth/me')
+            assert resp.json()['role'] == 'user'
+            assert resp.json()['name'] == 'Rotated User'
+    finally:
+        clear_jwks_cache()

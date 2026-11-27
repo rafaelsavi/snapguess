@@ -37,6 +37,13 @@ def isolated_env(monkeypatch: pytest.MonkeyPatch) -> None:
         'EXCLUDE_FLAGGED_PHOTOS',
         'PHOTO_PROVIDER',
         'LOCAL_LIBRARIES',
+        'AUTH_MODE',
+        'CF_CREATOR_EMAILS',
+        'CF_LOCK_PLAYER_NAME',
+        'CF_TEAM_DOMAIN',
+        'CF_AUD_TAG',
+        'CF_AUD_TAGS',
+        'ALLOW_DEV_AUTH',
     ):
         monkeypatch.delenv(key, raising=False)
 
@@ -499,4 +506,53 @@ def test_load_settings_local_provider_malformed_json(monkeypatch: pytest.MonkeyP
     monkeypatch.setenv('PHOTO_PROVIDER', 'local')
     monkeypatch.setenv('LOCAL_LIBRARIES', '{not-valid-json}')
     with pytest.raises(ConfigError, match='valid JSON'):
+        load_settings()
+
+
+@pytest.mark.parametrize(
+    'raw_domain, expected_origin',
+    [
+        ('myteam', 'https://myteam.cloudflareaccess.com'),
+        ('  "MyTeam.CloudflareAccess.com/"  ', 'https://myteam.cloudflareaccess.com'),
+        ('https://ExampleTeam.cloudflareaccess.com/', 'https://exampleteam.cloudflareaccess.com'),
+    ],
+)
+def test_cf_team_domain_and_aud_normalization(
+    monkeypatch: pytest.MonkeyPatch, raw_domain: str, expected_origin: str
+) -> None:
+    """Verify CF_TEAM_DOMAIN normalizes to canonical origin and CF_AUD_TAG parses cleanly."""
+    monkeypatch.setenv('IMMICH_SERVER_URL', 'https://example.test/api')
+    monkeypatch.setenv('IMMICH_LIBRARIES', '{"family": "token"}')
+    monkeypatch.setenv('AUTH_MODE', 'cloudflare')
+    monkeypatch.setenv('CF_TEAM_DOMAIN', raw_domain)
+    monkeypatch.setenv('CF_AUD_TAG', ' aud-alpha , aud-beta ')
+
+    settings = load_settings()
+    assert settings.cf_team_domain == expected_origin
+    assert settings.cf_aud_tags == frozenset({'aud-alpha', 'aud-beta'})
+    assert settings.allow_dev_auth is False
+
+
+@pytest.mark.parametrize('bad_domain', ['ftp://myteam.cloudflareaccess.com', 'bad team/path', 'https://'])
+def test_cf_team_domain_rejects_invalid_values(monkeypatch: pytest.MonkeyPatch, bad_domain: str) -> None:
+    """Verify malformed CF_TEAM_DOMAIN values raise ConfigError."""
+    monkeypatch.setenv('IMMICH_SERVER_URL', 'https://example.test/api')
+    monkeypatch.setenv('IMMICH_LIBRARIES', '{"family": "token"}')
+    monkeypatch.setenv('CF_TEAM_DOMAIN', bad_domain)
+
+    with pytest.raises(ConfigError, match='CF_TEAM_DOMAIN'):
+        load_settings()
+
+
+def test_allow_dev_auth_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify ALLOW_DEV_AUTH defaults to False and validates booleans."""
+    monkeypatch.setenv('IMMICH_SERVER_URL', 'https://example.test/api')
+    monkeypatch.setenv('IMMICH_LIBRARIES', '{"family": "token"}')
+    assert load_settings().allow_dev_auth is False
+
+    monkeypatch.setenv('ALLOW_DEV_AUTH', 'true')
+    assert load_settings().allow_dev_auth is True
+
+    monkeypatch.setenv('ALLOW_DEV_AUTH', 'invalid-bool')
+    with pytest.raises(ConfigError, match='ALLOW_DEV_AUTH'):
         load_settings()
