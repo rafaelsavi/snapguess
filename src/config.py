@@ -133,6 +133,29 @@ def _normalize_url(value: str, env_name: str = 'IMMICH_SERVER_URL') -> str:
     return url
 
 
+def _normalize_cf_team_domain(value: str) -> str:
+    """Normalize Cloudflare Access team domain into canonical 'https://<team>.cloudflareaccess.com' origin."""
+    from urllib.parse import urlparse
+
+    cleaned = value.strip().strip('\'"').rstrip('/')
+    if not cleaned:
+        return ''
+
+    if '://' in cleaned:
+        parsed = urlparse(cleaned)
+        if parsed.scheme not in {'http', 'https'} or not parsed.netloc or any(c in parsed.netloc for c in ' /?#@'):
+            raise ConfigError(f'CF_TEAM_DOMAIN must be a valid Cloudflare team name or HTTPS origin, got {value!r}')
+        return f'{parsed.scheme.lower()}://{parsed.netloc.lower()}'
+
+    if any(c in cleaned for c in ' /?#@:\\'):
+        raise ConfigError(f'CF_TEAM_DOMAIN must be a valid Cloudflare team name or HTTPS origin, got {value!r}')
+
+    host = cleaned.lower()
+    if '.' not in host:
+        host = f'{host}.cloudflareaccess.com'
+    return f'https://{host}'
+
+
 def _validate_no_overlap(set_a: frozenset[str], set_b: frozenset[str], name_a: str, name_b: str) -> None:
     """Ensure whitelist and blacklist sets are completely disjoint."""
     overlap = set_a & set_b
@@ -180,6 +203,9 @@ class AppSettings:
     auth_mode: str = 'disabled'
     cf_creator_emails: frozenset[str] = frozenset()
     cf_lock_player_name: bool = False
+    cf_team_domain: str = ''
+    cf_aud_tags: frozenset[str] = frozenset()
+    allow_dev_auth: bool = False
 
     # 4. Global Filter Safeguards
     date_lower_bound: date | None = None
@@ -246,12 +272,13 @@ class AppSettings:
         # Resolve data path to absolute filesystem path
         object.__setattr__(self, 'data_path', self.data_path.expanduser().resolve())
 
-        # Validate auth_mode
+        # Validate auth_mode and Cloudflare Access JWKS domain
         valid_auth_modes = {'disabled', 'cloudflare'}
         norm_auth = self.auth_mode.strip().lower()
         if norm_auth not in valid_auth_modes:
             raise ConfigError(f'AUTH_MODE must be one of {sorted(valid_auth_modes)}, got {self.auth_mode!r}')
         object.__setattr__(self, 'auth_mode', norm_auth)
+        object.__setattr__(self, 'cf_team_domain', _normalize_cf_team_domain(self.cf_team_domain))
 
         # Validate network port
         if not (1 <= self.app_port <= 65535):
@@ -394,6 +421,12 @@ def load_settings() -> AppSettings:
         kwargs['cf_creator_emails'] = _parse_comma_set(val)
     if val := _get_env('CF_LOCK_PLAYER_NAME'):
         kwargs['cf_lock_player_name'] = _parse_bool(val, 'CF_LOCK_PLAYER_NAME')
+    if val := _get_env('CF_TEAM_DOMAIN'):
+        kwargs['cf_team_domain'] = val
+    if val := _get_env('CF_AUD_TAG', 'CF_AUD_TAGS'):
+        kwargs['cf_aud_tags'] = frozenset(item.strip() for item in val.split(',') if item.strip())
+    if val := _get_env('ALLOW_DEV_AUTH'):
+        kwargs['allow_dev_auth'] = _parse_bool(val, 'ALLOW_DEV_AUTH')
 
     # Date Bounds
     if val := _get_env('DATE_LOWER_BOUND', 'FETCH_PHOTOS_DATE_LOWER_BOUND'):

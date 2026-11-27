@@ -1087,10 +1087,13 @@ def test_calculate_match_bounds_single_location() -> None:
     pool = [AssetAnswer(latitude=48.8584, longitude=2.2945)]  # Eiffel Tower
     bounds = calculate_match_bounds(pool)
     assert bounds is not None
-    assert bounds.min_lat == 48.8584
-    assert bounds.max_lat == 48.8584
-    assert bounds.min_lng == 2.2945
-    assert bounds.max_lng == 2.2945
+    # Anti-spoiler padding + 2-decimal coarse rounding keeps exact coordinates strictly inside box
+    assert bounds.min_lat < 48.8584 < bounds.max_lat
+    assert bounds.min_lng < 2.2945 < bounds.max_lng
+    assert round(bounds.min_lat, 2) == bounds.min_lat
+    assert round(bounds.max_lat, 2) == bounds.max_lat
+    assert round(bounds.min_lng, 2) == bounds.min_lng
+    assert round(bounds.max_lng, 2) == bounds.max_lng
 
 
 def test_calculate_match_bounds_global_fallback() -> None:
@@ -1101,6 +1104,24 @@ def test_calculate_match_bounds_global_fallback() -> None:
     ]
     bounds = calculate_match_bounds(pool, max_span_km=5000.0)
     assert bounds is None
+
+
+def test_calculate_match_bounds_antimeridian_and_outlier_trimming() -> None:
+    # 1. Antimeridian crossing (Fiji +178.0 and Samoa -172.0) safely returns None without ValidationError
+    fiji_samoa = [
+        AssetAnswer(latitude=-17.7134, longitude=178.0650),
+        AssetAnswer(latitude=-13.7590, longitude=-172.1046),
+    ]
+    assert calculate_match_bounds(fiji_samoa, max_span_km=5000.0) is None
+
+    # 2. 25 Paris photos + 1 distant GPS glitch (<5% outlier trimmed by 5th-95th percentile)
+    mostly_paris = [AssetAnswer(latitude=48.8500 + i * 0.002, longitude=2.2900 + i * 0.002) for i in range(25)] + [
+        AssetAnswer(latitude=-33.8688, longitude=151.2093)
+    ]
+    trimmed_bounds = calculate_match_bounds(mostly_paris, max_span_km=5000.0)
+    assert trimmed_bounds is not None
+    assert 48.0 < trimmed_bounds.min_lat < 48.85
+    assert 48.90 < trimmed_bounds.max_lat < 49.5
 
 
 def test_calculate_match_bounds_empty_and_invalid() -> None:
@@ -1119,8 +1140,12 @@ def test_calculate_match_bounds_multiple_locations() -> None:
         max_span_km=1000.0,
     )
     assert bounds is not None
-    assert bounds.min_lat == 48.8584
-    assert bounds.max_lat == 48.8606
+    assert bounds.min_lat < 48.8584
+    assert bounds.max_lat > 48.8606
+    assert bounds.min_lng < 2.2945
+    assert bounds.max_lng > 2.3376
+    assert round(bounds.min_lat, 2) == bounds.min_lat
+    assert round(bounds.max_lat, 2) == bounds.max_lat
 
 
 def test_calculate_match_bounds_logging(caplog: pytest.LogCaptureFixture) -> None:

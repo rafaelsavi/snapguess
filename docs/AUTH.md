@@ -26,9 +26,12 @@ Access control is configured via environment variables:
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
-| `AUTH_MODE` | `disabled` | Set to `cloudflare` (or `cf`) to enforce Zero Trust identity checks. Set to `disabled` for local single-player / trust-all setups. |
+| `AUTH_MODE` | `disabled` | Set to `cloudflare` to enforce Zero Trust identity checks. Set to `disabled` for local single-player / trust-all setups. |
 | `CF_CREATOR_EMAILS` | `""` | Comma-separated list of emails or usernames granted the **Creator** role. All other authenticated visitors receive the **User** role. |
 | `CF_LOCK_PLAYER_NAME` | `false` | When `true`, challenge gameplay strictly enforces verified reverse proxy / Cloudflare Access display names, disabling custom player name inputs. |
+| `CF_TEAM_DOMAIN` | `""` | Cloudflare Access team name (e.g. `myteam`) or HTTPS origin (`https://myteam.cloudflareaccess.com`). Enables cryptographic RS256 JWKS signature verification via `/cdn-cgi/access/certs` for `Cf-Access-Jwt-Assertion` headers and `CF_Authorization` cookies. **Required** to authenticate `CF_Authorization` cookies on `/play/*` Bypass routes. |
+| `CF_AUD_TAG` | `""` | Optional comma-separated Cloudflare Access Application Audience (`aud`) tag(s) verified when `CF_TEAM_DOMAIN` is set. |
+| `ALLOW_DEV_AUTH` | `false` | Local development only: permits `?dev_email=` / `X-Dev-Email` identity simulation from loopback (`127.0.0.1` / `::1`). Must remain `false` in production behind local reverse proxies or tunnels. |
 
 ### Single-Player / Disabled Mode (`AUTH_MODE=disabled`)
 
@@ -97,7 +100,7 @@ flowchart TD
    - Root payload claims: `name`, `preferred_username`, `user_name`, `nickname`, `display_name`
    - Nested claim objects: `oidc_fields`, `identity`, `identity.oidc_fields`, `custom`, `custom_claims`, `user_identity`
    - Split names: `given_name` + `family_name`
-   - *Bypass Route Support*: When `/play/*` is configured with a Cloudflare Access `Bypass` policy so anonymous guests can join via invite links without logging in, Cloudflare omits `Cf-Access-*` request headers on `/play/*` requests. SnapGuess automatically falls back to reading the browser's `CF_Authorization` session cookie so authenticated **Users** and **Creators** preserve their verified identity and role on `/play/*` routes.
+   - *Bypass Route Support (`CF_TEAM_DOMAIN` Required)*: When `/play/*` is configured with a Cloudflare Access `Bypass` policy so anonymous guests can join via invite links without logging in, Cloudflare omits `Cf-Access-*` request headers on `/play/*` requests. When `CF_TEAM_DOMAIN` (and optionally `CF_AUD_TAG`) is configured, SnapGuess cryptographically verifies the browser's `CF_Authorization` session cookie against Cloudflare's `/cdn-cgi/access/certs` RSA public keys so authenticated **Users** and **Creators** preserve their verified identity and role on `/play/*` routes. Without `CF_TEAM_DOMAIN`, unverified cookies and generic proxy headers on `/play/*` are never trusted and resolve to **Guest**.
 3. **Email Fallback**:
    - `Cf-Access-Authenticated-User-Email` or `X-Forwarded-Email`
    - If no explicit name was located in headers or JWT claims, the application formats the username portion before the `@` symbol (e.g. `player.one@example.com` → `player.one`).
@@ -210,13 +213,13 @@ To pass the real user name from your identity provider (Google, Microsoft, GitHu
 
 ## 6. Local Development & Testing
 
-When developing locally with `AUTH_MODE=cloudflare`, you can simulate any user identity directly from your browser without configuring an external reverse proxy:
+When developing locally with `AUTH_MODE=cloudflare` and `ALLOW_DEV_AUTH=true` (never enable `ALLOW_DEV_AUTH` in production behind local reverse proxies or tunnels), you can simulate any user identity directly from your browser without configuring an external reverse proxy:
 
-1. **URL Query Parameters** (Loopback connections `127.0.0.1` or `localhost` only):
+1. **URL Query Parameters** (Requires `ALLOW_DEV_AUTH=true` AND loopback connection `127.0.0.1` or `localhost`):
    - `http://localhost:8010/?dev_email=creator@example.com&dev_name=Test+Creator`
    - `http://localhost:8010/?dev_email=player@example.com&dev_name=Player+One`
 2. **HTTP Headers** (via curl or API client):
 
    ```bash
-   curl -H "X-User-Name: Alice" -H "X-Forwarded-Email: user1@example.com" http://localhost:8010/api/auth/me
+   curl -H "X-Dev-Email: user1@example.com" -H "X-Dev-Name: Alice" http://localhost:8010/api/auth/me
    ```

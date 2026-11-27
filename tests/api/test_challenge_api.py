@@ -171,11 +171,106 @@ def test_challenge_start_and_deduplicated_resumption(tmp_path: Path) -> None:
     assert s_data['is_resumed'] is False
     session_token = s_data['session_token']
 
-    # 2. Starting again with same player name returns same session
-    resume_res = client.post(f'/play/api/{token}/start', json={'player_name': 'Bob'})
+    # 2. Starting again with same player name WITH valid X-Player-Token resumes same session
+    resume_res = client.post(
+        f'/play/api/{token}/start',
+        json={'player_name': '  bob  '},
+        headers={'X-Player-Token': session_token},
+    )
     assert resume_res.status_code == 200
     r_data = resume_res.json()
     assert r_data['session_token'] == session_token
+
+    # 3. Attempting to start as 'Bob' WITHOUT X-Player-Token or with wrong token returns 409 Conflict
+    hijack_no_token = client.post(f'/play/api/{token}/start', json={'player_name': 'Bob'})
+    assert hijack_no_token.status_code == 409
+    assert 'already taken' in hijack_no_token.json()['detail'].lower()
+    assert 'session_token' not in hijack_no_token.json()
+
+    hijack_wrong_token = client.post(
+        f'/play/api/{token}/start',
+        json={'player_name': 'BOB'},
+        headers={'X-Player-Token': 'forged_token_value'},
+    )
+    assert hijack_wrong_token.status_code == 409
+
+
+def test_challenge_start_prevents_completed_replay_token_theft(tmp_path: Path) -> None:
+    """Verify an attacker cannot steal a finisher's session_token via POST /start to bypass Fog of War."""
+    immich = FakeImmichClient(_create_mock_assets(25))
+    client = build_client(tmp_path, immich)
+
+    create_res = client.post(
+        '/api/challenge/create',
+        json={'creator_name': 'Host', 'game_mode': 'pinpoint', 'round_count': 3, 'date_mode': False},
+    )
+    token = create_res.json()['capability_token']
+
+    # Alice joins and finishes all 3 rounds
+    alice_start = client.post(f'/play/api/{token}/start', json={'player_name': 'Alice'}).json()
+    alice_token = alice_start['session_token']
+    for r in range(3):
+        client.post(
+            f'/play/api/{token}/answer',
+            headers={'X-Player-Token': alice_token},
+            json={
+                'round_index': r,
+                'pinpoint': {'guessed_latitude': 10.0, 'guessed_longitude': 20.0},
+                'time_taken_seconds': 5.0,
+            },
+        )
+
+    # Challenge is still active: unauthenticated replay access is blocked by Fog of War (403)
+    assert client.get(f'/play/api/{token}/replay').status_code == 403
+
+    # Attacker tries to claim 'Alice' via POST /start without Alice's token -> 409 Conflict
+    steal_attempt = client.post(f'/play/api/{token}/start', json={'player_name': 'alice'})
+    assert steal_attempt.status_code == 409
+    assert 'session_token' not in steal_attempt.json()
+
+    # Alice herself can still view the replay using her legitimate session token
+    alice_replay = client.get(f'/play/api/{token}/replay', headers={'X-Player-Token': alice_token})
+    assert alice_replay.status_code == 200
+
+
+def test_challenge_map_bounds_uses_candidate_pool_without_answer_spoilers(tmp_path: Path) -> None:
+    """Verify challenge map_bounds uses the broader candidate pool with padded 2-decimal bounds."""
+    assets = [
+        make_asset(
+            f'paris-{i}',
+            latitude=48.810123 + i * 0.015,
+            longitude=2.250456 + i * 0.02,
+            captured=f'2024-06-{(i % 28) + 1:02d}T12:00:00Z',
+        )
+        for i in range(15)
+    ]
+    immich = FakeImmichClient(assets)
+    client = build_client(tmp_path, immich)
+
+    create_res = client.post(
+        '/api/challenge/create',
+        json={'creator_name': 'Host', 'game_mode': 'pinpoint', 'round_count': 3, 'location_mode': True},
+    )
+    assert create_res.status_code == 200
+    token = create_res.json()['capability_token']
+
+    detail = client.get(f'/play/api/{token}').json()
+    bounds = detail['map_bounds']
+    assert bounds is not None
+
+    # Bounds are quantized to 2 decimals and strictly wider than every selected answer coordinate
+    assert round(bounds['min_lat'], 2) == bounds['min_lat']
+    assert round(bounds['max_lat'], 2) == bounds['max_lat']
+    assert round(bounds['min_lng'], 2) == bounds['min_lng']
+    assert round(bounds['max_lng'], 2) == bounds['max_lng']
+
+    ch_record = client.app.state.challenge_store.get_challenge_by_token(token)
+    assert ch_record is not None
+    for aid in ch_record['asset_ids']:
+        ans = client.app.state.metadata_store.get_asset_answer(aid)
+        assert ans is not None and ans.latitude is not None and ans.longitude is not None
+        assert bounds['min_lat'] < ans.latitude < bounds['max_lat']
+        assert bounds['min_lng'] < ans.longitude < bounds['max_lng']
 
 
 def test_challenge_question_sequencing_and_security(tmp_path: Path) -> None:
@@ -1028,9 +1123,24 @@ def test_play_media_scoped_and_flagging(tmp_path: Path) -> None:
     token_fail = client.get(f'/play/media/invalid-token/{valid_asset_id}')
     assert token_fail.status_code == 404
 
-    # 5. Flag asset via challenge endpoint (/play/api/{token}/flag)
+    # 5. Flag asset without X-Player-Token or with invalid token -> 401 Unauthorized
+    unauth_flag = client.post(
+        f'/play/api/{token}/flag',
+        json={'asset_id': valid_asset_id, 'flag_coordinates': True},
+    )
+    assert unauth_flag.status_code == 401
+
+    bad_tok_flag = client.post(
+        f'/play/api/{token}/flag',
+        headers={'X-Player-Token': 'forged-token'},
+        json={'asset_id': valid_asset_id, 'flag_coordinates': True},
+    )
+    assert bad_tok_flag.status_code == 401
+
+    # 6. Flag asset via challenge endpoint (/play/api/{token}/flag) with valid session token
     flag_res = client.post(
         f'/play/api/{token}/flag',
+        headers={'X-Player-Token': p_token},
         json={
             'asset_id': valid_asset_id,
             'flag_coordinates': True,
@@ -1042,15 +1152,94 @@ def test_play_media_scoped_and_flagging(tmp_path: Path) -> None:
     assert flag_res.status_code == 200
     assert flag_res.json()['success'] is True
 
-    # 6. Flag unknown asset via challenge endpoint -> 404
+    # 7. Flag unknown asset via challenge endpoint -> 404
     flag_fail = client.post(
         f'/play/api/{token}/flag',
+        headers={'X-Player-Token': p_token},
         json={
             'asset_id': 'unknown-asset-id',
             'flag_coordinates': True,
         },
     )
     assert flag_fail.status_code == 404
+
+
+def test_flagging_and_ui_config_redact_immich_url_for_non_creators(tmp_path: Path) -> None:
+    """Verify Guests and non-Creator Users never receive private Immich URLs and cannot flag unplayed assets."""
+    from starlette.testclient import TestClient
+
+    from src.config import AppSettings
+    from src.main import create_app
+
+    creator_email = 'creator@example.com'
+    user_email = 'player@example.com'
+    settings = AppSettings(
+        immich_server_url='https://private-immich.internal:2283/api',
+        immich_libraries={'family': 'token'},
+        data_path=tmp_path,
+        auth_mode='cloudflare',
+        cf_creator_emails=frozenset({creator_email}),
+        auto_sync_on_startup=False,
+    )
+    immich = FakeImmichClient(_create_mock_assets(10))
+    app = create_app(settings=settings)
+    app.state.photo_provider = immich
+    seed_test_metadata(app.state.metadata_store, 'family', immich)
+
+    creator_headers = {'cf-access-authenticated-user-email': creator_email}
+    user_headers = {'cf-access-authenticated-user-email': user_email}
+
+    with TestClient(app) as cf_client:
+        # 1. Guest & User receive empty immich_web_url; Creator receives private URL
+        assert cf_client.get('/play/api/ui-config').json()['immich_web_url'] == ''
+        assert cf_client.get('/api/ui-config', headers=user_headers).json()['immich_web_url'] == ''
+        assert (
+            cf_client.get('/api/ui-config', headers=creator_headers).json()['immich_web_url']
+            == 'https://private-immich.internal:2283'
+        )
+
+        # 2. Guest cannot call /api/assets/flag (403 Forbidden)
+        guest_flag = cf_client.post('/api/assets/flag', json={'asset_id': 'mock-asset-0', 'flag_date': True})
+        assert guest_flag.status_code == 403
+
+        # 3. Non-creator User cannot flag arbitrary unplayed library assets (404 Not Found)
+        user_unplayed_flag = cf_client.post(
+            '/api/assets/flag',
+            headers=user_headers,
+            json={'asset_id': 'mock-asset-0', 'flag_date': True},
+        )
+        assert user_unplayed_flag.status_code == 404
+
+        # 4. Create challenge as Creator; Guest joins and flags an active challenge photo: immich_url is redacted
+        ch_res = cf_client.post(
+            '/api/challenge/create',
+            headers=creator_headers,
+            json={'creator_name': 'Host', 'game_mode': 'pinpoint', 'round_count': 3},
+        )
+        cap_token = ch_res.json()['capability_token']
+        guest_session = cf_client.post(f'/play/api/{cap_token}/start', json={'player_name': 'GuestAlice'}).json()
+        q0 = cf_client.get(
+            f'/play/api/{cap_token}/question/0',
+            headers={'X-Player-Token': guest_session['session_token']},
+        ).json()
+
+        play_flag = cf_client.post(
+            f'/play/api/{cap_token}/flag',
+            headers={'X-Player-Token': guest_session['session_token']},
+            json={'asset_id': q0['asset_id'], 'flag_coordinates': True},
+        )
+        assert play_flag.status_code == 200
+        assert play_flag.json()['immich_url'] == ''
+        assert play_flag.json()['reported_by'] == 'GuestAlice'
+
+        # 5. Authenticated User CAN flag an active challenge asset via /api/assets/flag, with redacted immich_url
+        user_played_flag = cf_client.post(
+            '/api/assets/flag',
+            headers=user_headers,
+            json={'asset_id': q0['asset_id'], 'flag_date': True},
+        )
+        assert user_played_flag.status_code == 200
+        assert user_played_flag.json()['immich_url'] == ''
 
 
 def test_challenge_start_normalizes_player_name(tmp_path: Path) -> None:
@@ -1119,6 +1308,16 @@ def test_challenge_start_locks_player_name_when_configured(tmp_path: Path) -> No
         assert start_res.status_code == 200
         # Overridden to verified name
         assert start_res.json()['player_name'] == 'Verified Hero'
+        hero_token = start_res.json()['session_token']
+
+        # Verified locked user can resume their own session across devices without X-Player-Token
+        resume_res = test_client.post(
+            f'/play/api/{token}/start',
+            json={'player_name': 'Verified Hero'},
+            headers=user_headers,
+        )
+        assert resume_res.status_code == 200
+        assert resume_res.json()['session_token'] == hero_token
 
 
 def test_challenge_pinpoint_date_scoring_precision(tmp_path: Path) -> None:

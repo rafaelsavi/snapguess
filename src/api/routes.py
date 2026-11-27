@@ -6,7 +6,7 @@ from cachetools import TTLCache
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from src.auth.models import AuthContext, Role
-from src.auth.service import require_role
+from src.auth.service import get_current_auth, require_role
 from src.config import AppSettings
 from src.game.service import GameService
 from src.i18n import SupportedLanguage, parse_accept_language
@@ -140,7 +140,8 @@ def build_immich_photo_url(settings: AppSettings, asset_id: str) -> str:
 @router.get('/ui-config', response_model=UiConfigResponse)
 async def ui_config(request: Request) -> dict[str, object]:
     settings = request.app.state.settings
-    immich_web_url = resolve_immich_web_url(settings)
+    auth = await get_current_auth(request)
+    immich_web_url = resolve_immich_web_url(settings) if auth.has_role(Role.CREATOR) else ''
     return {
         'photo_provider': settings.photo_provider,
         'language': settings.language,
@@ -450,17 +451,34 @@ async def match_summary(
 async def flag_asset(
     payload: FlagAssetRequest,
     request: Request,
+    auth: Annotated[AuthContext, Depends(require_role(Role.USER))],
+    store: SessionStore = Depends(get_session_store),
+    challenge_store: ChallengeStore = Depends(get_challenge_store),
+    leaderboard_store: LeaderboardStore = Depends(get_leaderboard_store),
     metadata_store: MetadataStore = Depends(get_metadata_store),
 ) -> FlagAssetResponse:
+    if not auth.has_role(Role.CREATOR):
+        is_local = await asyncio.to_thread(store.is_asset_registered, payload.asset_id)
+        is_history = await asyncio.to_thread(leaderboard_store.is_asset_recorded, payload.asset_id)
+        is_challenge = await asyncio.to_thread(challenge_store.is_asset_in_active_challenge, payload.asset_id)
+        if not (is_local or is_history or is_challenge):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail='Unknown asset for any active game or challenge',
+            )
+
+    reported_by = payload.reported_by or auth.name
     res = await asyncio.to_thread(
         metadata_store.flag_asset,
         payload.asset_id,
         flag_coordinates=payload.flag_coordinates,
         flag_date=payload.flag_date,
         other=payload.other,
-        reported_by=payload.reported_by,
+        reported_by=reported_by,
     )
-    immich_url = build_immich_photo_url(request.app.state.settings, payload.asset_id)
+    immich_url = (
+        build_immich_photo_url(request.app.state.settings, payload.asset_id) if auth.has_role(Role.CREATOR) else ''
+    )
     return FlagAssetResponse(
         success=True,
         asset_id=res['asset_id'],
