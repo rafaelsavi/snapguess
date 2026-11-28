@@ -273,6 +273,52 @@ def test_challenge_map_bounds_uses_candidate_pool_without_answer_spoilers(tmp_pa
         assert bounds['min_lng'] < ans.longitude < bounds['max_lng']
 
 
+def test_challenge_creation_records_times_played_and_rotates_unplayed_assets(tmp_path: Path) -> None:
+    """Verify creating back-to-back challenges increments times_played and selects unplayed photos first."""
+    assets = [
+        make_asset(
+            f'rot-{i}',
+            latitude=35.0 + i * 0.5,
+            longitude=135.0 + i * 0.5,
+            captured=f'2024-03-{(i % 20) + 1:02d}T12:00:00Z',
+        )
+        for i in range(6)
+    ]
+    immich = FakeImmichClient(assets)
+    client = build_client(tmp_path, immich)
+
+    res1 = client.post(
+        '/api/challenge/create',
+        json={'creator_name': 'Host', 'game_mode': 'pinpoint', 'round_count': 3},
+    )
+    assert res1.status_code == 200
+    ch1 = client.app.state.challenge_store.get_challenge_by_token(res1.json()['capability_token'])
+    assert ch1 is not None
+    first_ids = set(ch1['asset_ids'])
+    assert len(first_ids) == 3
+
+    for aid in first_ids:
+        row = client.app.state.metadata_store.db.fetch_one(
+            'SELECT times_played, last_played_at FROM assets WHERE id = ?',
+            (aid,),
+        )
+        assert row is not None
+        assert row['times_played'] == 1
+        assert row['last_played_at'] is not None
+
+    # Second 3-round challenge from the 6-photo pool MUST draw the 3 remaining unplayed photos
+    res2 = client.post(
+        '/api/challenge/create',
+        json={'creator_name': 'Host', 'game_mode': 'pinpoint', 'round_count': 3},
+    )
+    assert res2.status_code == 200
+    ch2 = client.app.state.challenge_store.get_challenge_by_token(res2.json()['capability_token'])
+    assert ch2 is not None
+    second_ids = set(ch2['asset_ids'])
+    assert len(second_ids) == 3
+    assert first_ids.isdisjoint(second_ids)
+
+
 def test_challenge_question_sequencing_and_security(tmp_path: Path) -> None:
     immich = FakeImmichClient(_create_mock_assets(25))
     client = build_client(tmp_path, immich)

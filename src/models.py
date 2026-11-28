@@ -425,6 +425,8 @@ class PreflightResponse(BaseModel):
     """Eligibility check result containing matching counts, warnings, and facet breakdowns."""
 
     eligible_count: int = Field(ge=0)
+    diverse_count: int | None = Field(default=None, ge=0)
+    low_diversity: bool = False
     required: int = Field(ge=0)
     ok: bool
     # Human-readable list of active filters that narrow eligibility

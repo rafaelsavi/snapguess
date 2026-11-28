@@ -82,13 +82,18 @@ def test_dms_to_dd_conversion() -> None:
 
 
 def test_parse_exif_datetime() -> None:
-    """Verify parsing of EXIF datetime strings into ISO UTC format."""
+    """Verify parsing of EXIF datetime strings into ISO UTC format, including pre-1970 historical scans."""
     assert _parse_exif_datetime('2023:07:15 14:30:45') == '2023-07-15T14:30:45Z'
     assert _parse_exif_datetime('2024-01-01 00:00:00') == '2024-01-01T00:00:00Z'
     assert _parse_exif_datetime('2022:12:31T23:59:59') == '2022-12-31T23:59:59Z'
     assert _parse_exif_datetime(b'2023:07:15 14:30:45') == '2023-07-15T14:30:45Z'
-    # Uninitialized or corrupted EXIF dates should be discarded
+    # Historical pre-1970 family scans (1826..2200) and date-only EXIF tags must be preserved
+    assert _parse_exif_datetime('1954:08:22 11:15:00') == '1954-08-22T11:15:00Z'
+    assert _parse_exif_datetime('1895:03:04') == '1895-03-04T00:00:00Z'
+    # Uninitialized, out-of-range, or impossible calendar dates should be discarded
     assert _parse_exif_datetime('0000:00:00 00:00:00') is None
+    assert _parse_exif_datetime('1800:01:01 00:00:00') is None
+    assert _parse_exif_datetime('2023:02:31 12:00:00') is None
     assert _parse_exif_datetime('invalid-timestamp') is None
     assert _parse_exif_datetime(None) is None
 
@@ -395,3 +400,41 @@ async def test_get_asset_bytes_lru_cache_and_mtime_invalidation(
 
     await provider.aclose()
     assert len(provider._thumb_cache) == 0
+
+
+async def test_historical_exif_preserved_and_pixel_bomb_guarded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify 1950s EXIF dates are not overwritten by mtime, and oversized images are rejected safely."""
+    import asyncio
+
+    lib_dir = tmp_path / 'vintage'
+    vintage_img = lib_dir / '1958_family.jpg'
+    _create_sample_image(vintage_img, width=200, height=200, date_str='1958:06:14 09:30:00')
+
+    meta = LocalFolderPhotoProvider.extract_file_metadata(vintage_img)
+    assert meta['capture_datetime'] == '1958-06-14T09:30:00Z'
+
+    # Oversized pixel limit check (e.g. max_image_pixels=10_000 rejects 200x200 = 40_000 px before decoding)
+    strict_provider = LocalFolderPhotoProvider({'vintage': str(lib_dir)}, max_image_pixels=10_000)
+    aid = LocalFolderPhotoProvider.encode_asset_id('vintage', '1958_family.jpg')
+    with pytest.raises(ProviderError, match='exceed safety limit'):
+        await strict_provider.get_asset_bytes('vintage', aid)
+
+    # Concurrent requests for the same uncached image coalesce via semaphore + double-checked cache
+    coalesce_provider = LocalFolderPhotoProvider(
+        {'vintage': str(lib_dir)},
+        max_concurrent_renders=1,
+    )
+    open_calls = 0
+    real_open = Image.open
+
+    def spy_open(*args: object, **kwargs: object) -> Image.Image:
+        nonlocal open_calls
+        open_calls += 1
+        return real_open(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(Image, 'open', spy_open)
+    results = await asyncio.gather(*(coalesce_provider.get_asset_bytes('vintage', aid) for _ in range(5)))
+    assert len(results) == 5
+    assert open_calls == 1

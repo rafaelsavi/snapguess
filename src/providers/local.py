@@ -28,6 +28,10 @@ from src.providers.base import BasePhotoProvider, ProviderError
 logger = get_logger(LOGGER_SYNC)
 
 SUPPORTED_EXTENSIONS = frozenset({'.jpg', '.jpeg', '.png', '.webp', '.tiff', '.tif', '.avif', '.heic', '.heif'})
+MIN_EXIF_YEAR = 1826
+MAX_EXIF_YEAR = 2200
+DEFAULT_THUMBNAIL_CONCURRENCY = 4
+MAX_THUMBNAIL_SOURCE_PIXELS = 100_000_000
 
 # Comprehensive ISO 3166-1 alpha-2 code to full country/territory name lookup
 ISO_3166_COUNTRIES: dict[str, str] = {
@@ -335,21 +339,42 @@ def _parse_exif_datetime(raw: Any) -> str | None:
             return None
     if not raw or not isinstance(raw, str):
         return None
-    cleaned = raw.strip()
-    # Match standard EXIF format '2023:07:15 14:30:00' or ISO '2023-07-15 14:30:00'
-    m = re.match(r'^(\d{4})[:\-](\d{2})[:\-](\d{2})[ T](\d{2}):(\d{2}):(\d{2})', cleaned)
+    cleaned = raw.strip().rstrip('\x00').strip()
+    # Match standard EXIF '1958:07:15 14:30:00', ISO '2023-07-15T14:30:00', or date-only '1958:07:15'
+    m = re.match(
+        r'^(\d{4})[:\-](\d{2})[:\-](\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2}))?',
+        cleaned,
+    )
     if m:
-        y, mo, d, h, mi, s = m.groups()
-        # Sanity check: reject uninitialized/corrupt dates (e.g. 0000:00:00 00:00:00)
-        if int(y) >= 1970 and 1 <= int(mo) <= 12 and 1 <= int(d) <= 31:
-            return f'{y}-{mo}-{d}T{h}:{mi}:{s}Z'
+        y_s, mo_s, d_s, h_s, mi_s, s_s = m.groups()
+        try:
+            dt = datetime(
+                int(y_s),
+                int(mo_s),
+                int(d_s),
+                int(h_s or 0),
+                int(mi_s or 0),
+                int(s_s or 0),
+                tzinfo=UTC,
+            )
+        except ValueError:
+            return None
+        if MIN_EXIF_YEAR <= dt.year <= MAX_EXIF_YEAR:
+            return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
     return None
 
 
 class LocalFolderPhotoProvider(BasePhotoProvider):
     """Local filesystem photo provider satisfying the BasePhotoProvider interface."""
 
-    def __init__(self, libraries: Mapping[str, str | Path], *, thumbnail_cache_size: int = 128) -> None:
+    def __init__(
+        self,
+        libraries: Mapping[str, str | Path],
+        *,
+        thumbnail_cache_size: int = 128,
+        max_concurrent_renders: int = DEFAULT_THUMBNAIL_CONCURRENCY,
+        max_image_pixels: int = MAX_THUMBNAIL_SOURCE_PIXELS,
+    ) -> None:
         """Initialize provider with library names mapped to directory paths."""
         self._libraries: dict[str, Path] = {
             name.strip(): Path(path).expanduser().resolve() for name, path in libraries.items() if name.strip()
@@ -357,6 +382,8 @@ class LocalFolderPhotoProvider(BasePhotoProvider):
         self._thumb_cache: LRUCache[tuple[str, str, int], tuple[bytes, str]] = LRUCache(
             maxsize=max(1, thumbnail_cache_size)
         )
+        self._render_semaphore = asyncio.Semaphore(max(1, max_concurrent_renders))
+        self._max_image_pixels = max(1, max_image_pixels)
 
     @staticmethod
     def encode_asset_id(library_name: str, rel_posix: str) -> str:
@@ -446,9 +473,17 @@ class LocalFolderPhotoProvider(BasePhotoProvider):
         if cached is not None:
             return cached
 
+        max_pixels = self._max_image_pixels
+
         def _generate() -> tuple[bytes, str]:
             try:
                 with Image.open(full_path) as raw_img:
+                    pixel_count = int(raw_img.width) * int(raw_img.height)
+                    if pixel_count > max_pixels:
+                        raise ProviderError(
+                            f'Image dimensions ({raw_img.width}x{raw_img.height}) '
+                            f'exceed safety limit for {full_path.name}'
+                        )
                     try:
                         img = ImageOps.exif_transpose(raw_img)
                     except Exception:
@@ -465,12 +500,18 @@ class LocalFolderPhotoProvider(BasePhotoProvider):
                     buf = io.BytesIO()
                     img.save(buf, format='JPEG', quality=82, optimize=True)
                     return buf.getvalue(), 'image/jpeg'
+            except ProviderError:
+                raise
             except Exception as exc:
                 raise ProviderError(f'Failed to render thumbnail for {full_path.name}: {exc}') from exc
 
-        result = await asyncio.to_thread(_generate)
-        self._thumb_cache[cache_key] = result
-        return result
+        async with self._render_semaphore:
+            cached_after_wait = self._thumb_cache.get(cache_key)
+            if cached_after_wait is not None:
+                return cached_after_wait
+            result = await asyncio.to_thread(_generate)
+            self._thumb_cache[cache_key] = result
+            return result
 
     async def aclose(self) -> None:
         """Release any underlying resources on shutdown."""

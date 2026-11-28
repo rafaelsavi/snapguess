@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.8] - 2026-11-28
+
+### Fixed
+
+- **Immich Delta Sync Album & Shared Photo Preservation**: Editing a photo in Immich (such as updating tags, faces, descriptions, or location) no longer drops its membership in unmodified albums or resets shared album visibility during incremental background syncs.
+- **Historical Pre-1970 Scanned Photo Dates in Local Mode**: Scanned historical and vintage family photos dated between `1826` and `1969` (including date-only EXIF stamps) now retain their true capture dates in local folder mode instead of falling back to file modification dates.
+- **Challenge Photo Rotation Across Repeated Matches**: Creating multiplayer challenges now tracks played photos and prioritizes unplayed memories first, matching local gameplay so consecutive challenges rotate through your library before repeating photos.
+
+### Changed
+
+- **Smoother Gameplay During Background Syncs & Multiplayer Loads**: Background library indexing and local folder thumbnail rendering now run without stalling active rounds or live standings, while coalescing simultaneous thumbnail requests for the same photo and rejecting oversized corrupt image files safely.
+
 ## [4.5.7] - 2026-11-27
 
 ### Added

@@ -103,7 +103,31 @@ def test_preflight_strict_diversity_clustered(tmp_path: Path) -> None:
     body = res.json()
     assert body['eligible_count'] == 5
     assert body['required'] == 5
-    assert body['ok'] is True  # 5 eligible >= 5 required
+    assert body['ok'] is True  # 5 eligible >= 5 required (graceful fallback supported)
+    assert body['diverse_count'] == 1
+    assert body['low_diversity'] is True
+
+
+def test_preflight_diverse_pool_reports_no_low_diversity_warning(tmp_path: Path) -> None:
+    diverse_assets = [
+        make_asset(
+            f'diverse_{i}',
+            latitude=40.0 + (i * 0.5),
+            longitude=2.0 + (i * 0.5),
+            captured=f'2024-01-{(i % 20) + 1:02d}T12:00:00Z',
+        )
+        for i in range(6)
+    ]
+    immich = FakeImmichClient(diverse_assets)
+    client = build_client(tmp_path, immich)
+
+    res = client.post('/api/game/preflight', json=setup_payload(round_count=5, location_mode=True, date_mode=True))
+    assert res.status_code == 200
+    body = res.json()
+    assert body['eligible_count'] == 6
+    assert body['diverse_count'] == 6
+    assert body['low_diversity'] is False
+    assert body['ok'] is True
 
 
 async def test_selector_prioritizes_diversity_with_graceful_fallback() -> None:
