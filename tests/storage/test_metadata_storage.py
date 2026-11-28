@@ -1451,6 +1451,155 @@ async def test_hundreds_of_albums_parallel_and_delta_skip(tmp_path: Path) -> Non
     assert len(album_search_calls) == 0
 
 
+@pytest.mark.asyncio
+async def test_delta_sync_preserves_unmodified_albums_and_shared_flags(tmp_path: Path) -> None:
+    """Verify editing an asset in Immich does not wipe its memberships in unmodified private/shared albums."""
+    db_mgr = DatabaseManager(tmp_path / 'delta_preserve_albums.db')
+    meta_store = MetadataStore(db_mgr)
+
+    asset_city = 'Lisbon'
+    asset_updated_at = '2024-05-01T10:00:00Z'
+    private_mod_updated_at = '2024-04-01T00:00:00Z'
+
+    class MockDeltaAlbumPreserveClient:
+        def _library_key(self, library_name: str) -> str:
+            return 'token'
+
+        async def _current_user_id(self, key: str) -> str:
+            return 'user-me'
+
+        async def _request_json(self, method: str, path: str, key: str, json: Any = None) -> Any:
+            if path == '/people':
+                return []
+            if path == '/tags':
+                return []
+            if path == '/albums':
+                return [
+                    {
+                        'id': 'alb-priv-unmod',
+                        'albumName': 'Portugal Trip',
+                        'ownerId': 'user-me',
+                        'shared': False,
+                        'assetCount': 1,
+                        'updatedAt': '2024-04-01T00:00:00Z',
+                    },
+                    {
+                        'id': 'alb-shared-unmod',
+                        'albumName': 'Family Shared',
+                        'ownerId': 'other-user',
+                        'shared': True,
+                        'assetCount': 1,
+                        'updatedAt': '2024-04-01T00:00:00Z',
+                    },
+                    {
+                        'id': 'alb-priv-mod',
+                        'albumName': 'Favorites',
+                        'ownerId': 'user-me',
+                        'shared': False,
+                        'assetCount': 1,
+                        'updatedAt': private_mod_updated_at,
+                    },
+                ]
+            if path == '/search/metadata':
+                filter_obj = (json or {}).get('filter', {})
+                if 'albumIds' in filter_obj:
+                    alb_id = filter_obj['albumIds']['any'][0]
+                    if alb_id == 'alb-priv-unmod':
+                        return {'assets': {'items': [{'id': 'asset-1'}], 'nextCursor': None}}
+                    if alb_id == 'alb-shared-unmod':
+                        return {'assets': {'items': [{'id': 'asset-shared-1'}], 'nextCursor': None}}
+                    if alb_id == 'alb-priv-mod':
+                        return {'assets': {'items': [{'id': 'asset-shared-1'}], 'nextCursor': None}}
+                if (json or {}).get('cursor'):
+                    return {'assets': {'items': [], 'nextCursor': None}}
+                return {
+                    'assets': {
+                        'items': [
+                            {
+                                'id': 'asset-1',
+                                'type': 'IMAGE',
+                                'ownerId': 'user-me',
+                                'updatedAt': asset_updated_at,
+                                'exifInfo': {
+                                    'latitude': 38.7223,
+                                    'longitude': -9.1393,
+                                    'country': 'Portugal',
+                                    'city': asset_city,
+                                    'dateTimeOriginal': '2024-04-15T12:00:00Z',
+                                },
+                            },
+                            {
+                                'id': 'asset-shared-1',
+                                'type': 'IMAGE',
+                                'ownerId': 'other-user',
+                                'isShared': False,
+                                'updatedAt': asset_updated_at,
+                                'exifInfo': {
+                                    'latitude': 41.1579,
+                                    'longitude': -8.6291,
+                                    'country': 'Portugal',
+                                    'city': asset_city,
+                                    'dateTimeOriginal': '2024-04-16T12:00:00Z',
+                                },
+                            },
+                        ],
+                        'nextCursor': None,
+                    }
+                }
+            return {}
+
+        async def get_asset_count(self, library_name: str) -> int | None:
+            return 2
+
+        def _extract_total_assets(self, raw: Any) -> int | None:
+            return 2
+
+        def _extract_asset_items(self, raw: Any) -> list[dict[str, Any]]:
+            return raw.get('assets', {}).get('items', [])
+
+    sync_engine = SyncEngine(MockDeltaAlbumPreserveClient(), meta_store)  # type: ignore[arg-type]
+
+    # 1. Initial Full Sync populates all 3 albums and marks asset-shared-1 as is_shared=1, is_partner=0
+    await sync_engine.sync_library('family')
+    assert (
+        meta_store.count_eligible_assets(AssetFilterCriteria(library_names=('family',), album_ids=('alb-priv-unmod',)))
+        == 1
+    )
+    shared_row_initial = db_mgr.fetch_one("SELECT is_shared, is_partner FROM assets WHERE id = 'asset-shared-1'")
+    assert shared_row_initial is not None
+    assert shared_row_initial['is_shared'] == 1
+    assert shared_row_initial['is_partner'] == 0
+
+    # 2. Both assets are edited in Immich AND private album 'alb-priv-mod' is modified,
+    #    while 'alb-priv-unmod' and 'alb-shared-unmod' remain unmodified!
+    asset_city = 'Porto'
+    asset_updated_at = '2024-06-01T10:00:00Z'
+    private_mod_updated_at = '2024-06-01T09:00:00Z'
+
+    await sync_engine.sync_library('family')
+
+    # Unmodified private album membership on asset-1 MUST remain intact, with updated city
+    cand_priv = meta_store.fetch_candidate_assets(
+        AssetFilterCriteria(library_names=('family',), album_ids=('alb-priv-unmod',))
+    )
+    assert 'asset-1' in cand_priv
+    assert cand_priv['asset-1'].city == 'Porto'
+
+    # Unmodified shared album membership & is_shared=1 MUST remain intact on asset-shared-1
+    shared_albums = [
+        r['album_id']
+        for r in db_mgr.fetch_all(
+            "SELECT album_id FROM asset_albums WHERE asset_id = 'asset-shared-1' ORDER BY album_id"
+        )
+    ]
+    assert shared_albums == ['alb-priv-mod', 'alb-shared-unmod']
+    shared_row_after = db_mgr.fetch_one("SELECT is_shared, is_partner, city FROM assets WHERE id = 'asset-shared-1'")
+    assert shared_row_after is not None
+    assert shared_row_after['is_shared'] == 1
+    assert shared_row_after['is_partner'] == 0
+    assert shared_row_after['city'] == 'Porto'
+
+
 def test_sync_stages_telemetry(meta_store: MetadataStore) -> None:
     # Test setting and getting sync state with sync_stage
     meta_store.set_sync_state(

@@ -778,13 +778,14 @@ class SyncEngine:
                     if updated_str and (max_updated_at is None or updated_str > max_updated_at):
                         max_updated_at = updated_str
 
-                # Batch upsert into SQLite
+                # Batch upsert into SQLite (preserve unmodified album memberships during delta sync)
                 self._metadata_store.upsert_assets_batch(
                     library_name,
                     batch_assets,
                     batch_asset_people,
                     batch_asset_albums,
                     batch_asset_tags,
+                    replace_albums=not is_delta,
                 )
 
                 synced_count = len(seen_asset_ids)

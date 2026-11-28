@@ -557,9 +557,16 @@ class MetadataStore:
         *,
         clear_album_ids: set[str] | None = None,
     ) -> None:
-        """Insert album junction records and optionally update shared flags in bulk for a library."""
+        """Insert album junction records and reconcile shared flags without clobbering unmodified shared albums."""
         with self._db.connection() as conn:
+            cleared_asset_ids: set[str] = set()
             if clear_album_ids:
+                for alb_id in clear_album_ids:
+                    rows = conn.execute(
+                        'SELECT asset_id FROM asset_albums WHERE library_name = ? AND album_id = ?',
+                        (library_name, alb_id),
+                    ).fetchall()
+                    cleared_asset_ids.update(r[0] for r in rows)
                 conn.executemany(
                     'DELETE FROM asset_albums WHERE library_name = ? AND album_id = ?',
                     [(library_name, aid) for aid in clear_album_ids],
@@ -579,10 +586,28 @@ class MetadataStore:
                     'UPDATE assets SET is_shared = 1, is_partner = 0 WHERE id = ? AND library_name = ?',
                     [(aid[0], library_name) for aid in shared_asset_updates],
                 )
+
+            candidate_unshared_ids: set[str] = set(cleared_asset_ids)
             if unshared_asset_updates:
+                candidate_unshared_ids.update(aid[0] for aid in unshared_asset_updates)
+            if shared_asset_updates:
+                candidate_unshared_ids.difference_update(aid[0] for aid in shared_asset_updates)
+
+            if candidate_unshared_ids:
                 conn.executemany(
-                    'UPDATE assets SET is_shared = 0 WHERE id = ? AND library_name = ?',
-                    [(aid[0], library_name) for aid in unshared_asset_updates],
+                    """
+                    UPDATE assets
+                    SET is_shared = 0
+                    WHERE id = ? AND library_name = ?
+                      AND NOT EXISTS (
+                          SELECT 1 FROM asset_albums aa
+                          JOIN albums alb ON aa.album_id = alb.id AND aa.library_name = alb.library_name
+                          WHERE aa.asset_id = assets.id
+                            AND aa.library_name = assets.library_name
+                            AND alb.is_shared = 1
+                      )
+                    """,
+                    [(aid, library_name) for aid in candidate_unshared_ids],
                 )
 
     def count_library_assets(self, library_name: str) -> int:
@@ -602,6 +627,8 @@ class MetadataStore:
         asset_people: list[tuple[str, str]],
         asset_albums: list[tuple[str, str]],
         asset_tags: list[tuple[str, str]] | None = None,
+        *,
+        replace_albums: bool = True,
     ) -> None:
         """Insert or update batch of asset records along with people/album/tag junction rows."""
         if not assets:
@@ -671,10 +698,12 @@ class MetadataStore:
                 asset_rows,
             )
 
-            # Clear stale junction records for this batch of assets in this library
+            # Clear stale junction records for this batch of assets in this library.
+            # When replace_albums=False (Immich delta sync), preserve memberships in unmodified albums.
             id_tuples = [(aid, library_name) for aid in asset_ids]
             conn.executemany('DELETE FROM asset_people WHERE asset_id = ? AND library_name = ?', id_tuples)
-            conn.executemany('DELETE FROM asset_albums WHERE asset_id = ? AND library_name = ?', id_tuples)
+            if replace_albums:
+                conn.executemany('DELETE FROM asset_albums WHERE asset_id = ? AND library_name = ?', id_tuples)
             conn.executemany('DELETE FROM asset_tags WHERE asset_id = ? AND library_name = ?', id_tuples)
 
             if asset_people:
@@ -697,6 +726,24 @@ class MetadataStore:
                     WHERE a.id = ? AND alb.id = ? AND a.library_name = ? AND alb.library_name = ?
                     """,
                     [(library_name, aid, albid, library_name, library_name) for aid, albid in asset_albums],
+                )
+
+            if not replace_albums:
+                conn.executemany(
+                    """
+                    UPDATE assets
+                    SET is_shared = 1,
+                        is_partner = 0
+                    WHERE id = ? AND library_name = ?
+                      AND EXISTS (
+                          SELECT 1 FROM asset_albums aa
+                          JOIN albums alb ON aa.album_id = alb.id AND aa.library_name = alb.library_name
+                          WHERE aa.asset_id = assets.id
+                            AND aa.library_name = assets.library_name
+                            AND alb.is_shared = 1
+                      )
+                    """,
+                    id_tuples,
                 )
 
             if asset_tags:
