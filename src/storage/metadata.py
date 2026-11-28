@@ -793,7 +793,7 @@ class MetadataStore:
         """Increment play count and record timestamp for multiple played assets."""
         if not asset_ids:
             return
-        ts = (played_at or datetime.now()).isoformat()
+        ts = (played_at or datetime.now(UTC)).isoformat()
         with self._db.connection() as conn:
             conn.executemany(
                 """

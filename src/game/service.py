@@ -12,7 +12,7 @@ from fastapi import HTTPException
 from src.app_logging import LOGGER_MATCH, get_logger
 from src.config import AppSettings
 from src.game.modes import GameModeRegistry, default_game_mode_registry
-from src.game.selector import calculate_match_bounds, load_asset_pool
+from src.game.selector import calculate_match_bounds, filter_diverse_asset_answers, load_asset_pool
 from src.i18n import SupportedLanguage
 from src.models import (
     AnswerRequest,
@@ -250,8 +250,12 @@ class GameService:
         effective_max_date = criteria.max_date
 
         target_libs = setup.libraries or None
-        is_synced = self.metadata_store.has_synced_assets(target_libs)
-        sync_state = self.metadata_store.get_sync_state(target_libs[0]) if target_libs and len(target_libs) == 1 else {}
+        is_synced = await asyncio.to_thread(self.metadata_store.has_synced_assets, target_libs)
+        sync_state = (
+            await asyncio.to_thread(self.metadata_store.get_sync_state, target_libs[0])
+            if target_libs and len(target_libs) == 1
+            else {}
+        )
         raw_status = sync_state.get('sync_status', SyncStatus.idle.value)
         sync_status = SyncStatus(raw_status) if raw_status in SyncStatus._value2member_map_ else SyncStatus.idle
 
@@ -284,9 +288,28 @@ class GameService:
             active_filters.append('date_range')
 
         required = 3 * setup.round_count if setup.game_mode == GameMode.unshuffle else setup.round_count
+        if eligible_count == 0:
+            diverse_count = 0
+            low_diversity = False
+        else:
+            sample_limit = max(250, required * 5)
+            candidate_sample = await asyncio.to_thread(
+                self.metadata_store.fetch_candidate_assets,
+                criteria,
+                sample_limit,
+            )
+            diverse_subset = filter_diverse_asset_answers(
+                list(candidate_sample.values()),
+                location_mode=setup.location_mode,
+                date_mode=setup.date_mode,
+            )
+            diverse_count = len(diverse_subset)
+            low_diversity = eligible_count >= required and diverse_count < required
 
         return PreflightResponse(
             eligible_count=eligible_count,
+            diverse_count=diverse_count,
+            low_diversity=low_diversity,
             required=required,
             ok=eligible_count >= required,
             active_filters=active_filters,

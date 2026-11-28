@@ -212,6 +212,8 @@ Response:
 ```json
 {
   "eligible_count": 45,
+  "diverse_count": 38,
+  "low_diversity": false,
   "required": 10,
   "ok": true,
   "active_filters": ["location", "date", "album", "country", "city", "people", "date_range"],

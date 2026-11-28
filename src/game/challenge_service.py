@@ -52,14 +52,17 @@ def select_diverse_challenge_assets(
     count: int,
     location_mode: bool,
     date_mode: bool,
+    *,
+    preserve_order: bool = False,
 ) -> list[RoundAsset]:
     """Select count diverse assets from candidate pool with fallback."""
-    shuffled_ids = list(candidates.keys())
-    random.shuffle(shuffled_ids)
+    candidate_ids = list(candidates.keys())
+    if not preserve_order:
+        random.shuffle(candidate_ids)
 
     selected: list[RoundAsset] = []
     # Primary pass: greedily pick diverse assets
-    for aid in shuffled_ids:
+    for aid in candidate_ids:
         ans = candidates[aid]
         if is_asset_valid_for_batch(
             ans,
@@ -74,7 +77,7 @@ def select_diverse_challenge_assets(
     # Fallback pass: fill remaining slots with distinct unplayed candidates
     if len(selected) < count:
         selected_ids = {ra.asset_id for ra in selected}
-        for aid in shuffled_ids:
+        for aid in candidate_ids:
             if aid not in selected_ids:
                 selected.append(RoundAsset(asset_id=aid, answer=candidates[aid]))
                 if len(selected) == count:
@@ -148,12 +151,13 @@ class ChallengeService:
                 detail=f'Insufficient eligible photos. Found {len(candidates)}, need {required}.',
             )
 
-        # Select diverse assets using diversity engine
+        # Select diverse assets while preserving SQLite's least-played (times_played ASC, RANDOM()) priority
         selected = select_diverse_challenge_assets(
             candidates,
             required,
             location_mode=setup.location_mode,
             date_mode=setup.date_mode,
+            preserve_order=True,
         )
         asset_ids = [ra.asset_id for ra in selected]
 
@@ -202,6 +206,7 @@ class ChallengeService:
             title=title,
             expires_in_hours=setup.expires_in_hours,
         )
+        self.metadata_store.record_assets_played(asset_ids)
 
         play_url = f'{base_url.rstrip("/")}/play/{record["capability_token"]}'
 
