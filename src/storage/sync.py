@@ -439,6 +439,11 @@ class SyncEngine:
 
         return asset_dict, asset_people, asset_albums, asset_tags
 
+    def _checkpoint_and_optimize_db(self) -> None:
+        """Flush SQLite WAL and update query planner statistics."""
+        self._metadata_store.db.checkpoint(mode='TRUNCATE')
+        self._metadata_store.db.optimize()
+
     async def sync_library(self, library_name: str, *, force_full: bool = False) -> None:
         """Perform metadata synchronization (delta or full) for a specific library."""
         if getattr(self._provider, 'provider_id', '') == 'local':
@@ -494,7 +499,7 @@ class SyncEngine:
                     pname = str(p.get('name', '')).strip()
                     if pid and pname and not bool(p.get('isHidden', False)):
                         people_data.append({'id': pid, 'name': pname})
-            self._metadata_store.upsert_people(library_name, people_data)
+            await asyncio.to_thread(self._metadata_store.upsert_people, library_name, people_data)
             known_person_ids = {p['id'] for p in people_data}
             logger.info("Indexed %d active people for library '%s'", len(people_data), library_name)
 
@@ -505,7 +510,7 @@ class SyncEngine:
             album_asset_map: dict[str, set[str]] = {}  # asset_id -> set of album_ids
             shared_album_ids: set[str] = set()
 
-            indexed_album_ids = self._metadata_store.get_indexed_album_ids(library_name)
+            indexed_album_ids = await asyncio.to_thread(self._metadata_store.get_indexed_album_ids, library_name)
             albums_to_fetch: list[tuple[str, int]] = []  # (album_id, asset_count)
 
             for alb in albums_list:
@@ -535,7 +540,7 @@ class SyncEngine:
                                 if is_new or is_modified:
                                     albums_to_fetch.append((aid, asset_count))
 
-            self._metadata_store.upsert_albums(library_name, albums_data)
+            await asyncio.to_thread(self._metadata_store.upsert_albums, library_name, albums_data)
             known_album_ids = {a['id'] for a in albums_data}
             logger.info(
                 "Indexed %d albums (%d shared) for library '%s'; %d album(s) queued for asset contents fetch",
@@ -546,7 +551,7 @@ class SyncEngine:
             )
 
             if not is_delta:
-                self._metadata_store.prune_missing_albums(library_name, known_album_ids)
+                await asyncio.to_thread(self._metadata_store.prune_missing_albums, library_name, known_album_ids)
 
             # Concurrent album asset fetching (bounded concurrency pool of 15)
             if albums_to_fetch:
@@ -631,7 +636,8 @@ class SyncEngine:
                             modified_junction_inserts.append((item_id, alb_id))
 
                 if modified_junction_inserts or clear_album_ids:
-                    self._metadata_store.link_album_assets(
+                    await asyncio.to_thread(
+                        self._metadata_store.link_album_assets,
                         library_name,
                         modified_junction_inserts,
                         clear_album_ids=clear_album_ids if is_delta else None,
@@ -660,7 +666,7 @@ class SyncEngine:
                         tname = str(t.get('name', '')).strip()
                         if tid and tname:
                             tags_data.append({'id': tid, 'name': tname})
-                self._metadata_store.upsert_tags(library_name, tags_data)
+                await asyncio.to_thread(self._metadata_store.upsert_tags, library_name, tags_data)
                 known_tag_ids = {t['id'] for t in tags_data}
                 logger.info("Indexed %d tags for library '%s'", len(tags_data), library_name)
             except Exception as exc:
@@ -778,8 +784,9 @@ class SyncEngine:
                     if updated_str and (max_updated_at is None or updated_str > max_updated_at):
                         max_updated_at = updated_str
 
-                # Batch upsert into SQLite (preserve unmodified album memberships during delta sync)
-                self._metadata_store.upsert_assets_batch(
+                # Batch upsert into SQLite off the event loop (preserve unmodified album memberships during delta sync)
+                await asyncio.to_thread(
+                    self._metadata_store.upsert_assets_batch,
                     library_name,
                     batch_assets,
                     batch_asset_people,
@@ -852,7 +859,8 @@ class SyncEngine:
                         unshared_asset_updates.append((asset_id,))
 
                 if junction_inserts or shared_asset_updates or unshared_asset_updates:
-                    self._metadata_store.link_album_assets(
+                    await asyncio.to_thread(
+                        self._metadata_store.link_album_assets,
                         library_name,
                         junction_inserts,
                         shared_asset_updates=shared_asset_updates,
@@ -874,7 +882,11 @@ class SyncEngine:
                     sync_mode=sync_mode,
                     sync_stage=SyncStage.pruning,
                 )
-                pruned_count = self._metadata_store.prune_missing_assets(library_name, seen_asset_ids)
+                pruned_count = await asyncio.to_thread(
+                    self._metadata_store.prune_missing_assets,
+                    library_name,
+                    seen_asset_ids,
+                )
                 if pruned_count > 0:
                     logger.info('Pruned %d deleted asset(s) from metadata index for %s', pruned_count, library_name)
                 else:
@@ -889,7 +901,7 @@ class SyncEngine:
             )
             now_iso = datetime.now(UTC).isoformat()
             duration_sec = round(time.monotonic() - sync_start, 2)
-            db_total = self._metadata_store.count_library_assets(library_name)
+            db_total = await asyncio.to_thread(self._metadata_store.count_library_assets, library_name)
 
             last_full_at = now_iso if not is_delta else current_state.get('last_full_sync_at')
             self._metadata_store.set_sync_state(
@@ -930,8 +942,7 @@ class SyncEngine:
                 "Flushing SQLite WAL (TRUNCATE) and optimizing query planner statistics for '%s'",
                 library_name,
             )
-            self._metadata_store.db.checkpoint(mode='TRUNCATE')
-            self._metadata_store.db.optimize()
+            await asyncio.to_thread(self._checkpoint_and_optimize_db)
 
             if self._on_sync_complete is not None:
                 try:
@@ -988,7 +999,7 @@ class SyncEngine:
 
             cached_mtimes: dict[str, str] = {}
             if is_delta:
-                cached_mtimes = self._metadata_store.get_asset_mtimes(library_name)
+                cached_mtimes = await asyncio.to_thread(self._metadata_store.get_asset_mtimes, library_name)
 
             asset_dicts, albums_data, asset_albums, all_seen_ids = await asyncio.to_thread(
                 self._provider.scan_library_files,
@@ -999,9 +1010,9 @@ class SyncEngine:
 
             # 1. Upsert & prune albums (scan_library_files returns complete album list in both modes)
             if albums_data:
-                self._metadata_store.upsert_albums(library_name, albums_data)
+                await asyncio.to_thread(self._metadata_store.upsert_albums, library_name, albums_data)
             known_album_ids = {a['id'] for a in albums_data}
-            self._metadata_store.prune_missing_albums(library_name, known_album_ids)
+            await asyncio.to_thread(self._metadata_store.prune_missing_albums, library_name, known_album_ids)
 
             # 2. Upsert assets in batches
             self._metadata_store.set_sync_state(
@@ -1021,7 +1032,14 @@ class SyncEngine:
             for i in range(0, len(asset_dicts), chunk_size):
                 chunk = asset_dicts[i : i + chunk_size]
                 chunk_albums = [link for a in chunk for link in album_links_by_aid.get(a['id'], [])]
-                self._metadata_store.upsert_assets_batch(library_name, chunk, [], chunk_albums, [])
+                await asyncio.to_thread(
+                    self._metadata_store.upsert_assets_batch,
+                    library_name,
+                    chunk,
+                    [],
+                    chunk_albums,
+                    [],
+                )
 
             # 3. Prune deleted assets in full sync
             if not is_delta:
@@ -1031,7 +1049,11 @@ class SyncEngine:
                     sync_mode=sync_mode,
                     sync_stage=SyncStage.pruning,
                 )
-                pruned_count = self._metadata_store.prune_missing_assets(library_name, all_seen_ids)
+                pruned_count = await asyncio.to_thread(
+                    self._metadata_store.prune_missing_assets,
+                    library_name,
+                    all_seen_ids,
+                )
                 if pruned_count > 0:
                     logger.info('Pruned %d deleted asset(s) from local library %s', pruned_count, library_name)
 
@@ -1044,7 +1066,7 @@ class SyncEngine:
             )
             now_iso = datetime.now(UTC).isoformat()
             duration_sec = round(time.monotonic() - sync_start, 2)
-            db_total = self._metadata_store.count_library_assets(library_name)
+            db_total = await asyncio.to_thread(self._metadata_store.count_library_assets, library_name)
             last_full_at = now_iso if not is_delta else current_state.get('last_full_sync_at')
 
             self._metadata_store.set_sync_state(
@@ -1080,8 +1102,7 @@ class SyncEngine:
                 duration_sec,
             )
 
-            self._metadata_store.db.checkpoint(mode='TRUNCATE')
-            self._metadata_store.db.optimize()
+            await asyncio.to_thread(self._checkpoint_and_optimize_db)
 
             if self._on_sync_complete is not None:
                 try:

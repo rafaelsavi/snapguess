@@ -1600,6 +1600,48 @@ async def test_delta_sync_preserves_unmodified_albums_and_shared_flags(tmp_path:
     assert shared_row_after['city'] == 'Porto'
 
 
+@pytest.mark.asyncio
+async def test_sync_engine_offloads_batch_writes_to_worker_thread(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify SyncEngine executes SQLite batch upserts on worker threads rather than blocking the event loop."""
+    import threading
+
+    db_mgr = DatabaseManager(tmp_path / 'thread_offload.db')
+    meta_store = MetadataStore(db_mgr)
+    event_loop_thread = threading.current_thread()
+    observed_threads: list[threading.Thread] = []
+    real_upsert = meta_store.upsert_assets_batch
+
+    def spy_upsert(*args: Any, **kwargs: Any) -> None:
+        observed_threads.append(threading.current_thread())
+        real_upsert(*args, **kwargs)
+
+    monkeypatch.setattr(meta_store, 'upsert_assets_batch', spy_upsert)
+
+    class SingleBatchClient(_DummySyncClient):
+        async def _request_json(self, method: str, path: str, key: str, json: Any = None) -> Any:
+            if path == '/search/metadata' and not (json or {}).get('cursor'):
+                return {
+                    'assets': {
+                        'items': [{'id': 'a-thread-1', 'type': 'IMAGE', 'ownerId': 'user-1'}],
+                        'nextCursor': None,
+                    }
+                }
+            return []
+
+        def _extract_asset_items(self, raw: Any) -> list[dict[str, Any]]:
+            if isinstance(raw, dict):
+                return raw.get('assets', {}).get('items', [])
+            return []
+
+    sync_engine = SyncEngine(SingleBatchClient(), meta_store)  # type: ignore[arg-type]
+    await sync_engine.sync_library('family')
+
+    assert len(observed_threads) == 1
+    assert observed_threads[0] is not event_loop_thread
+
+
 def test_sync_stages_telemetry(meta_store: MetadataStore) -> None:
     # Test setting and getting sync state with sync_stage
     meta_store.set_sync_state(

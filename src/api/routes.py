@@ -204,7 +204,7 @@ async def sync_status(
     sync_engine: SyncEngine = Depends(get_sync_engine),
 ) -> dict[str, Any]:
     available = request.app.state.available_libraries
-    return sync_engine.get_sync_status(available_libraries=available)
+    return await asyncio.to_thread(sync_engine.get_sync_status, available)
 
 
 @router.post('/sync', response_model=SyncStateResponse, dependencies=[Depends(require_role(Role.CREATOR))])
@@ -245,7 +245,7 @@ async def leaderboard(
     query: Annotated[LeaderboardQuery, Query()],
     store: LeaderboardStore = Depends(get_leaderboard_store),
 ) -> list[LeaderboardEntry]:
-    return store.list_entries(query)
+    return await asyncio.to_thread(store.list_entries, query)
 
 
 @router.get(
